@@ -30,7 +30,7 @@ export function SpecialTeamsPrintModal({ isOpen, onClose }: SpecialTeamsPrintMod
                 Special Teams Master Coordinator Call Sheet
               </h2>
               <p className="text-xs text-slate-400 font-mono">
-                Printable sideline game-day card for all 6 special teams units
+                Printable sideline game-day card with Wheel KOR and all 6 special teams units
               </p>
             </div>
           </div>
@@ -70,7 +70,24 @@ export function SpecialTeamsPrintModal({ isOpen, onClose }: SpecialTeamsPrintMod
                 {unit.coachingMotto}
               </div>
 
-              {/* Top Personnel */}
+              {/* Calls / Scheme Variations */}
+              <div className="p-2 rounded bg-[#060D11] border border-[#162A33] space-y-1">
+                <span className="text-[10px] uppercase font-mono text-teal-400 font-semibold block">
+                  Sideline Scheme Calls:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {unit.schemeOptions.map((sch) => (
+                    <span
+                      key={sch.id}
+                      className="px-2 py-0.5 rounded bg-teal-950/60 border border-teal-800/40 text-[10px] font-mono text-teal-200"
+                    >
+                      {sch.label.split('(')[0].trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Key Personnel */}
               <div className="space-y-1">
                 <span className="text-[10px] uppercase font-mono text-slate-400 font-semibold block">
                   Key Players & Roles:

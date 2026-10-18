@@ -46,6 +46,9 @@ interface PlaySetupConsoleProps {
   progress: number;
   onResetPreSnap: () => void;
   onStepForward: () => void;
+  onStepBackward?: () => void;
+  isLooping?: boolean;
+  onToggleLoop?: () => void;
   playbackSpeed: number;
   onChangePlaybackSpeed: (speed: number) => void;
   currentPhaseNumber: number;
@@ -79,6 +82,9 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
   progress,
   onResetPreSnap,
   onStepForward,
+  onStepBackward,
+  isLooping = true,
+  onToggleLoop,
   playbackSpeed,
   onChangePlaybackSpeed,
   currentPhaseNumber,
@@ -662,23 +668,51 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
             )}
           </button>
 
+          {onStepBackward && (
+            <button
+              type="button"
+              onClick={onStepBackward}
+              title="Step backward 15%"
+              className="inline-flex items-center gap-1 px-2.5 py-2 text-xs font-medium text-slate-200 bg-[#101F26] hover:bg-[#162B35] border border-[#1D3643] rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+            >
+              -15%
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onStepForward}
+            title="Step forward 15%"
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-200 bg-[#101F26] hover:bg-[#162B35] border border-[#1D3643] rounded-lg transition-colors cursor-pointer whitespace-nowrap"
           >
             <StepForward className="w-3.5 h-3.5" />
-            Step +25%
+            +15%
           </button>
 
           <button
             type="button"
             onClick={onResetPreSnap}
+            title="Reset to pre-snap alignment (0%)"
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 bg-[#0E1A20] hover:bg-[#162832] border border-[#162A33] rounded-lg transition-colors cursor-pointer whitespace-nowrap"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Reset Pre-Snap
           </button>
+
+          {onToggleLoop && (
+            <button
+              type="button"
+              onClick={onToggleLoop}
+              title="Toggle continuous looping animation"
+              className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-mono font-semibold rounded-lg border transition-colors cursor-pointer whitespace-nowrap ${
+                isLooping
+                  ? 'border-teal-400 bg-teal-950/60 text-teal-300'
+                  : 'border-[#162A33] bg-[#0E1A20] text-slate-400 hover:text-white'
+              }`}
+            >
+              🔁 Loop {isLooping ? 'ON' : 'OFF'}
+            </button>
+          )}
 
           {/* Speed Toggle */}
           <div className="flex items-center gap-1 p-1 bg-[#060D11] border border-[#162A33] rounded-lg text-xs">

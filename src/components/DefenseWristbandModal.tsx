@@ -98,18 +98,18 @@ export function DefenseWristbandModal({ isOpen, onClose }: DefenseWristbandModal
 
             <div className="grid grid-cols-3 gap-2 text-xs font-mono">
               {[
-                { num: '01', call: 'Base 3-4 Green', desc: '✊ Fist up palm out · Cover 3 Sky · SS roll to strong curl' },
-                { num: '02', call: 'Shield 5-2 Green', desc: '👊 Fist in front palm in · Sam & Rover 2x0 on LOS' },
-                { num: '03', call: 'Base 3-4 Blue', desc: 'Cover 2 Zone · Corners squat flat · 2 deep halves' },
-                { num: '04', call: 'Shield Slant Rip', desc: 'Sam & Rover 2x0 · DL slants toward TE strong side' },
-                { num: '05', call: 'Vanguard Goal Line', desc: 'MLBs @ 2 yds, Safeties @ 5 yds · MLB pick open gap' },
-                { num: '06', call: 'Base Black Blue', desc: 'Cover 2 Man · 2 Safeties deep · Underneath trail' },
-                { num: '07', call: 'Shield + Sam Edge', desc: '5-2 Front · Individual call: Sam crashes strong edge' },
-                { num: '08', call: 'Shield + Rover Fire', desc: '5-2 Front · Individual call: Rover fires blindside' },
-                { num: '09', call: 'Base + Mike Dog', desc: '3-4 Base · Individual call: Mike shoots strong A-gap' },
-                { num: '10', call: 'Base Pinch Front', desc: 'DL pinch inside · Spills ball to Sam and Rover' },
-                { num: '11', call: 'Shell Prevent Sack', desc: 'OLBs @ 4, MLBs @ 6, Safeties @ 12 · DL: Go get a sack!' },
-                { num: '12', call: 'Check Smoke (Empty)', desc: 'Auto check vs Empty: Shield 5-2 rush with man-free' },
+                { num: '01', call: 'Base 3-4 Green', desc: '✊ Fist up · 👇 Point ground · Cover 3 Sky · SS roll to strong curl' },
+                { num: '02', call: 'Shield 5-2 Green', desc: '👊 Fist in front · 👇 Point ground · Sam & Rover 2x0 on LOS' },
+                { num: '03', call: 'Base 3-4 Blue', desc: '✊ Fist up · 👆 Point sky · Cover 2 Zone · Corners squat flat' },
+                { num: '04', call: 'Base 3-4 Black', desc: '✊ Fist up · 👕 Jersey tug · Cover 1 Man-Free · Press-man' },
+                { num: '05', call: 'Vanguard Goal Line', desc: '⚔️ Vanguard · MLBs @ 2 yds, Safeties @ 5 yds · MLB pick open gap' },
+                { num: '06', call: 'Base + Slant Call', desc: 'DL slants weak side (no slant strong; default is strong)' },
+                { num: '07', call: 'Shield + Sam Blitz', desc: '5-2 Front · Blitz: Sam shoots assigned strong edge gap' },
+                { num: '08', call: 'Shield + Rover Blitz', desc: '5-2 Front · Blitz: Rover shoots assigned weak edge gap' },
+                { num: '09', call: 'Base + Mike Blitz', desc: '3-4 Base · Blitz: Mike shoots assigned gap based on DL' },
+                { num: '10', call: 'Base + Will Blitz', desc: '3-4 Base · Blitz: Will shoots assigned gap based on DL' },
+                { num: '11', call: 'Shell Prevent Sack', desc: '🛡️ Shell · OLBs @ 4, MLBs @ 6, Safeties @ 12 · Linemen get a sack!' },
+                { num: '12', call: 'Check Reload', desc: 'Auto check vs hurry-up: “RELOAD!” all 11 sprint to alignment' },
               ].map((c) => (
                 <div key={c.num} className="p-2.5 rounded-lg border border-[#18323F] bg-[#09151D] space-y-1">
                   <div className="flex items-center justify-between text-teal-300 font-bold">

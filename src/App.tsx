@@ -9,11 +9,14 @@ import {
   Eye,
   Info,
   Maximize2,
+  Pause,
   PenTool,
+  Play,
   Printer,
   RotateCcw,
   Shield,
   Sparkles,
+  StepForward,
   Zap,
 } from 'lucide-react';
 import {
@@ -53,6 +56,7 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(0.5);
+  const [isLooping, setIsLooping] = useState<boolean>(true);
 
   // Field appearance & chalkboard
   const [fieldTheme, setFieldTheme] = useState<'night_turf' | 'chalkboard' | 'high_contrast'>('night_turf');
@@ -82,32 +86,71 @@ export default function App() {
     xMode
   );
 
-  // Smooth 60fps animation loop
+  const isLoopingRef = React.useRef(isLooping);
+  isLoopingRef.current = isLooping;
+  const playbackSpeedRef = React.useRef(playbackSpeed);
+  playbackSpeedRef.current = playbackSpeed;
+
+  // Smooth 60fps animation loop with loop support and natural pause at whistle
   useEffect(() => {
     if (!isPlaying) return;
     let animationFrameId: number;
     let lastTime = performance.now();
+    let holdDuration = 0;
 
     const animate = (now: number) => {
-      const dt = (now - lastTime) / 1000;
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
       lastTime = now;
-      const deltaProgress = (dt * playbackSpeed) / 3.0;
+      const deltaProgress = (dt * playbackSpeedRef.current) / 3.0;
+      let shouldStop = false;
 
       setProgress((prev) => {
+        if (prev >= 1) {
+          if (isLoopingRef.current) {
+            holdDuration += dt;
+            if (holdDuration >= 0.75) {
+              holdDuration = 0;
+              return 0; // Restart smoothly from pre-snap
+            }
+            return 1;
+          } else {
+            shouldStop = true;
+            return 1;
+          }
+        }
         const next = prev + deltaProgress;
         if (next >= 1) {
-          setIsPlaying(false);
-          return 1;
+          if (isLoopingRef.current) {
+            holdDuration = 0;
+            return 1;
+          } else {
+            shouldStop = true;
+            return 1;
+          }
         }
         return next;
       });
+
+      if (shouldStop) {
+        setIsPlaying(false);
+        return;
+      }
 
       animationFrameId = requestAnimationFrame(animate);
     };
 
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isPlaying, playbackSpeed]);
+  }, [isPlaying]);
+
+  const handleTogglePlay = () => {
+    if (progress >= 0.98) {
+      setProgress(0);
+      setIsPlaying(true);
+    } else {
+      setIsPlaying((prev) => !prev);
+    }
+  };
 
   const handleSelectPlay = (playId: string) => {
     setSelectedPlayId(playId);
@@ -129,7 +172,17 @@ export default function App() {
 
   const handleStepForward = () => {
     setIsPlaying(false);
-    setProgress((prev) => (prev >= 1 ? 0 : Math.min(1, Number((prev + 0.25).toFixed(2)))));
+    setProgress((prev) => (prev >= 1 ? 0 : Math.min(1, Number((prev + 0.15).toFixed(2)))));
+  };
+
+  const handleStepBackward = () => {
+    setIsPlaying(false);
+    setProgress((prev) => Math.max(0, Number((prev - 0.15).toFixed(2))));
+  };
+
+  const handleResetPreSnap = () => {
+    setIsPlaying(false);
+    setProgress(0);
   };
 
   const currentPhase =
@@ -281,26 +334,17 @@ export default function App() {
               frontId={frontId}
               onChangeFrontId={setFrontId}
               diveBehavior={diveBehavior}
-              onChangeDiveBehavior={(behavior) => {
-                setDiveBehavior(behavior);
-                setProgress(0.65);
-              }}
+              onChangeDiveBehavior={(behavior) => setDiveBehavior(behavior)}
               pitchBehavior={pitchBehavior}
-              onChangePitchBehavior={(behavior) => {
-                setPitchBehavior(behavior);
-                setProgress(0.65);
-              }}
+              onChangePitchBehavior={(behavior) => setPitchBehavior(behavior)}
               isPlaying={isPlaying}
-              onTogglePlay={() => {
-                if (progress >= 1) setProgress(0);
-                setIsPlaying((prev) => !prev);
-              }}
+              onTogglePlay={handleTogglePlay}
               progress={progress}
-              onResetPreSnap={() => {
-                setIsPlaying(false);
-                setProgress(0);
-              }}
+              onResetPreSnap={handleResetPreSnap}
               onStepForward={handleStepForward}
+              onStepBackward={handleStepBackward}
+              isLooping={isLooping}
+              onToggleLoop={() => setIsLooping((p) => !p)}
               playbackSpeed={playbackSpeed}
               onChangePlaybackSpeed={setPlaybackSpeed}
               currentPhaseNumber={currentPhase.phase}
@@ -327,18 +371,46 @@ export default function App() {
               className="rounded-2xl border border-[#162A33] bg-[#070E13] p-4 lg:p-6 shadow-2xl space-y-4"
             >
               {/* Canvas Action Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#162A33]/80">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#162A33]/80">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className="text-xs font-mono font-bold text-teal-400 uppercase tracking-wider">
-                    Chalkboard Canvas
+                    Tactical Chalkboard
                   </span>
-                  <span className="text-xs text-slate-400">· Click or drag players to inspect</span>
+                  {isPlaying ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[11px] font-bold animate-pulse">
+                      <Play className="w-3 h-3 fill-emerald-300" />
+                      LIVE SIMULATION RUNNING
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#0A1318] border border-[#162A33] text-slate-400 font-mono text-[11px]">
+                      <Pause className="w-3 h-3" />
+                      SIMULATION PAUSED ({Math.round(progress * 100)}%)
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                   <button
+                    type="button"
+                    onClick={handleTogglePlay}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-400 text-slate-950 hover:bg-teal-300 transition-all cursor-pointer shadow-sm"
+                  >
+                    {isPlaying ? (
+                      <>
+                        <Pause className="w-3.5 h-3.5" />
+                        Pause
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-slate-950" />
+                        {progress > 0 && progress < 1 ? 'Resume' : 'Play'}
+                      </>
+                    )}
+                  </button>
+
+                  <button
                     onClick={() => setShowGapLabels((p) => !p)}
-                    className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors border cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border cursor-pointer ${
                       showGapLabels
                         ? 'border-teal-400 bg-teal-950/60 text-teal-300'
                         : 'border-[#162A33] bg-[#0A1318] text-slate-400 hover:text-slate-200'
@@ -349,18 +421,18 @@ export default function App() {
 
                   <button
                     onClick={() => setShowBlockingAngles((p) => !p)}
-                    className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors border cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border cursor-pointer ${
                       showBlockingAngles
                         ? 'border-teal-400 bg-teal-950/60 text-teal-300'
                         : 'border-[#162A33] bg-[#0A1318] text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    Block Lines {showBlockingAngles ? 'ON' : 'OFF'}
+                    Blocks {showBlockingAngles ? 'ON' : 'OFF'}
                   </button>
 
                   <button
                     onClick={() => setChalkboardMode((p) => !p)}
-                    className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors border cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border cursor-pointer ${
                       chalkboardMode
                         ? 'border-amber-400 bg-amber-950/60 text-amber-300'
                         : 'border-[#162A33] bg-[#0A1318] text-slate-400 hover:text-slate-200'
@@ -406,28 +478,180 @@ export default function App() {
                   customArrows={customArrows}
                   onAddCustomArrow={(arr) => setCustomArrows((prev) => [...prev, arr])}
                 />
+
+                {/* Big Center Overlay Play Prompt if Stopped at Pre-Snap */}
+                {!isPlaying && progress === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <button
+                      type="button"
+                      onClick={handleTogglePlay}
+                      className="pointer-events-auto px-5 py-2.5 rounded-xl bg-teal-400 text-slate-950 font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-2 hover:bg-teal-300 transition-all transform hover:scale-105 cursor-pointer border border-teal-200"
+                    >
+                      <Play className="w-4 h-4 fill-slate-950" />
+                      <span>Start 60fps Play Simulation</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Phase Timeline Slider */}
-              <div className="pt-2 space-y-2">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-slate-400">
-                    Phase: <strong className="text-teal-400">{currentPhase.title}</strong>
-                  </span>
-                  <span className="text-slate-400">T: {Math.round(progress * 100)}%</span>
+              {/* Interactive Tactical Playback Console Bar */}
+              <div className="p-4 rounded-xl border border-[#162A33] bg-[#0A1318] space-y-3">
+                {/* Upper: Playback Action Buttons */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#14262E]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleTogglePlay}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-950 bg-teal-400 rounded-lg hover:bg-teal-300 transition-colors cursor-pointer whitespace-nowrap shadow-md shadow-teal-500/20"
+                    >
+                      {isPlaying ? (
+                        <>
+                          <Pause className="w-3.5 h-3.5" />
+                          Pause Simulation
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3.5 h-3.5 fill-slate-950" />
+                          {progress > 0 && progress < 1 ? 'Resume Simulation' : 'Run Play Simulation'}
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleStepBackward}
+                      title="Step backward 15%"
+                      className="inline-flex items-center px-2.5 py-2 text-xs font-medium text-slate-200 bg-[#101F26] hover:bg-[#162B35] border border-[#1D3643] rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      -15%
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleStepForward}
+                      title="Step forward 15%"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-200 bg-[#101F26] hover:bg-[#162B35] border border-[#1D3643] rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      <StepForward className="w-3.5 h-3.5" />
+                      +15%
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleResetPreSnap}
+                      title="Reset to pre-snap alignment (0%)"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 bg-[#0E1A20] hover:bg-[#162832] border border-[#162A33] rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Pre-Snap (0%)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsLooping((p) => !p)}
+                      title="Toggle continuous looping animation"
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-mono font-semibold rounded-lg border transition-colors cursor-pointer whitespace-nowrap ${
+                        isLooping
+                          ? 'border-teal-400 bg-teal-950/60 text-teal-300'
+                          : 'border-[#162A33] bg-[#0E1A20] text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      🔁 Loop {isLooping ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+
+                  {/* Playback Speed Controls */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-slate-400 font-mono mr-1">Speed:</span>
+                    <div className="flex items-center gap-1 p-0.5 bg-[#060D11] border border-[#162A33] rounded-lg text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setPlaybackSpeed(0.25)}
+                        className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+                          playbackSpeed === 0.25
+                            ? 'bg-teal-400 text-slate-950 font-bold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        0.25x
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPlaybackSpeed(0.5)}
+                        className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+                          playbackSpeed === 0.5
+                            ? 'bg-teal-400 text-slate-950 font-bold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        0.5x
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPlaybackSpeed(1)}
+                        className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+                          playbackSpeed === 1
+                            ? 'bg-teal-400 text-slate-950 font-bold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        1.0x
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={progress}
-                  onChange={(e) => {
-                    setIsPlaying(false);
-                    setProgress(parseFloat(e.target.value));
-                  }}
-                  className="w-full accent-teal-400 cursor-pointer h-1.5 bg-[#162A33] rounded-lg"
-                />
+
+                {/* Phase Jumper Pills */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-mono text-slate-400 shrink-0 mr-1">
+                    Coaching Phases:
+                  </span>
+                  {activePlay.coachingPhases.map((ph) => {
+                    const isCurrent = currentPhase.phase === ph.phase;
+                    return (
+                      <button
+                        key={ph.phase}
+                        type="button"
+                        onClick={() => handleJumpToPhase(ph.timeRange)}
+                        className={`px-2.5 py-1 rounded-lg border text-xs font-mono transition-colors cursor-pointer whitespace-nowrap ${
+                          isCurrent
+                            ? 'border-teal-400 bg-teal-950/70 text-teal-300 font-bold'
+                            : 'border-[#162A33] bg-[#070F14] text-slate-400 hover:text-white hover:border-[#1E3B49]'
+                        }`}
+                      >
+                        P{ph.phase}: {ph.title.replace(/^Phase \d:\s*/, '')}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Timeline Range Slider */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-slate-300">
+                      Phase {currentPhase.phase}: <strong className="text-teal-400">{currentPhase.title}</strong>
+                    </span>
+                    <span className="text-teal-300 font-bold">Progress: {Math.round(progress * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={progress}
+                    onChange={(e) => {
+                      setIsPlaying(false);
+                      setProgress(parseFloat(e.target.value));
+                    }}
+                    className="w-full accent-teal-400 cursor-pointer h-2 bg-[#14262E] rounded-lg"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono px-0.5">
+                    <span>0% Pre-Snap</span>
+                    <span>35% Mesh & Read</span>
+                    <span>65% Pitch / Keep</span>
+                    <span>100% Finish</span>
+                  </div>
+                </div>
               </div>
             </section>
 

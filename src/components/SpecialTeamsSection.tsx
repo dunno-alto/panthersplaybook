@@ -13,12 +13,14 @@ import {
   Play,
   RotateCcw,
   Sparkles,
+  ArrowRight,
 } from 'lucide-react';
 import {
   SPECIAL_TEAMS_PLAYBOOK,
   SpecialTeamsUnit,
   SpecialTeamsUnitId,
   STPlayer,
+  getActiveSTPlayer,
 } from '../data/specialTeamsData';
 
 interface SpecialTeamsSectionProps {
@@ -26,14 +28,18 @@ interface SpecialTeamsSectionProps {
 }
 
 export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionProps) {
-  const [selectedUnitId, setSelectedUnitId] = useState<SpecialTeamsUnitId>('kickoff');
-  const [selectedSchemeId, setSelectedSchemeId] = useState<string>('middle_deep');
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('L3');
+  const [selectedUnitId, setSelectedUnitId] = useState<SpecialTeamsUnitId>('kick_return');
+  const [selectedSchemeId, setSelectedSchemeId] = useState<string>('wheel_left');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('RTR1');
   const [showPaths, setShowPaths] = useState<boolean>(true);
 
   const activeUnit: SpecialTeamsUnit = SPECIAL_TEAMS_PLAYBOOK[selectedUnitId];
-  const selectedPlayer: STPlayer =
+  const activePlayers: STPlayer[] = activeUnit.players.map((p) =>
+    getActiveSTPlayer(p, selectedSchemeId)
+  );
+  const rawPlayer =
     activeUnit.players.find((p) => p.id === selectedPlayerId) || activeUnit.players[0];
+  const selectedPlayer: STPlayer = getActiveSTPlayer(rawPlayer, selectedSchemeId);
 
   const handleUnitChange = (unitId: SpecialTeamsUnitId) => {
     setSelectedUnitId(unitId);
@@ -41,6 +47,11 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
     setSelectedSchemeId(unit.schemeOptions[0].id);
     setSelectedPlayerId(unit.players[0].id);
   };
+
+  const isKickReturn = selectedUnitId === 'kick_return';
+  const isWheelLeft = isKickReturn && selectedSchemeId === 'wheel_left';
+  const isWheelRight = isKickReturn && selectedSchemeId === 'wheel_right';
+  const isHandsTeam = isKickReturn && selectedSchemeId === 'hands_team';
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -57,8 +68,9 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
               Special Teams <span className="text-teal-400">Playbook & Execution</span>
             </h1>
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-              Master the hidden third of the game. Comprehensive tactical diagrams and lane
-              disciplines for Kickoff, Kickoff Return, Punt (Shield & Spread), Punt Return & Block,
+              Master the hidden third of the game. Featuring the high-efficiency{' '}
+              <strong className="text-teal-300 font-semibold">Wheel Left & Wheel Right Kickoff Return</strong> system,
+              lane integrity for Kickoff Coverage, Punt (Shield & Spread), Punt Return & Block,
               Field Goal / PAT Protection, and Field Goal Block / Kick-Six.
             </p>
           </div>
@@ -132,12 +144,24 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                       onClick={() => setSelectedSchemeId(sch.id)}
                       className={`w-full p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                         isSel
-                          ? 'border-teal-400 bg-teal-950/40 text-white'
+                          ? 'border-teal-400 bg-teal-950/40 text-white ring-1 ring-teal-400/50'
                           : 'border-[#162A33] bg-[#091318] text-slate-400 hover:text-slate-200 hover:border-slate-700'
                       }`}
                     >
-                      <div className="text-xs font-bold text-slate-200">{sch.label}</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">{sch.description}</div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                          {isKickReturn && (
+                            <span className="w-2 h-2 rounded-full bg-teal-400 shrink-0" />
+                          )}
+                          <span>{sch.label}</span>
+                        </div>
+                        {isSel && (
+                          <span className="text-[10px] font-mono font-bold text-teal-400 bg-teal-950 px-1.5 py-0.5 rounded border border-teal-700/40">
+                            ACTIVE
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-1 leading-normal">{sch.description}</div>
                     </button>
                   );
                 })}
@@ -153,12 +177,12 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                 11-Player Personnel Roster
               </div>
               <span className="text-[11px] font-mono text-slate-400">
-                {activeUnit.players.length} Players
+                {activePlayers.length} Players
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              {activeUnit.players.map((p) => {
+              {activePlayers.map((p) => {
                 const isSelected = selectedPlayerId === p.id;
                 return (
                   <button
@@ -166,7 +190,7 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                     onClick={() => setSelectedPlayerId(p.id)}
                     className={`p-2 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
                       isSelected
-                        ? 'border-teal-400 bg-teal-950/50 text-white'
+                        ? 'border-teal-400 bg-teal-950/50 text-white ring-1 ring-teal-400/40'
                         : 'border-[#162A33] bg-[#091318] text-slate-400 hover:text-slate-200'
                     }`}
                   >
@@ -179,7 +203,7 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                     </span>
                     <div className="min-w-0">
                       <div className="text-xs font-bold truncate text-slate-200">#{p.number} {p.name.split(' ')[0]}</div>
-                      <div className="text-[10px] text-slate-400 truncate">{p.role}</div>
+                      <div className="text-[10px] text-slate-400 truncate">{p.role.split('(')[0].trim()}</div>
                     </div>
                   </button>
                 );
@@ -200,6 +224,15 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
               </div>
 
               <div className="flex items-center gap-3 text-xs">
+                {isKickReturn && (
+                  <div className="px-2.5 py-1 rounded bg-teal-950/70 border border-teal-500/40 text-teal-300 font-mono text-[11px] font-bold">
+                    {isWheelLeft
+                      ? '⚡ WHEEL LEFT (KOR POV)'
+                      : isWheelRight
+                      ? '⚡ WHEEL RIGHT (KOR POV)'
+                      : '🛡️ HANDS TEAM (ONSIDE RECOVERY)'}
+                  </div>
+                )}
                 <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
                   <input
                     type="checkbox"
@@ -247,45 +280,348 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                   >
                     <path d="M 0 1 L 8 5 L 0 9 z" fill="#F59E0B" />
                   </marker>
+                  <marker
+                    id="stWheelArrow"
+                    viewBox="0 0 10 10"
+                    refX="6"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M 0 1 L 8 5 L 0 9 z" fill="#38BDF8" />
+                  </marker>
                 </defs>
 
                 {/* Field Background */}
                 <rect width="1000" height="620" fill="#04090D" />
                 <rect width="1000" height="620" fill="url(#stFieldGrid)" opacity="0.6" />
 
-                {/* Yard Lines */}
-                <line x1="50" y1="120" x2="950" y2="120" stroke="#162E3B" strokeWidth="1.5" />
-                <line x1="50" y1="240" x2="950" y2="240" stroke="#162E3B" strokeWidth="1.5" />
-                <line x1="50" y1="360" x2="950" y2="360" stroke="#162E3B" strokeWidth="1.5" />
-                <line x1="50" y1="390" x2="950" y2="390" stroke="#2DD4BF" strokeWidth="2.5" opacity="0.8" />
-                <line x1="50" y1="480" x2="950" y2="480" stroke="#162E3B" strokeWidth="1.5" />
+                {/* Yard Lines & Field Markings based on Unit POV */}
+                {selectedUnitId === 'kick_return' || selectedUnitId === 'punt_return' || selectedUnitId === 'fg_block' ? (
+                  /* RETURN & BLOCK POV: OUR TEAM DEFENDING / RETURNING AT BOTTOM, OPPONENT AT TOP */
+                  <g>
+                    {/* Opponent Kicking / Snapping Line at y=140 or y=230 */}
+                    <line x1="50" y1={selectedUnitId === 'kick_return' ? 140 : 230} x2="950" y2={selectedUnitId === 'kick_return' ? 140 : 230} stroke="#2DD4BF" strokeWidth="2.5" opacity="0.85" />
+                    <text x="70" y={selectedUnitId === 'kick_return' ? 134 : 224} fill="#2DD4BF" fontSize="11" fontFamily="monospace" fontWeight="bold">
+                      {selectedUnitId === 'kick_return'
+                        ? 'OPPONENT KICKOFF LINE (35 YD LINE)'
+                        : selectedUnitId === 'punt_return'
+                        ? 'OPPONENT LINE OF SCRIMMAGE (PUNT PROTECTION)'
+                        : 'OPPONENT LINE OF SCRIMMAGE (FG PROTECTION)'}
+                    </text>
+                    <text x="740" y={selectedUnitId === 'kick_return' ? 134 : 224} fill="#2DD4BF" fontSize="11" fontFamily="monospace" fontWeight="bold">
+                      RETURN TARGET (OPPONENT GOAL) ➔
+                    </text>
 
-                {/* Field Markings */}
-                <text x="70" y="384" fill="#2DD4BF" fontSize="12" fontFamily="monospace" fontWeight="bold">
-                  LINE OF SCRIMMAGE / RESTRAINT LINE
-                </text>
-                <text x="820" y="384" fill="#2DD4BF" fontSize="12" fontFamily="monospace" fontWeight="bold">
-                  {activeUnit.name.toUpperCase()}
-                </text>
+                    {/* Midfield 50 Yard Line */}
+                    <line x1="50" y1="350" x2="950" y2="350" stroke="#162E3B" strokeWidth="1.5" />
+                    <text x="70" y="344" fill="#64748B" fontSize="10" fontFamily="monospace">
+                      50 YD LINE (MIDFIELD)
+                    </text>
 
-                {/* Goal Line & End Zone */}
-                <rect x="50" y="40" width="900" height="40" fill="#091E27" opacity="0.5" />
-                <text x="500" y="65" fill="#14B8A6" fontSize="12" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                  GOAL LINE & END ZONE
-                </text>
+                    {/* Return Territory 20 Yard Line */}
+                    <line x1="50" y1="470" x2="950" y2="470" stroke="#162E3B" strokeWidth="1.5" />
+                    <text x="70" y="464" fill="#64748B" fontSize="10" fontFamily="monospace">
+                      OWN 20 YD LINE
+                    </text>
 
-                {/* Movement / Lane Path Vectors */}
+                    {/* Own Goal Line & End Zone at bottom (y=575 to 615) */}
+                    <rect x="50" y="575" width="900" height="40" fill="#091E27" opacity="0.5" />
+                    <text x="500" y="600" fill="#14B8A6" fontSize="12" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                      OWN GOAL LINE & END ZONE (OUR TEAM POV · LOOKING UPFIELD)
+                    </text>
+
+                    {/* Opponent Scout Visuals for Punt Return */}
+                    {selectedUnitId === 'punt_return' && (
+                      <g opacity="0.6">
+                        <circle cx="500" cy="115" r="14" fill="#1E293B" stroke="#94A3B8" strokeWidth="1.5" strokeDasharray="3 2" />
+                        <text x="500" y="119" fill="#E2E8F0" fontSize="9" fontFamily="monospace" fontWeight="bold" textAnchor="middle">P</text>
+                        <text x="500" y="95" fill="#94A3B8" fontSize="9" fontFamily="monospace" textAnchor="middle">OPPONENT PUNTER</text>
+                      </g>
+                    )}
+
+                    {/* Opponent Scout Visuals for FG Block */}
+                    {selectedUnitId === 'fg_block' && (
+                      <g opacity="0.6">
+                        <circle cx="500" cy="165" r="13" fill="#1E293B" stroke="#94A3B8" strokeWidth="1.5" strokeDasharray="3 2" />
+                        <text x="500" y="169" fill="#E2E8F0" fontSize="9" fontFamily="monospace" fontWeight="bold" textAnchor="middle">H</text>
+                        <circle cx="460" cy="135" r="13" fill="#1E293B" stroke="#94A3B8" strokeWidth="1.5" strokeDasharray="3 2" />
+                        <text x="460" y="139" fill="#E2E8F0" fontSize="9" fontFamily="monospace" fontWeight="bold" textAnchor="middle">K</text>
+                        <text x="480" y="105" fill="#94A3B8" fontSize="9" fontFamily="monospace" textAnchor="middle">OPPONENT FG LAUNCH ZONE</text>
+                      </g>
+                    )}
+                  </g>
+                ) : (
+                  /* COVERAGE & KICKING POV: OUR TEAM KICKING FROM BOTTOM TOWARD OPPONENT GOAL AT TOP */
+                  <g>
+                    <line x1="50" y1="120" x2="950" y2="120" stroke="#162E3B" strokeWidth="1.5" />
+                    <line x1="50" y1="240" x2="950" y2="240" stroke="#162E3B" strokeWidth="1.5" />
+                    <line x1="50" y1="360" x2="950" y2="360" stroke="#162E3B" strokeWidth="1.5" />
+                    <line x1="50" y1="390" x2="950" y2="390" stroke="#2DD4BF" strokeWidth="2.5" opacity="0.8" />
+                    <line x1="50" y1="480" x2="950" y2="480" stroke="#162E3B" strokeWidth="1.5" />
+
+                    <text x="70" y="384" fill="#2DD4BF" fontSize="12" fontFamily="monospace" fontWeight="bold">
+                      {selectedUnitId === 'kickoff' ? 'OUR KICKOFF LINE (35 YARD LINE)' : 'LINE OF SCRIMMAGE (LOS)'}
+                    </text>
+                    <text x="820" y="384" fill="#2DD4BF" fontSize="12" fontFamily="monospace" fontWeight="bold">
+                      {activeUnit.name.toUpperCase()}
+                    </text>
+
+                    <rect x="50" y="40" width="900" height="40" fill="#091E27" opacity="0.5" />
+                    <text x="500" y="65" fill="#14B8A6" fontSize="12" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                      OPPONENT GOAL LINE & END ZONE (OUR TEAM PERSPECTIVE)
+                    </text>
+                  </g>
+                )}
+
+                {/* Wheel Return Sideline Alley Corridor Highlight (KOR POV) */}
+                {isKickReturn && (
+                  <g>
+                    {isWheelLeft && (
+                      <>
+                        {/* Shaded Left Sideline Alley Corridor */}
+                        <polygon
+                          points="60,140 250,140 260,575 60,575"
+                          fill="#14B8A6"
+                          fillOpacity="0.08"
+                          stroke="#14B8A6"
+                          strokeWidth="1.5"
+                          strokeDasharray="6 4"
+                        />
+                        <text
+                          x="155"
+                          y="555"
+                          fill="#5EEAD4"
+                          fontSize="11"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          ★ DESIGNATED WHEEL LEFT ALLEY
+                        </text>
+
+                        {/* 4-Man Side-by-Side Wedge Wall Bracket (W1 · FB · W2 · W3) */}
+                        <rect
+                          x="100"
+                          y="222"
+                          width="128"
+                          height="36"
+                          rx="6"
+                          fill="#14B8A6"
+                          fillOpacity="0.18"
+                          stroke="#2DD4BF"
+                          strokeWidth="1.8"
+                          strokeDasharray="4 2"
+                        />
+                        <text
+                          x="164"
+                          y="214"
+                          fill="#5EEAD4"
+                          fontSize="9.5"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          🛡️ 4-MAN WEDGE WALL (W1 · FB · W2 · W3)
+                        </text>
+
+                        {/* Returner following 10 yards back caliper */}
+                        <line
+                          x1="165"
+                          y1="262"
+                          x2="165"
+                          y2="304"
+                          stroke="#F59E0B"
+                          strokeWidth="1.6"
+                          strokeDasharray="3 3"
+                        />
+                        <rect x="180" y="275" width="76" height="16" rx="3" fill="#0B1A22" stroke="#F59E0B" strokeWidth="0.8" />
+                        <text
+                          x="218"
+                          y="286"
+                          fill="#FCD34D"
+                          fontSize="8.5"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          10 YDS BACK
+                        </text>
+
+                        {/* Off-Returner R2 assignment indicator */}
+                        <rect x="250" y="244" width="160" height="16" rx="3" fill="#1C102C" stroke="#C084FC" strokeWidth="0.8" />
+                        <text
+                          x="330"
+                          y="255"
+                          fill="#E9D5FF"
+                          fontSize="8.5"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          R2: HUNTS WEDGE BUSTER
+                        </text>
+
+                        {/* Upfield Returner Curve Arc (Bottom to Top) */}
+                        <path
+                          d="M 430 560 Q 490 535, 200 460 L 165 320"
+                          fill="none"
+                          stroke="#F59E0B"
+                          strokeWidth="3.5"
+                          strokeDasharray="6 3"
+                          markerEnd="url(#stKeyArrow)"
+                          opacity="0.9"
+                        />
+                      </>
+                    )}
+
+                    {isWheelRight && (
+                      <>
+                        {/* Shaded Right Sideline Alley Corridor */}
+                        <polygon
+                          points="750,140 940,140 940,575 740,575"
+                          fill="#14B8A6"
+                          fillOpacity="0.08"
+                          stroke="#14B8A6"
+                          strokeWidth="1.5"
+                          strokeDasharray="6 4"
+                        />
+                        <text
+                          x="845"
+                          y="555"
+                          fill="#5EEAD4"
+                          fontSize="11"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          ★ DESIGNATED WHEEL RIGHT ALLEY
+                        </text>
+
+                        {/* 4-Man Side-by-Side Wedge Wall Bracket (W3 · FB · W2 · W1) */}
+                        <rect
+                          x="772"
+                          y="222"
+                          width="128"
+                          height="36"
+                          rx="6"
+                          fill="#14B8A6"
+                          fillOpacity="0.18"
+                          stroke="#2DD4BF"
+                          strokeWidth="1.8"
+                          strokeDasharray="4 2"
+                        />
+                        <text
+                          x="836"
+                          y="214"
+                          fill="#5EEAD4"
+                          fontSize="9.5"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          🛡️ 4-MAN WEDGE WALL (W3 · FB · W2 · W1)
+                        </text>
+
+                        {/* Returner following 10 yards back caliper */}
+                        <line
+                          x1="835"
+                          y1="262"
+                          x2="835"
+                          y2="304"
+                          stroke="#F59E0B"
+                          strokeWidth="1.6"
+                          strokeDasharray="3 3"
+                        />
+                        <rect x="744" y="275" width="76" height="16" rx="3" fill="#0B1A22" stroke="#F59E0B" strokeWidth="0.8" />
+                        <text
+                          x="782"
+                          y="286"
+                          fill="#FCD34D"
+                          fontSize="8.5"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          10 YDS BACK
+                        </text>
+
+                        {/* Off-Returner R2 assignment indicator */}
+                        <rect x="585" y="244" width="160" height="16" rx="3" fill="#1C102C" stroke="#C084FC" strokeWidth="0.8" />
+                        <text
+                          x="665"
+                          y="255"
+                          fill="#E9D5FF"
+                          fontSize="8.5"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          R2: HUNTS WEDGE BUSTER
+                        </text>
+
+                        {/* Upfield Returner Curve Arc (Bottom to Top) */}
+                        <path
+                          d="M 430 560 Q 370 535, 800 460 L 835 320"
+                          fill="none"
+                          stroke="#F59E0B"
+                          strokeWidth="3.5"
+                          strokeDasharray="6 3"
+                          markerEnd="url(#stKeyArrow)"
+                          opacity="0.9"
+                        />
+                      </>
+                    )}
+
+                    {isHandsTeam && (
+                      <>
+                        {/* Shaded Hands Recovery Zone across the line */}
+                        <rect
+                          x="60"
+                          y="140"
+                          width="880"
+                          height="130"
+                          fill="#F59E0B"
+                          fillOpacity="0.07"
+                          stroke="#F59E0B"
+                          strokeWidth="1.5"
+                          strokeDasharray="6 4"
+                        />
+                        <text
+                          x="500"
+                          y="155"
+                          fill="#FCD34D"
+                          fontSize="11"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          ★ HANDS TEAM ONSIDE RECOVERY WALL (ALL 11 ADVANCED)
+                        </text>
+                      </>
+                    )}
+                  </g>
+                )}
+
+                {/* Movement / Lane Path Vectors (supports waypoints for turns & scraping) */}
                 {showPaths &&
-                  activeUnit.players.map((p) => {
+                  activePlayers.map((p) => {
                     if (p.targetX === undefined || p.targetY === undefined) return null;
                     const isKey = p.isKickerOrKey;
+                    const points = [
+                      { x: p.x, y: p.y },
+                      ...(p.waypoints || []),
+                      { x: p.targetX, y: p.targetY },
+                    ];
+                    const d = points
+                      .map((pt, idx) => `${idx === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`)
+                      .join(' ');
                     return (
                       <g key={`path-${p.id}`}>
-                        <line
-                          x1={p.x}
-                          y1={p.y}
-                          x2={p.targetX}
-                          y2={p.targetY}
+                        <path
+                          d={d}
+                          fill="none"
                           stroke={isKey ? '#F59E0B' : '#14B8A6'}
                           strokeWidth="2.5"
                           strokeDasharray="5 3"
@@ -297,7 +633,7 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                   })}
 
                 {/* Player Circles */}
-                {activeUnit.players.map((p) => {
+                {activePlayers.map((p) => {
                   const isSelected = selectedPlayerId === p.id;
                   const isKey = p.isKickerOrKey;
 
@@ -358,9 +694,9 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                       {isSelected && (
                         <g>
                           <rect
-                            x={p.x - 60}
+                            x={p.x - 70}
                             y={p.y - 34}
-                            width="120"
+                            width="140"
                             height="18"
                             rx="4"
                             fill="#0A1C24"
@@ -406,17 +742,24 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                   </div>
                 </div>
 
-                {selectedPlayer.isKickerOrKey && (
-                  <span className="px-2.5 py-1 rounded bg-amber-950 text-amber-300 text-xs font-mono font-bold border border-amber-700/50">
-                    ★ Key Specialist
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {isKickReturn && (
+                    <span className="px-2.5 py-1 rounded bg-teal-950 text-teal-300 text-xs font-mono font-bold border border-teal-700/50">
+                      {isWheelLeft ? 'Wheel Left' : 'Wheel Right'}
+                    </span>
+                  )}
+                  {selectedPlayer.isKickerOrKey && (
+                    <span className="px-2.5 py-1 rounded bg-amber-950 text-amber-300 text-xs font-mono font-bold border border-amber-700/50">
+                      ★ Key Specialist
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                 <div className="p-3 rounded-lg bg-[#060E13] border border-[#162A33]">
                   <span className="text-[10px] uppercase font-mono text-slate-400 block font-semibold">
-                    Core Responsibility & Alignment
+                    Core Responsibility & Assignment ({isKickReturn ? (isWheelLeft ? 'Wheel Left' : 'Wheel Right') : 'Base'})
                   </span>
                   <p className="text-slate-200 mt-1 leading-relaxed">
                     {selectedPlayer.responsibility}
