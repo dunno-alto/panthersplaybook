@@ -1,0 +1,6 @@
+{
+  "name": "Playbook Studio -- Split Back Veer",
+  "description": "Tactical playbook, defensive front simulator, and execution drill system for the Split Back Veer offense.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
