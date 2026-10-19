@@ -638,14 +638,14 @@ export const INSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
     split: 'Under Center',
     stance: 'Knees bent, thumbs together, scanning keys pre-snap.',
     aimingPoint: 'Playside Mesh Point / Option Alley',
-    footwork: '4:30 step, ride B-gap mesh with 3; read #1 Dive Key then #2 Pitch Key.',
+    footwork: '4:30 step, ride B-gap mesh with 2 (Playside Dive Back); read #1 Dive Key then #2 Pitch Key.',
     assignmentsByFront: {
-      '5-3': 'Read #1 4b-Tech DT; pull if he crashes, give to 3 if he widens/bull rushes. If pull, attack #2 9-Tech.',
-      '4-4': 'Read #1 5-Tech End; pull if he crashes, give to 3 if he widens. If pull, attack #2 SOLB.',
-      '4-3': 'Read #1 Strong End; pull if he crashes, give to 3 if he widens. If pull, attack #2 Sam LB.',
-      '3-4': 'Read #1 4-Tech End; pull if he crashes, give to 3 if he widens. If pull, attack #2 Strong OLB.',
-      '6-2': 'Read #1 4-Tech DT; pull if he crashes, give to 3 if he widens. If pull, attack #2 9-Tech End.',
-      '5-2': 'Read #1 4-Tech DT; pull if he crashes, give to 3 if he widens. If pull, attack #2 Monster.',
+      '5-3': 'Read #1 4b-Tech DT; pull if he crashes, give to 2 if he widens/bull rushes. If pull, attack #2 9-Tech with 3 trailing on pitch.',
+      '4-4': 'Read #1 5-Tech End; pull if he crashes, give to 2 if he widens. If pull, attack #2 SOLB with 3 trailing on pitch.',
+      '4-3': 'Read #1 Strong End; pull if he crashes, give to 2 if he widens. If pull, attack #2 Sam LB with 3 trailing on pitch.',
+      '3-4': 'Read #1 4-Tech End; pull if he crashes, give to 2 if he widens. If pull, attack #2 Strong OLB with 3 trailing on pitch.',
+      '6-2': 'Read #1 4-Tech DT; pull if he crashes, give to 2 if he widens. If pull, attack #2 9-Tech End with 3 trailing on pitch.',
+      '5-2': 'Read #1 4-Tech DT; pull if he crashes, give to 2 if he widens. If pull, attack #2 Monster with 3 trailing on pitch.',
     },
     coachingCue: 'Eyes glued to #1 Dive Key jersey numbers from snap to disconnect.',
     commonErrorsFix: 'Looking down at the football during the mesh ruins option reads.',
@@ -653,42 +653,42 @@ export const INSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
   LH: {
     id: 'LH',
     label: '3',
-    fullName: '3 (Left Halfback / Dive Back)',
+    fullName: '3 (Left Halfback / Backside Pitch Back)',
     group: 'BACK',
     split: '4 yards deep, inside foot behind Left Guard outside heel',
     stance: '2-point stance, hands on knees, zero false steps.',
-    aimingPoint: 'Playside B-Gap (RG Outside Hip)',
-    footwork: '45° crossover to RG hip; soft pocket shelf; hammer downhill.',
+    aimingPoint: '5x2 Pitch Track (Right Perimeter Alley)',
+    footwork: 'Crossover step right, sprint across backfield into 5x2 pitch relationship outside #2.',
     assignmentsByFront: {
-      '5-3': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
-      '4-4': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
-      '4-3': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
-      '3-4': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
-      '6-2': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
-      '5-2': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
+      '5-3': 'Backside pitch back: sprint across backfield into 5x2 pitch trail relationship outside #2 (Pitch Key).',
+      '4-4': 'Backside pitch back: sprint across backfield into 5x2 pitch trail relationship outside #2 SOLB.',
+      '4-3': 'Backside pitch back: sprint across backfield into 5x2 pitch trail relationship outside #2 Sam LB.',
+      '3-4': 'Backside pitch back: sprint across backfield into 5x2 pitch trail relationship outside #2 Strong OLB.',
+      '6-2': 'Backside pitch back: sprint across backfield into 5x2 pitch trail relationship outside #2 9-Tech End.',
+      '5-2': 'Backside pitch back: sprint across backfield into 5x2 pitch trail relationship outside #2 Monster.',
     },
-    coachingCue: 'Tight on Guard\'s hip — soft pocket shelf for the football.',
-    commonErrorsFix: 'Curving too wide toward the Tackle on Inside Veer lets #1 tackle both backs.',
+    coachingCue: 'Backside Pitch Back: Maintain exact 5 yards width x 2 yards depth relationship with QB.',
+    commonErrorsFix: 'Trailing too close behind the 1 on option pitches allows one defender to tackle both.',
   },
   RH: {
     id: 'RH',
     label: '2',
-    fullName: '2 (Right Halfback / Pitch Back)',
+    fullName: '2 (Right Halfback / Playside Dive Back)',
     group: 'BACK',
     split: '4 yards deep, inside foot behind Right Guard outside heel',
     stance: '2-point stance facing straight ahead so defense gets no tip.',
-    aimingPoint: '5x2 Pitch Track',
-    footwork: 'Drop-step, sprint to 5x2 pitch relationship outside #2.',
+    aimingPoint: 'Playside B-Gap (RG Outside Hip)',
+    footwork: 'Downhill 45° step into RG hip; soft pocket shelf; hammer downhill.',
     assignmentsByFront: {
-      '5-3': 'Sprint to 5x2 pitch trail relationship outside #2 (Pitch Key).',
-      '4-4': 'Sprint to 5x2 pitch trail relationship outside #2 SOLB.',
-      '4-3': 'Sprint to 5x2 pitch trail relationship outside #2 Sam LB.',
-      '3-4': 'Sprint to 5x2 pitch trail relationship outside #2 Strong OLB.',
-      '6-2': 'Sprint to 5x2 pitch trail relationship outside #2 9-Tech End.',
-      '5-2': 'Sprint to 5x2 pitch trail relationship outside #2 Monster.',
+      '5-3': 'Playside dive back: explode at RG outside hip (B-Gap) downhill; hammer through crease unless QB pulls.',
+      '4-4': 'Playside dive back: explode at RG outside hip (B-Gap) downhill; hammer through crease unless QB pulls.',
+      '4-3': 'Playside dive back: explode at RG outside hip (B-Gap) downhill; hammer through crease unless QB pulls.',
+      '3-4': 'Playside dive back: explode at RG outside hip (B-Gap) downhill; hammer through crease unless QB pulls.',
+      '6-2': 'Playside dive back: explode at RG outside hip (B-Gap) downhill; hammer through crease unless QB pulls.',
+      '5-2': 'Playside dive back: explode at RG outside hip (B-Gap) downhill; hammer through crease unless QB pulls.',
     },
-    coachingCue: 'Maintain exact 5 yards width x 2 yards depth relationship with QB.',
-    commonErrorsFix: 'Trailing too close behind the 1 on option pitches allows one defender to tackle both.',
+    coachingCue: 'Playside Dive Back: Tight on Guard\'s hip — soft pocket shelf for the football.',
+    commonErrorsFix: 'Curving too wide toward the Tackle on Inside Veer lets #1 tackle both backs.',
   },
   W: {
     id: 'W',
@@ -805,42 +805,44 @@ export const OUTSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
   QB: {
     ...INSIDE_VEER_POSITION_RULES.QB,
     aimingPoint: 'C-Gap Mesh Point / D-Gap Option Alley',
-    footwork: '5:00 step, ride C-gap mesh with 3; read EMLOS (#1) then Corner (#2).',
+    footwork: '5:00 step, ride C-gap mesh with 2 (Playside Dive Back); read EMLOS (#1) then Corner (#2).',
     assignmentsByFront: {
-      '5-3': 'Read #1 9-Tech End; pull if he crashes, give to 3 if he widens. If pull, attack Corner #2.',
-      '4-4': 'Read #1 5-Tech End; pull if he crashes, give to 3 if he widens. If pull, attack OLB #2.',
-      '4-3': 'Read #1 Strong End; pull if he crashes, give to 3 if he widens. If pull, attack Sam #2.',
-      '3-4': 'Read #1 Strong OLB; pull if he crashes, give to 3 if he widens. If pull, attack Safety #2.',
-      '6-2': 'Read #1 9-Tech End; pull if he crashes, give to 3 if he widens. If pull, attack Corner #2.',
-      '5-2': 'Read #1 Monster End; pull if he crashes, give to 3 if he widens. If pull, attack Monster #2.',
+      '5-3': 'Read #1 9-Tech End; pull if he crashes, give to 2 if he widens. If pull, attack Corner #2 with 3 trailing on pitch.',
+      '4-4': 'Read #1 5-Tech End; pull if he crashes, give to 2 if he widens. If pull, attack OLB #2 with 3 trailing on pitch.',
+      '4-3': 'Read #1 Strong End; pull if he crashes, give to 2 if he widens. If pull, attack Sam #2 with 3 trailing on pitch.',
+      '3-4': 'Read #1 Strong OLB; pull if he crashes, give to 2 if he widens. If pull, attack Safety #2 with 3 trailing on pitch.',
+      '6-2': 'Read #1 9-Tech End; pull if he crashes, give to 2 if he widens. If pull, attack Corner #2 with 3 trailing on pitch.',
+      '5-2': 'Read #1 Monster End; pull if he crashes, give to 2 if he widens. If pull, attack Monster #2 with 3 trailing on pitch.',
     },
     coachingCue: 'Read the EMLOS End; force the perimeter defender to declare.',
   },
   LH: {
     ...INSIDE_VEER_POSITION_RULES.LH,
-    aimingPoint: 'Outside Hip of Right Tackle (Playside C-Gap)',
-    footwork: 'Wider 45° crossover track aiming 1 yard wider than Inside Veer.',
+    aimingPoint: 'Wider 5x2 Pitch Track (Right Sideline Alley)',
+    footwork: 'Crossover step right, sprint across backfield to wide 5x2 pitch trail outside #2 Corner.',
     assignmentsByFront: {
-      '5-3': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
-      '4-4': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
-      '4-3': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
-      '3-4': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
-      '6-2': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
-      '5-2': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+      '5-3': 'Backside pitch back: sprint to wider 5x2 pitch trail outside #2 Corner.',
+      '4-4': 'Backside pitch back: sprint to 5x2 pitch trail outside #2 OLB.',
+      '4-3': 'Backside pitch back: sprint to 5x2 pitch trail outside #2 Sam LB.',
+      '3-4': 'Backside pitch back: sprint to 5x2 pitch trail outside #2 Strong OLB.',
+      '6-2': 'Backside pitch back: sprint to 5x2 pitch trail outside #2 Corner.',
+      '5-2': 'Backside pitch back: sprint to 5x2 pitch trail outside #2 Monster.',
     },
-    coachingCue: 'Hit the Tackle\'s outside hip full speed — press the C-Gap.',
+    coachingCue: 'Backside Pitch Back: Wider pitch track — stay outside the numbers.',
   },
   RH: {
     ...INSIDE_VEER_POSITION_RULES.RH,
+    aimingPoint: 'Outside Hip of Right Tackle (Playside C-Gap)',
+    footwork: 'Downhill 5:00 track to RT outside hip; press off-tackle seam.',
     assignmentsByFront: {
-      '5-3': 'Sprint to wider 5x2 pitch trail outside #2 Corner.',
-      '4-4': 'Sprint to 5x2 pitch trail outside #2 OLB.',
-      '4-3': 'Sprint to 5x2 pitch trail outside #2 Sam LB.',
-      '3-4': 'Sprint to 5x2 pitch trail outside #2 Strong OLB.',
-      '6-2': 'Sprint to 5x2 pitch trail outside #2 Corner.',
-      '5-2': 'Sprint to 5x2 pitch trail outside #2 Monster.',
+      '5-3': 'Playside dive back: explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+      '4-4': 'Playside dive back: explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+      '4-3': 'Playside dive back: explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+      '3-4': 'Playside dive back: explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+      '6-2': 'Playside dive back: explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+      '5-2': 'Playside dive back: explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
     },
-    coachingCue: 'Wider pitch track — stay outside the numbers.',
+    coachingCue: 'Playside Dive Back: Hit the Tackle\'s outside hip full speed — press the C-Gap.',
   },
   W: {
     ...INSIDE_VEER_POSITION_RULES.W,
@@ -1384,13 +1386,13 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
     primaryReadLabel: '#1 Dive Key (Playside 4b/5-Tech DT)',
     secondaryReadLabel: '#2 Pitch Key (EMLOS 7/9-Tech End)',
     summary:
-      'The foundation of the Split Back Veer offense. 3 (Left Halfback) explodes at the Right Guard\'s outside hip (B-Gap) while 2 (Right Halfback) maintains a 5x2 pitch relationship. Right Tackle (RT) inside veer-releases past #1 to the Mike LB, leaving #1 and #2 completely unblocked.',
+      'The foundation of the Split Back Veer offense. The playside back (2 / Right Halfback) explodes downhill at the Right Guard\'s outside hip (B-Gap) as the dive back, while the backside back (3 / Left Halfback) crosses into a 5x2 pitch relationship. Right Tackle (RT) inside veer-releases past #1 to the Mike LB, leaving #1 and #2 completely unblocked.',
     whenToCall:
       'First play of the game and whenever the defense packs 8 or 9 players into the box to stop inside runs.',
     qbDecisionMatrix: {
-      crashPull: 'If #1 crashes inside to tackle 3 → 1 pulls ball & attacks #2 on perimeter.',
-      squeezeGive: 'If #1 sits square, widens, or Bull Rushes → GIVE to 3 diving through B-gap.',
-      pitchPhase: 'Once 1 pulls: if #2 commits to tackle 1 → PITCH to 2 in stride; if #2 feathers to 2 → 1 cuts upfield inside #2.',
+      crashPull: 'If #1 crashes inside to tackle 2 (dive back) → 1 pulls ball & attacks #2 on perimeter.',
+      squeezeGive: 'If #1 sits square, widens, or Bull Rushes → GIVE to 2 (dive back) driving through B-gap.',
+      pitchPhase: 'Once 1 pulls: if #2 commits to tackle 1 → PITCH to 3 (pitch back) in stride; if #2 feathers to 3 → 1 cuts upfield inside #2.',
     },
     coachingPhases: [
       {
@@ -1403,13 +1405,13 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
         phase: 2,
         timeRange: [0.25, 0.55],
         title: 'Phase 2: 4:30 Step, B-Gap Dive Mesh & #1 Read',
-        detail: '3 hits RG outside hip full speed. RT inside veer-releases to MLB. 1 rides 3 while reading #1 shoulders.',
+        detail: '2 (playside dive back) hits RG outside hip full speed. RT inside veer-releases to MLB. 1 rides 2 while reading #1 shoulders.',
       },
       {
         phase: 3,
         timeRange: [0.55, 0.8],
         title: 'Phase 3: Option Disconnect & 5x2 Pitch Leverage',
-        detail: 'Based on #1, 3 carries into secondary OR 1 disconnects with 2 maintaining 5 yards width x 2 yards depth.',
+        detail: 'Based on #1, 2 carries into secondary OR 1 disconnects with 3 (backside pitch back) maintaining 5 yards width x 2 yards depth.',
       },
       {
         phase: 4,
@@ -1436,11 +1438,11 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
       const qbKeep = !diveGive && pitchBehavior === 'feather_pitch';
       const pitchTriggered = !diveGive && pitchBehavior === 'commit_qb';
 
-      const finalCarrier = diveGive ? 'LH' : pitchTriggered ? 'RH' : 'QB';
+      const finalCarrier = diveGive ? 'RH' : pitchTriggered ? 'LH' : 'QB';
       const outcomeLabel = diveGive
-        ? 'GIVE TO 3 (B-Gap Dive)'
+        ? 'GIVE TO 2 (B-Gap Dive)'
         : pitchTriggered
-        ? 'PITCH TO 2 (Perimeter Alley)'
+        ? 'PITCH TO 3 (Perimeter Alley)'
         : '1 KEEPER (Off-Tackle Seam)';
 
       const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
@@ -1457,25 +1459,27 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
             : [base.XTE, { x: 405, y: 325 }, { x: 486, y: 192 }],
         },
         W: { role: 'block_veer', points: [base.W, { x: base.W.x + 28, y: 335 }, { x: 742, y: 268 }] },
-        LH: {
+        // RH is playside back -> DIVE BACK
+        RH: {
           role: 'dive',
           points: diveGive
-            ? [base.LH, { x: 526, y: 408 }, { x: 556, y: 332 }, { x: 562, y: 185 }]
-            : [base.LH, { x: 526, y: 408 }, { x: 564, y: 354 }, { x: 575, y: 325 }],
+            ? [base.RH, { x: 556, y: 430 }, { x: 562, y: 345 }, { x: 565, y: 185 }]
+            : [base.RH, { x: 556, y: 430 }, { x: 562, y: 350 }, { x: 568, y: 320 }],
         },
         QB: {
           role: 'qb',
           points: diveGive
-            ? [base.QB, { x: 524, y: 412 }, { x: 618, y: 406 }, { x: 658, y: 375 }]
+            ? [base.QB, { x: 528, y: 418 }, { x: 618, y: 406 }, { x: 658, y: 375 }]
             : qbKeep
-            ? [base.QB, { x: 524, y: 412 }, { x: 626, y: 402 }, { x: 642, y: 320 }, { x: 648, y: 175 }]
-            : [base.QB, { x: 524, y: 412 }, { x: 628, y: 404 }, { x: 644, y: 392 }],
+            ? [base.QB, { x: 528, y: 418 }, { x: 626, y: 402 }, { x: 642, y: 320 }, { x: 648, y: 175 }]
+            : [base.QB, { x: 528, y: 418 }, { x: 628, y: 404 }, { x: 644, y: 392 }],
         },
-        RH: {
+        // LH is backside back -> PITCH BACK
+        LH: {
           role: 'pitch',
           points: pitchTriggered
-            ? [base.RH, { x: 636, y: 476 }, { x: 716, y: 418 }, { x: 748, y: 300 }, { x: 758, y: 155 }]
-            : [base.RH, { x: 636, y: 476 }, { x: 716, y: 418 }, { x: 754, y: 345 }],
+            ? [base.LH, { x: 535, y: 480 }, { x: 645, y: 450 }, { x: 730, y: 380 }, { x: 755, y: 280 }, { x: 765, y: 155 }]
+            : [base.LH, { x: 535, y: 480 }, { x: 645, y: 450 }, { x: 730, y: 380 }, { x: 750, y: 335 }],
         },
       };
 
@@ -1487,15 +1491,17 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
           diveGive,
           qbKeep,
           pitchTriggered,
-          finalCarrier: targetSide === 'left' ? (finalCarrier === 'LH' ? 'RH' : finalCarrier === 'RH' ? 'LH' : 'QB') : finalCarrier,
-          outcomeLabel: targetSide === 'left' ? outcomeLabel.replace('3', '2').replace('2', '3') : outcomeLabel,
+          finalCarrier: targetSide === 'left' ? (finalCarrier === 'RH' ? 'LH' : finalCarrier === 'LH' ? 'RH' : 'QB') : finalCarrier,
+          outcomeLabel: targetSide === 'left'
+            ? (diveGive ? 'GIVE TO 3 (B-Gap Dive)' : pitchTriggered ? 'PITCH TO 2 (Perimeter Alley)' : '1 KEEPER (Off-Tackle Seam)')
+            : outcomeLabel,
           expectedYards: diveGive ? '+6.5 Yds (Interior B-Gap)' : pitchTriggered ? '+14.5 Yds (Perimeter Alley)' : '+9.0 Yds (Off-Tackle Seam)',
           coachingExplanation: diveGive
             ? (diveBehavior === 'upfield'
-              ? '#1 executed a Bull Rush into the line — 1 leaves ball in stomach of dive back creasing right past the rush into the secondary.'
-              : '#1 Dive Key stayed square/wide. 1 leaves ball in dive back stomach for a clean 6+ yard B-gap crease.')
+              ? '#1 executed a Bull Rush into the line — 1 leaves ball in stomach of playside dive back creasing right past the rush into the secondary.'
+              : '#1 Dive Key stayed square/wide. 1 leaves ball in playside dive back stomach for a clean 6+ yard B-gap crease.')
             : pitchTriggered
-            ? '#1 crashed and #2 committed to 1 — 1 flips a clean wrist-pitch to pitch back in the open perimeter.'
+            ? '#1 crashed and #2 committed to 1 — 1 flips a clean wrist-pitch to backside pitch back in the open perimeter.'
             : '#1 crashed and #2 feathered wide — 1 plants outside foot and cuts upfield inside #2.',
         },
       };
@@ -1514,13 +1520,13 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
     primaryReadLabel: '#1 Dive Key (EMLOS 7/9-Tech Defensive End)',
     secondaryReadLabel: '#2 Pitch Key (Playside Corner / Alley Force)',
     summary:
-      'The essential companion to Inside Veer. When the defense widens its tackle to stop the B-gap dive, Outside Veer down-blocks the interior: Playside Tackle (RT) and Guard (RG) wash the DT and Nose inside. Y inside veer-releases to the Linebacker. 1 reads the Defensive End (EMLOS) as #1, and 3 hits the C-gap dive track right on RT\'s outside hip.',
+      'The essential companion to Inside Veer. When the defense widens its tackle to stop the B-gap dive, Outside Veer down-blocks the interior: Playside Tackle (RT) and Guard (RG) wash the DT and Nose inside. Y inside veer-releases to the Linebacker. 1 reads the Defensive End (EMLOS) as #1, and 2 (playside dive back) hits the C-gap dive track right on RT\'s outside hip, while 3 (backside pitch back) trails on pitch.',
     whenToCall:
       'When the defense stacks the B-gap or plays a heavy 4-tech/5-tech who pinches inside against Inside Veer.',
     qbDecisionMatrix: {
       crashPull: 'If #1 (EMLOS End) crashes inside on the C-gap dive → 1 pulls and attacks outside.',
-      squeezeGive: 'If #1 (EMLOS End) widens, sits square, or Bull Rushes → GIVE to 3 diving through C-gap off RT\'s down block.',
-      pitchPhase: 'If 1 pulls: if #2 (Corner/Safety) attacks 1 → PITCH to 2 on perimeter; if #2 stays wide → 1 turns up inside.',
+      squeezeGive: 'If #1 (EMLOS End) widens, sits square, or Bull Rushes → GIVE to 2 (dive back) diving through C-gap off RT\'s down block.',
+      pitchPhase: 'If 1 pulls: if #2 (Corner/Safety) attacks 1 → PITCH to 3 (pitch back) on perimeter; if #2 stays wide → 1 turns up inside.',
     },
     coachingPhases: [
       {
@@ -1533,19 +1539,19 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
         phase: 2,
         timeRange: [0.25, 0.55],
         title: 'Phase 2: 5:00 Step, C-Gap Dive Mesh & EMLOS Read',
-        detail: '3 takes a wider track to RT outside hip (C-Gap). Y releases inside past the DE to the Mike/Sam LB. 1 reads the EMLOS (#1).',
+        detail: '2 (playside dive back) takes a wider track to RT outside hip (C-Gap). Y releases inside past the DE to the Mike/Sam LB. 1 reads the EMLOS (#1).',
       },
       {
         phase: 3,
         timeRange: [0.55, 0.8],
         title: 'Phase 3: Wider Perimeter Pitch Track',
-        detail: 'If EMLOS crashes, 1 pulls and sprints to the D-gap alley with 2 maintaining 5x2 leverage outside.',
+        detail: 'If EMLOS crashes, 1 pulls and sprints to the D-gap alley with 3 (backside pitch back) maintaining 5x2 leverage outside.',
       },
       {
         phase: 4,
         timeRange: [0.8, 1.0],
         title: 'Phase 4: Optioning the Cornerback in Space',
-        detail: '1 forces the Cornerback (#2) to declare: pitch to 2 for the sideline or 1 keeper off-tackle.',
+        detail: '1 forces the Cornerback (#2) to declare: pitch to 3 for the sideline or 1 keeper off-tackle.',
       },
     ],
     positionRules: OUTSIDE_VEER_POSITION_RULES,
@@ -1555,11 +1561,11 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
       const qbKeep = !diveGive && pitchBehavior === 'feather_pitch';
       const pitchTriggered = !diveGive && pitchBehavior === 'commit_qb';
 
-      const finalCarrier = diveGive ? 'LH' : pitchTriggered ? 'RH' : 'QB';
+      const finalCarrier = diveGive ? 'RH' : pitchTriggered ? 'LH' : 'QB';
       const outcomeLabel = diveGive
-        ? 'GIVE TO 3 (C-Gap Off-Tackle Dive)'
+        ? 'GIVE TO 2 (C-Gap Off-Tackle Dive)'
         : pitchTriggered
-        ? 'PITCH TO 2 (Sideline Alley)'
+        ? 'PITCH TO 3 (Sideline Alley)'
         : '1 KEEPER (D-Gap Burst)';
 
       const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
@@ -1576,25 +1582,27 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
             : [base.XTE, { x: 408, y: 325 }, { x: 488, y: 195 }],
         },
         W: { role: 'block_veer', points: [base.W, { x: base.W.x + 35, y: 330 }, { x: 760, y: 260 }] },
-        LH: {
+        // RH is playside back -> DIVE BACK
+        RH: {
           role: 'dive',
           points: diveGive
-            ? [base.LH, { x: 542, y: 412 }, { x: 612, y: 348 }, { x: 622, y: 185 }]
-            : [base.LH, { x: 542, y: 412 }, { x: 612, y: 360 }],
+            ? [base.RH, { x: 580, y: 440 }, { x: 615, y: 348 }, { x: 624, y: 185 }]
+            : [base.RH, { x: 580, y: 440 }, { x: 615, y: 360 }, { x: 622, y: 325 }],
         },
         QB: {
           role: 'qb',
           points: diveGive
-            ? [base.QB, { x: 540, y: 416 }, { x: 642, y: 410 }, { x: 685, y: 375 }]
+            ? [base.QB, { x: 542, y: 418 }, { x: 642, y: 410 }, { x: 685, y: 375 }]
             : qbKeep
-            ? [base.QB, { x: 540, y: 416 }, { x: 658, y: 408 }, { x: 688, y: 325 }, { x: 694, y: 175 }]
-            : [base.QB, { x: 540, y: 416 }, { x: 662, y: 408 }, { x: 685, y: 395 }],
+            ? [base.QB, { x: 542, y: 418 }, { x: 658, y: 408 }, { x: 688, y: 325 }, { x: 694, y: 175 }]
+            : [base.QB, { x: 542, y: 418 }, { x: 662, y: 408 }, { x: 685, y: 395 }],
         },
-        RH: {
+        // LH is backside back -> PITCH BACK
+        LH: {
           role: 'pitch',
           points: pitchTriggered
-            ? [base.RH, { x: 654, y: 472 }, { x: 742, y: 415 }, { x: 772, y: 295 }, { x: 780, y: 155 }]
-            : [base.RH, { x: 654, y: 472 }, { x: 742, y: 415 }, { x: 776, y: 345 }],
+            ? [base.LH, { x: 545, y: 480 }, { x: 655, y: 450 }, { x: 745, y: 360 }, { x: 775, y: 280 }, { x: 785, y: 155 }]
+            : [base.LH, { x: 545, y: 480 }, { x: 655, y: 450 }, { x: 745, y: 360 }, { x: 775, y: 335 }],
         },
       };
 
@@ -1606,15 +1614,17 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
           diveGive,
           qbKeep,
           pitchTriggered,
-          finalCarrier: targetSide === 'left' ? (finalCarrier === 'LH' ? 'RH' : finalCarrier === 'RH' ? 'LH' : 'QB') : finalCarrier,
-          outcomeLabel: targetSide === 'left' ? outcomeLabel.replace('3', '2').replace('2', '3') : outcomeLabel,
+          finalCarrier: targetSide === 'left' ? (finalCarrier === 'RH' ? 'LH' : finalCarrier === 'LH' ? 'RH' : 'QB') : finalCarrier,
+          outcomeLabel: targetSide === 'left'
+            ? (diveGive ? 'GIVE TO 3 (C-Gap Off-Tackle Dive)' : pitchTriggered ? 'PITCH TO 2 (Sideline Alley)' : '1 KEEPER (D-Gap Burst)')
+            : outcomeLabel,
           expectedYards: diveGive ? '+7.5 Yds (Off-Tackle C-Gap)' : pitchTriggered ? '+16.0 Yds (Sideline Strike)' : '+9.5 Yds (1 Keeper)',
           coachingExplanation: diveGive
             ? (diveBehavior === 'upfield'
-              ? '#1 EMLOS End executed a Bull Rush — 1 leaves ball in dive back\'s stomach as dive back creases off down block.'
-              : 'EMLOS End widened or sat flat — dive back hits C-gap crease off down block for big off-tackle yards.')
+              ? '#1 EMLOS End executed a Bull Rush — 1 leaves ball in playside dive back\'s stomach as dive back creases off down block.'
+              : 'EMLOS End widened or sat flat — playside dive back hits C-gap crease off down block for big off-tackle yards.')
             : pitchTriggered
-            ? 'EMLOS End crashed hard on C-gap dive, and Corner came up on 1 — 1 pitches to perimeter for big yardage.'
+            ? 'EMLOS End crashed hard on C-gap dive, and Corner came up on 1 — 1 pitches to backside pitch back on perimeter for big yardage.'
             : 'EMLOS End crashed on Dive, and Corner backed off — 1 keeps and accelerates North-South into the alley.',
         },
       };
@@ -2012,8 +2022,8 @@ export const PRACTICE_DRILLS: PracticeDrill[] = [
     objective: 'Master both the Inside Veer (B-Gap / #1 DT read) and Outside Veer (C-Gap / #1 EMLOS read) meshes without ever looking down at the football.',
     setupSteps: [
       'Set cones for Center, Right Guard, and Right Tackle splits.',
-      'Reps 1–5: Inside Veer track (LH aims at RG hip, Coach stands on RG outside shoulder).',
-      'Reps 6–10: Outside Veer track (LH aims at RT outside hip, Coach stands on edge outside RT).',
+      'Reps 1–5: Inside Veer track (RH playside dive back aims at RG hip, Coach stands on RG outside shoulder, LH backside back works 5x2 pitch trail).',
+      'Reps 6–10: Outside Veer track (RH playside dive back aims at RT outside hip, Coach stands on edge outside RT, LH backside back works wider pitch trail).',
     ],
     coachingPoints: [
       'Dive Back soft pocket shelf: top arm parallel to ground, eyes up field.',
@@ -2089,14 +2099,14 @@ function adaptPositionRulesForTargetSide(
     let newCue = rule.coachingCue;
 
     if (concept === 'inside_veer') {
-      if (pid === 'RH') {
+      if (pid === 'LH') {
         newAiming = 'Playside B-Gap (LG Outside Hip)';
-        newFootwork = '7:30 crossover to LG hip; soft pocket shelf; hammer downhill.';
-        newCue = '2-Back: Explode downhill at LG outside hip on 41 Inside Veer.';
-      } else if (pid === 'LH') {
+        newFootwork = 'Downhill step to LG hip; soft pocket shelf; hammer downhill.';
+        newCue = '3-Back (Playside Dive Back): Explode downhill at LG outside hip on 41 Inside Veer.';
+      } else if (pid === 'RH') {
         newAiming = 'Left Sideline 5x2 Pitch Track';
-        newFootwork = 'Drop-step left, sprint to 5x2 pitch relationship with QB outside left edge.';
-        newCue = '3-Back: Maintain 5 yards width x 2 yards depth on left pitch alley.';
+        newFootwork = 'Crossover step left, sprint across backfield to 5x2 pitch relationship with QB outside left edge.';
+        newCue = '2-Back (Backside Pitch Back): Maintain 5 yards width x 2 yards depth on left pitch alley.';
       } else if (pid === 'LT') {
         newAiming = 'Inside Veer Release past #1 Dive Key to Will/Mike LB';
         newCue = 'Rip past #1 without contact directly to the second level.';
@@ -2106,12 +2116,13 @@ function adaptPositionRulesForTargetSide(
         newAiming = 'Backside Cutoff';
       }
     } else if (concept === 'outside_veer') {
-      if (pid === 'RH') {
+      if (pid === 'LH') {
         newAiming = 'Playside C-Gap (LT Outside Hip)';
-        newCue = '2-Back: Hit the LT outside hip full speed on 45 Outside Veer.';
-      } else if (pid === 'LH') {
+        newCue = '3-Back (Playside Dive Back): Hit the LT outside hip full speed on 45 Outside Veer.';
+      } else if (pid === 'RH') {
         newAiming = 'Left Sideline Pitch Track';
-        newCue = '3-Back: Wider pitch track outside the left numbers.';
+        newFootwork = 'Crossover step left, sprint across backfield to wide 5x2 pitch trail outside left edge.';
+        newCue = '2-Back (Backside Pitch Back): Wider pitch track outside the left numbers.';
       } else if (pid === 'LT') {
         newAiming = 'Heavy Down Block on Defensive Tackle';
       }

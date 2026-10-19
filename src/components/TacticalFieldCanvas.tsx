@@ -348,8 +348,16 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
       return currentOffensivePositions.QB;
     }
 
+    const isOptionPlay = play.playType === 'Triple Option';
+    const diveBackId = isOptionPlay
+      ? (targetSide === 'left' ? 'LH' : 'RH')
+      : (targetSide === 'left' ? 'RH' : 'LH');
+    const pitchBackId = isOptionPlay
+      ? (targetSide === 'left' ? 'RH' : 'LH')
+      : (targetSide === 'left' ? 'LH' : 'RH');
+
     if (simResult.ballCarrierSequence.diveGive) {
-      return currentOffensivePositions.LH;
+      return currentOffensivePositions[diveBackId] || currentOffensivePositions.QB;
     }
 
     if (simResult.ballCarrierSequence.pitchTriggered) {
@@ -358,9 +366,12 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
       }
       if (progress < 0.70) {
         const pitchFlightT = (progress - 0.54) / 0.16;
-        return interpolatePoints([currentOffensivePositions.QB, currentOffensivePositions.RH], pitchFlightT);
+        return interpolatePoints(
+          [currentOffensivePositions.QB, currentOffensivePositions[pitchBackId] || currentOffensivePositions.QB],
+          pitchFlightT
+        );
       }
-      return currentOffensivePositions.RH;
+      return currentOffensivePositions[pitchBackId] || currentOffensivePositions.QB;
     }
 
     return currentOffensivePositions.QB;
@@ -621,7 +632,10 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
           <g opacity="0.85">
             {(() => {
               const qbPt = currentOffensivePositions.QB;
-              const pbPt = currentOffensivePositions.RH;
+              const pitchBackId = play.playType === 'Triple Option'
+                ? (targetSide === 'left' ? 'RH' : 'LH')
+                : (targetSide === 'right' ? 'LH' : 'RH');
+              const pbPt = currentOffensivePositions[pitchBackId];
               if (!qbPt || !pbPt) return null;
               return (
                 <>

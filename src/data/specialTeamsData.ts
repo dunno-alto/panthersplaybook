@@ -546,7 +546,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
         name: 'Front Far Left',
         role: 'Front Blocker (Left End)',
         x: 160,
-        y: 170,
+        y: 190,
         targetX: 280,
         targetY: 370,
         waypoints: [{ x: 150, y: 370 }],
@@ -555,7 +555,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
         schemeVariants: {
           wheel_left: {
             x: 160,
-            y: 170,
+            y: 190,
             targetX: 280,
             targetY: 370,
             waypoints: [{ x: 150, y: 370 }],
@@ -565,7 +565,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
           },
           wheel_right: {
             x: 160,
-            y: 170,
+            y: 190,
             targetX: 740,
             targetY: 210,
             waypoints: [{ x: 850, y: 210 }],
@@ -575,7 +575,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
           },
           hands_team: {
             x: 140,
-            y: 170,
+            y: 175,
             targetX: 140,
             targetY: 155,
             waypoints: [],
@@ -592,7 +592,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
         name: 'Front Left Tackle',
         role: 'Front Blocker (Left Tackle)',
         x: 330,
-        y: 170,
+        y: 190,
         targetX: 270,
         targetY: 330,
         waypoints: [{ x: 150, y: 330 }],
@@ -601,7 +601,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
         schemeVariants: {
           wheel_left: {
             x: 330,
-            y: 170,
+            y: 190,
             targetX: 270,
             targetY: 330,
             waypoints: [{ x: 150, y: 330 }],
@@ -611,7 +611,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
           },
           wheel_right: {
             x: 330,
-            y: 170,
+            y: 190,
             targetX: 730,
             targetY: 250,
             waypoints: [{ x: 850, y: 250 }],
@@ -621,7 +621,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
           },
           hands_team: {
             x: 240,
-            y: 170,
+            y: 175,
             targetX: 240,
             targetY: 155,
             waypoints: [],
@@ -638,7 +638,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
         name: 'Front Center',
         role: 'Front Blocker (Center)',
         x: 500,
-        y: 170,
+        y: 190,
         targetX: 260,
         targetY: 290,
         waypoints: [{ x: 150, y: 290 }],
@@ -647,7 +647,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
         schemeVariants: {
           wheel_left: {
             x: 500,
-            y: 170,
+            y: 190,
             targetX: 260,
             targetY: 290,
             waypoints: [{ x: 150, y: 290 }],
@@ -657,7 +657,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
           },
           wheel_right: {
             x: 500,
-            y: 170,
+            y: 190,
             targetX: 740,
             targetY: 290,
             waypoints: [{ x: 850, y: 290 }],
@@ -667,7 +667,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
           },
           hands_team: {
             x: 340,
-            y: 170,
+            y: 175,
             targetX: 340,
             targetY: 155,
             waypoints: [],
@@ -684,7 +684,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
         name: 'Front Right Tackle',
         role: 'Front Blocker (Right Tackle)',
         x: 670,
-        y: 170,
+        y: 190,
         targetX: 250,
         targetY: 250,
         waypoints: [{ x: 150, y: 250 }],
@@ -693,7 +693,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
         schemeVariants: {
           wheel_left: {
             x: 670,
-            y: 170,
+            y: 190,
             targetX: 250,
             targetY: 250,
             waypoints: [{ x: 150, y: 250 }],
@@ -703,7 +703,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
           },
           wheel_right: {
             x: 670,
-            y: 170,
+            y: 190,
             targetX: 730,
             targetY: 330,
             waypoints: [{ x: 850, y: 330 }],
@@ -713,7 +713,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
           },
           hands_team: {
             x: 440,
-            y: 170,
+            y: 175,
             targetX: 440,
             targetY: 155,
             waypoints: [],
@@ -730,7 +730,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
         name: 'Front Far Right',
         role: 'Front Blocker (Right End)',
         x: 840,
-        y: 170,
+        y: 190,
         targetX: 240,
         targetY: 210,
         waypoints: [{ x: 150, y: 210 }],
@@ -739,7 +739,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
         schemeVariants: {
           wheel_left: {
             x: 840,
-            y: 170,
+            y: 190,
             targetX: 240,
             targetY: 210,
             waypoints: [{ x: 150, y: 210 }],
@@ -749,7 +749,7 @@ export const SPECIAL_TEAMS_PLAYBOOK: Record<SpecialTeamsUnitId, SpecialTeamsUnit
           },
           wheel_right: {
             x: 840,
-            y: 170,
+            y: 190,
             targetX: 720,
             targetY: 370,
             waypoints: [{ x: 850, y: 370 }],

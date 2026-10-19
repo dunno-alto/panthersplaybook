@@ -709,7 +709,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                           : 'text-slate-300 hover:text-white hover:bg-[#0D1820]'
                       }`}
                     >
-                      Feather to 2
+                      Feather to Pitch
                     </button>
                   </div>
                 </div>
