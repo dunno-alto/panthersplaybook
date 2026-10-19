@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   AlertCircle,
+  ArrowLeftRight,
   CheckCircle2,
   ChevronRight,
   Eye,
@@ -21,15 +22,28 @@ import {
   DefensiveFrontId,
   DiveKeyBehavior,
   EleventhPlayerMode,
+  OffensiveConcept,
   PitchKeyBehavior,
   PlayDefinition,
+  TargetSide,
   VEER_PLAYBOOK,
   XPlayerMode,
+  ZAlignmentSide,
+  ZAlignmentType,
+  formatOffensivePlayCall,
 } from '../data/veerPlaybookData';
 
 interface PlaySetupConsoleProps {
   selectedPlay: PlayDefinition;
-  onSelectPlay: (playId: PlayDefinition['id']) => void;
+  onSelectPlay: (playId: string) => void;
+  selectedConcept?: OffensiveConcept;
+  onSelectConcept?: (concept: OffensiveConcept) => void;
+  targetSide?: TargetSide;
+  onChangeTargetSide?: (side: TargetSide) => void;
+  zSide?: ZAlignmentSide;
+  onChangeZSide?: (side: ZAlignmentSide) => void;
+  zType?: ZAlignmentType;
+  onChangeZType?: (type: ZAlignmentType) => void;
   eleventhMode: EleventhPlayerMode;
   onChangeEleventhMode: (mode: EleventhPlayerMode) => void;
   xMode: XPlayerMode;
@@ -67,6 +81,14 @@ interface PlaySetupConsoleProps {
 export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
   selectedPlay,
   onSelectPlay,
+  selectedConcept = 'inside_veer',
+  onSelectConcept,
+  targetSide = 'right',
+  onChangeTargetSide,
+  zSide = 'right',
+  onChangeZSide,
+  zType = 'wide',
+  onChangeZType,
   eleventhMode,
   onChangeEleventhMode,
   xMode,
@@ -99,11 +121,28 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
   hasChalkboardDrawings,
 }) => {
   const activeFront = DEFENSIVE_FRONTS[frontId];
-  const isOptionPlay =
-    selectedPlay.playType === 'Triple Option' ||
-    selectedPlay.playType === 'Misdirection Option';
-  const isPower = selectedPlay.id === '24-power';
-  const isPowerPass = selectedPlay.id === '324-power-pass';
+
+  // Derive concept from selectedPlay if not provided explicitly
+  const activeConcept: OffensiveConcept =
+    selectedConcept ||
+    (selectedPlay.id.includes('inside-veer')
+      ? 'inside_veer'
+      : selectedPlay.id.includes('outside-veer')
+      ? 'outside_veer'
+      : selectedPlay.id.includes('counter')
+      ? 'counter'
+      : selectedPlay.id.includes('power-pass') || selectedPlay.id.includes('flood')
+      ? 'flood'
+      : 'power');
+
+  // Compute live play call formatting: <Formation> <Z-Alignment> <Number> <Concept>
+  const playCallInfo = formatOffensivePlayCall(
+    activeConcept,
+    targetSide,
+    xMode,
+    zSide,
+    zType
+  );
 
   // Compute live read outcome
   const simResult = selectedPlay.getOffensivePaths(
@@ -111,17 +150,58 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
     diveBehavior,
     pitchBehavior,
     eleventhMode,
-    xMode
+    xMode,
+    zSide,
+    targetSide
   );
 
-  const formationName =
-    xMode === 'tight_x' && eleventhMode === 'wing_z'
-      ? 'Double Tight'
-      : xMode === 'wide_x' && eleventhMode === 'wide_z'
-      ? 'Double Wide (Spread)'
-      : xMode === 'wide_x'
-      ? 'Wide X / Wing Z'
-      : 'Tight X / Wide Z';
+  const handleSelectConcept = (concept: OffensiveConcept) => {
+    if (onSelectConcept) {
+      onSelectConcept(concept);
+    } else {
+      const playIdMap: Record<OffensiveConcept, string> = {
+        inside_veer: '42-inside-veer',
+        outside_veer: '46-outside-veer',
+        counter: '31-counter',
+        power: '24-power',
+        flood: '324-power-pass',
+      };
+      onSelectPlay(playIdMap[concept]);
+    }
+  };
+
+  const handleToggleTargetSide = () => {
+    const nextSide: TargetSide = targetSide === 'right' ? 'left' : 'right';
+    if (onChangeTargetSide) {
+      onChangeTargetSide(nextSide);
+    }
+  };
+
+  const handleSelectZSide = (side: ZAlignmentSide) => {
+    if (onChangeZSide) onChangeZSide(side);
+  };
+
+  const handleSelectZType = (type: ZAlignmentType) => {
+    if (onChangeZType) {
+      onChangeZType(type);
+    }
+    // Also sync eleventhMode for backward compatibility
+    onChangeEleventhMode(type === 'wing' ? 'wing_z' : 'wide_z');
+  };
+
+  const concepts: {
+    id: OffensiveConcept;
+    name: string;
+    rightNumber: string;
+    leftNumber: string;
+    tag: string;
+  }[] = [
+    { id: 'inside_veer', name: 'Inside Veer', rightNumber: '42', leftNumber: '41', tag: 'Triple Option' },
+    { id: 'outside_veer', name: 'Outside Veer', rightNumber: '46', leftNumber: '45', tag: 'Triple Option' },
+    { id: 'counter', name: 'Counter', rightNumber: '32', leftNumber: '31', tag: 'Misdirection' },
+    { id: 'power', name: 'Power', rightNumber: '24', leftNumber: '23', tag: 'Downhill Run' },
+    { id: 'flood', name: 'Flood', rightNumber: '36', leftNumber: '35', tag: 'Play-Action Pass' },
+  ];
 
   return (
     <section
@@ -129,35 +209,38 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
       aria-label="Play Setup & Matchup Console"
       className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 lg:p-6 shadow-2xl space-y-6"
     >
-      {/* Console Master Header Bar */}
+      {/* Console Master Header Bar with Live Spoken Call */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#162A33]/80">
         <div>
           <div className="flex flex-wrap items-center gap-2 text-xs font-mono-tabular">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/15 border border-teal-500/40 text-teal-300 font-bold uppercase tracking-wider text-[11px]">
               <Sparkles className="w-3 h-3" />
-              Unified Play Setup & Matchup Lab
+              Offensive Call System & Matchup Lab
             </span>
             <span aria-hidden="true" className="text-slate-600">·</span>
-            <span className="text-slate-400">All Player & Coach Inputs</span>
+            <span className="text-slate-400">Formation · Direction · Concept</span>
             <span aria-hidden="true" className="text-slate-600">·</span>
-            <span className="text-teal-400 font-semibold">Pre-Play Decision Hub</span>
+            <span className="text-teal-400 font-semibold font-mono">
+              &lt;Formation-ZAlignment-Number-Concept&gt;
+            </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white mt-1.5 font-display tracking-tight flex items-center gap-2">
-            Matchup & Play Setup Console
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-3xl leading-relaxed">
-            Configure offensive formation & play, opponent defensive front, and reads/reactions in one consolidated command area before running the tactical field simulation.
-          </p>
+
+          <div className="mt-2 flex flex-wrap items-center gap-2.5">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+              Live Offensive Call:
+            </span>
+            <span className="text-xl sm:text-2xl font-extrabold text-white font-mono tracking-tight bg-teal-950/40 px-3 py-1 rounded-lg border border-teal-500/50 shadow-inner">
+              {playCallInfo.fullPlayCall}
+            </span>
+          </div>
         </div>
 
         {/* Live Matchup Summary Pill */}
         <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B151C] border border-[#162A33] text-xs font-mono-tabular shrink-0">
           <div className="flex items-center gap-1.5 text-teal-300 font-bold">
-            <span>{selectedPlay.code}</span>
+            <span>{playCallInfo.numberCode} {playCallInfo.conceptName.toUpperCase()}</span>
             <span className="text-slate-500">/</span>
-            <span className="text-slate-300">
-              {formationName}
-            </span>
+            <span className="text-slate-300">{playCallInfo.formation}</span>
           </div>
           <span className="text-slate-500">vs</span>
           <span className="text-amber-400 font-bold">{activeFront.shortLabel}</span>
@@ -168,12 +251,13 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
         </div>
       </div>
 
-      {/* 3-Column Consolidated Inputs Grid (Desktop side-by-side, perfectly balanced) */}
+      {/* 3-Column Consolidated Inputs Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         {/* PANEL 1: OFFENSE CONFIGURATION (5 cols) */}
         <div className="lg:col-span-5 rounded-xl border border-[#162A33] bg-[#0A1318] p-4 flex flex-col justify-between space-y-4">
           <div className="space-y-3.5">
-            <div className="flex items-center justify-between">
+            {/* Header with Call Breakdown Chips */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-[#162A33]">
               <div className="flex items-center gap-2">
                 <span className="w-5 h-5 rounded-md bg-teal-500/20 text-teal-300 font-mono text-xs font-bold flex items-center justify-center border border-teal-500/40">
                   A
@@ -182,53 +266,75 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                   Offense Configuration
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-teal-500/10 border border-teal-500/30 text-[10px] text-teal-300 font-mono font-semibold">
-                {formationName}
-              </span>
+              <div className="flex flex-wrap items-center gap-1 text-[10px] font-mono">
+                <span className="px-1.5 py-0.5 rounded bg-teal-500/15 border border-teal-500/30 text-teal-300 font-bold">
+                  {playCallInfo.formation}
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 text-sky-300 font-bold">
+                  {playCallInfo.zDesc}
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
+                  #{playCallInfo.numberCode}
+                </span>
+              </div>
             </div>
 
-            {/* Formation Alignments: 11th Player (Z) & Opposite TE (X) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {/* 11th Player (Z) Alignment */}
-              <div className="space-y-1.5 p-2 rounded-lg bg-[#060D11] border border-[#162A33]">
-                <label className="text-[11px] font-medium text-slate-300 flex items-center justify-between">
-                  <span>11th Player (Z):</span>
-                  <span className="text-[10px] text-teal-400 font-mono font-bold">
-                    {eleventhMode === 'wide_z' ? 'Wide Z' : 'Wing Z'}
-                  </span>
-                </label>
-                <div className="grid grid-cols-2 gap-1 p-0.5 bg-[#091318] border border-[#162A33] rounded-md text-xs">
-                  <button
-                    type="button"
-                    onClick={() => onChangeEleventhMode('wide_z')}
-                    className={`py-1 px-2 rounded font-medium transition-all cursor-pointer text-center truncate text-[11px] ${
-                      eleventhMode === 'wide_z'
-                        ? 'bg-teal-400 text-slate-950 font-bold shadow-sm'
-                        : 'text-slate-300 hover:text-white hover:bg-[#0D1820]'
-                    }`}
-                  >
-                    Wide Z
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onChangeEleventhMode('wing_z')}
-                    className={`py-1 px-2 rounded font-medium transition-all cursor-pointer text-center truncate text-[11px] ${
-                      eleventhMode === 'wing_z'
-                        ? 'bg-teal-400 text-slate-950 font-bold shadow-sm'
-                        : 'text-slate-300 hover:text-white hover:bg-[#0D1820]'
-                    }`}
-                  >
-                    Wing Z
-                  </button>
-                </div>
+            {/* Direction / Target Side Switcher with Flip Button */}
+            <div className="p-2.5 rounded-lg bg-[#060D11] border border-[#162A33] space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-slate-300">Play Target Side / Direction:</span>
+                <button
+                  type="button"
+                  onClick={handleToggleTargetSide}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#101F26] text-teal-300 border border-teal-500/30 hover:bg-teal-500/20 transition-colors cursor-pointer"
+                  title="Flip play target side (Right ⇄ Left)"
+                >
+                  <ArrowLeftRight className="w-3 h-3" />
+                  Flip Play
+                </button>
               </div>
 
-              {/* Opposite TE (X) Alignment */}
+              <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
+                <button
+                  type="button"
+                  onClick={() => onChangeTargetSide && onChangeTargetSide('right')}
+                  className={`py-1.5 px-2 rounded-md font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 text-center text-xs ${
+                    targetSide === 'right'
+                      ? 'bg-teal-400 text-slate-950 shadow-md ring-1 ring-teal-400/50'
+                      : 'bg-[#091318] text-slate-400 hover:text-white border border-[#162A33]'
+                  }`}
+                >
+                  <span>RIGHT</span>
+                  <span className={`text-[10px] px-1 rounded ${targetSide === 'right' ? 'bg-slate-950/20 text-slate-900' : 'text-slate-500'}`}>
+                    Even ({playCallInfo.numberCode})
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onChangeTargetSide && onChangeTargetSide('left')}
+                  className={`py-1.5 px-2 rounded-md font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 text-center text-xs ${
+                    targetSide === 'left'
+                      ? 'bg-teal-400 text-slate-950 shadow-md ring-1 ring-teal-400/50'
+                      : 'bg-[#091318] text-slate-400 hover:text-white border border-[#162A33]'
+                  }`}
+                >
+                  <span>LEFT</span>
+                  <span className={`text-[10px] px-1 rounded ${targetSide === 'left' ? 'bg-slate-950/20 text-slate-900' : 'text-slate-500'}`}>
+                    Odd ({playCallInfo.numberCode})
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Alignments: X Alignment (Formation) & Z Alignment Side/Type */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* X Alignment: Tight ("Double Tight") vs Wide ("Wide") */}
               <div className="space-y-1.5 p-2 rounded-lg bg-[#060D11] border border-[#162A33]">
                 <label className="text-[11px] font-medium text-slate-300 flex items-center justify-between">
-                  <span>Opposite TE (X):</span>
+                  <span>X Alignment:</span>
                   <span className="text-[10px] text-teal-400 font-mono font-bold">
-                    {xMode === 'wide_x' ? 'Wide X' : 'Tight X'}
+                    {xMode === 'tight_x' ? 'Double Tight' : 'Wide'}
                   </span>
                 </label>
                 <div className="grid grid-cols-2 gap-1 p-0.5 bg-[#091318] border border-[#162A33] rounded-md text-xs">
@@ -256,21 +362,85 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Z Alignment: Side (Right/Left) & Position (Wide/Wing) */}
+              <div className="space-y-1.5 p-2 rounded-lg bg-[#060D11] border border-[#162A33]">
+                <label className="text-[11px] font-medium text-slate-300 flex items-center justify-between">
+                  <span>Z Alignment:</span>
+                  <span className="text-[10px] text-teal-400 font-mono font-bold">
+                    {playCallInfo.zDesc}
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-1 p-0.5 bg-[#091318] border border-[#162A33] rounded-md text-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectZSide('right')}
+                    className={`py-0.5 px-1.5 rounded font-medium transition-all cursor-pointer text-center truncate text-[10px] ${
+                      zSide === 'right'
+                        ? 'bg-sky-400 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Right
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectZSide('left')}
+                    className={`py-0.5 px-1.5 rounded font-medium transition-all cursor-pointer text-center truncate text-[10px] ${
+                      zSide === 'left'
+                        ? 'bg-sky-400 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Left
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-1 p-0.5 bg-[#091318] border border-[#162A33] rounded-md text-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectZType('wide')}
+                    className={`py-0.5 px-1.5 rounded font-medium transition-all cursor-pointer text-center truncate text-[10px] ${
+                      zType === 'wide'
+                        ? 'bg-teal-400 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Split/Wide
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectZType('wing')}
+                    className={`py-0.5 px-1.5 rounded font-medium transition-all cursor-pointer text-center truncate text-[10px] ${
+                      zType === 'wing'
+                        ? 'bg-teal-400 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Wing
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* Offensive Play Selector (The 5 Core Plays) */}
+            {/* The 5 Core Offensive Play Concepts */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-300">
-                Select Offensive Play Concept:
+              <label className="text-xs font-medium text-slate-300 flex items-center justify-between">
+                <span>Select Offensive Play Concept:</span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Target: {targetSide === 'right' ? 'Right' : 'Left'} side
+                </span>
               </label>
+
               <div className="space-y-1.5">
-                {VEER_PLAYBOOK.map((play) => {
-                  const isSelected = play.id === selectedPlay.id;
+                {concepts.map((concept) => {
+                  const isSelected = activeConcept === concept.id;
+                  const activeNumber = targetSide === 'right' ? concept.rightNumber : concept.leftNumber;
+
                   return (
                     <button
-                      key={play.id}
+                      key={concept.id}
                       type="button"
-                      onClick={() => onSelectPlay(play.id)}
+                      onClick={() => handleSelectConcept(concept.id)}
                       className={`w-full p-2.5 rounded-lg border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
                         isSelected
                           ? 'border-teal-400 bg-[#0E222A] text-white shadow-md ring-1 ring-teal-400/50'
@@ -279,20 +449,20 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <span
-                          className={`font-mono-tabular font-bold text-xs px-2 py-0.5 rounded ${
+                          className={`font-mono font-bold text-xs px-2 py-0.5 rounded ${
                             isSelected
-                              ? 'bg-teal-400 text-slate-950 font-extrabold'
+                              ? 'bg-teal-400 text-slate-950 font-extrabold shadow-sm'
                               : 'bg-[#101F26] text-teal-300 border border-[#1B3542]'
                           }`}
                         >
-                          {play.code}
+                          {activeNumber}
                         </span>
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-white truncate">
-                            {play.name.split('(')[0].trim()}
+                            {concept.name}
                           </p>
                           <p className="text-[11px] text-slate-400 truncate">
-                            {play.targetGap.split('/')[0].trim()}
+                            {activeNumber} {concept.name} · {concept.tag}
                           </p>
                         </div>
                       </div>
@@ -305,7 +475,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                               : 'bg-[#091318] text-slate-400 border border-[#162A33]'
                           }`}
                         >
-                          {play.playType}
+                          {concept.tag}
                         </span>
                         <ChevronRight
                           className={`w-3.5 h-3.5 ${
@@ -322,8 +492,8 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
 
           {/* Quick Play Intel Footer */}
           <div className="pt-2 border-t border-[#162A33] text-[11px] text-slate-400 flex items-center justify-between font-mono">
-            <span>Primary Concept: {selectedPlay.playType}</span>
-            <span className="text-teal-400">Aiming: {selectedPlay.targetGap}</span>
+            <span>Call: {playCallInfo.fullPlayCall}</span>
+            <span className="text-teal-400">Target: {playCallInfo.numberCode}-Hole</span>
           </div>
         </div>
 

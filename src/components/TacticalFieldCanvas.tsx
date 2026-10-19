@@ -7,7 +7,9 @@ import {
   PitchKeyBehavior,
   PlayDefinition,
   Point,
+  TargetSide,
   XPlayerMode,
+  ZAlignmentSide,
   getBaseOffensiveAlignment,
 } from '../data/veerPlaybookData';
 
@@ -25,6 +27,8 @@ interface TacticalFieldCanvasProps {
   pitchBehavior: PitchKeyBehavior;
   eleventhMode: EleventhPlayerMode;
   xMode?: XPlayerMode;
+  zSide?: ZAlignmentSide;
+  targetSide?: TargetSide;
   progress: number;
   selectedPlayerId: string;
   onSelectPlayer: (id: string) => void;
@@ -69,6 +73,8 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   pitchBehavior,
   eleventhMode,
   xMode = 'tight_x',
+  zSide = 'right',
+  targetSide = 'right',
   progress,
   selectedPlayerId,
   onSelectPlayer,
@@ -94,9 +100,9 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   const [drawingStart, setDrawingStart] = useState<Point | null>(null);
   const [drawingCurrent, setDrawingCurrent] = useState<Point | null>(null);
 
-  const baseOffense = getBaseOffensiveAlignment(eleventhMode, xMode);
+  const baseOffense = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
   const frontConfig = DEFENSIVE_FRONTS[frontId];
-  const simResult = play.getOffensivePaths(frontId, diveBehavior, pitchBehavior, eleventhMode, xMode);
+  const simResult = play.getOffensivePaths(frontId, diveBehavior, pitchBehavior, eleventhMode, xMode, zSide, targetSide);
 
   const isLeftPlay = play.id === '31-counter';
   const isOutsideVeer = play.id === '46-outside-veer';

@@ -4,6 +4,11 @@ export type PitchKeyBehavior = 'commit_qb' | 'feather_pitch';
 export type EleventhPlayerMode = 'wide_z' | 'wing_z';
 export type XPlayerMode = 'tight_x' | 'wide_x';
 
+export type OffensiveConcept = 'inside_veer' | 'outside_veer' | 'counter' | 'power' | 'flood';
+export type TargetSide = 'right' | 'left';
+export type ZAlignmentSide = 'right' | 'left';
+export type ZAlignmentType = 'wide' | 'wing';
+
 export interface Point {
   x: number; // Field coordinates: 0 to 1000 (500 is ball X)
   y: number; // Field coordinates: 0 to 620 (390 is Line of Scrimmage Y, offense moves UP towards y < 390)
@@ -31,7 +36,9 @@ export interface OffensivePathDef {
 }
 
 export interface PlayDefinition {
-  id: '42-inside-veer' | '46-outside-veer' | '31-counter' | '24-power' | '324-power-pass';
+  id: string;
+  concept?: OffensiveConcept;
+  targetSide?: TargetSide;
   code: string;
   name: string;
   subtitle: string;
@@ -59,7 +66,9 @@ export interface PlayDefinition {
     diveBehavior: DiveKeyBehavior,
     pitchBehavior: PitchKeyBehavior,
     eleventhMode: EleventhPlayerMode,
-    xMode?: XPlayerMode
+    xMode?: XPlayerMode,
+    zSide?: ZAlignmentSide,
+    targetSide?: TargetSide
   ) => {
     paths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }>;
     ballCarrierSequence: {
@@ -115,22 +124,85 @@ export interface PracticeDrill {
   };
 }
 
+// Compute official Play Call name: <Formation> <Z-Alignment> <Number> <Concept>
+export function formatOffensivePlayCall(
+  concept: OffensiveConcept,
+  targetSide: TargetSide,
+  xMode: XPlayerMode,
+  zSide: ZAlignmentSide,
+  zType: ZAlignmentType
+): {
+  fullName: string;
+  formation: string;
+  zDesc: string;
+  numberCode: string;
+  conceptName: string;
+  fullPlayCall: string;
+} {
+  const formation = xMode === 'tight_x' ? 'Double Tight' : 'Wide';
+  const zDesc = zType === 'wing' ? `Wing ${zSide === 'right' ? 'Right' : 'Left'}` : (zSide === 'right' ? 'Right' : 'Left');
+
+  let numberCode = '';
+  let conceptName = '';
+  if (concept === 'inside_veer') {
+    numberCode = targetSide === 'right' ? '42' : '41';
+    conceptName = 'Inside Veer';
+  } else if (concept === 'outside_veer') {
+    numberCode = targetSide === 'right' ? '46' : '45';
+    conceptName = 'Outside Veer';
+  } else if (concept === 'counter') {
+    numberCode = targetSide === 'right' ? '32' : '31';
+    conceptName = 'Counter';
+  } else if (concept === 'power') {
+    numberCode = targetSide === 'right' ? '24' : '23';
+    conceptName = 'Power';
+  } else {
+    // Flood
+    numberCode = targetSide === 'right' ? '36' : '35';
+    conceptName = 'Flood';
+  }
+
+  const fullPlayCall = `${formation} ${zDesc} ${numberCode} ${conceptName}`;
+  return {
+    fullName: fullPlayCall,
+    formation,
+    zDesc,
+    numberCode,
+    conceptName,
+    fullPlayCall,
+  };
+}
+
 // Base offensive coordinates on a 1000x620 tactical canvas
 // Line of scrimmage is Y = 390. Ball is at X = 500, Y = 390.
 // 3-Foot OL splits in Veer: 48px (~3 feet scaled for visual clarity)
 export function getBaseOffensiveAlignment(
   eleventhMode: EleventhPlayerMode,
-  xMode: XPlayerMode = 'tight_x'
+  xMode: XPlayerMode = 'tight_x',
+  zSide: ZAlignmentSide = 'right'
 ): Record<string, { x: number; y: number; label: string; name: string; group: 'OL' | 'TE' | 'BACK' | 'WR' }> {
-  const zPoint =
-    eleventhMode === 'wing_z'
-      ? { x: 676, y: 418, label: 'Z', name: 'Wing Z', group: 'WR' as const }
-      : { x: 825, y: 416, label: 'Z', name: 'Wide Z', group: 'WR' as const };
+  let zPoint: { x: number; y: number; label: string; name: string; group: 'WR' };
 
-  const xPoint =
-    xMode === 'wide_x'
-      ? { x: 175, y: 394, label: 'X', name: 'Wide X (Split End)', group: 'WR' as const }
-      : { x: 356, y: 394, label: 'X', name: 'Tight X (Tight End)', group: 'TE' as const };
+  if (zSide === 'left') {
+    zPoint =
+      eleventhMode === 'wing_z'
+        ? { x: 324, y: 418, label: 'Z', name: 'Wing Z (Left)', group: 'WR' as const }
+        : { x: 175, y: 416, label: 'Z', name: 'Wide Z (Left)', group: 'WR' as const };
+  } else {
+    zPoint =
+      eleventhMode === 'wing_z'
+        ? { x: 676, y: 418, label: 'Z', name: 'Wing Z (Right)', group: 'WR' as const }
+        : { x: 825, y: 416, label: 'Z', name: 'Wide Z (Right)', group: 'WR' as const };
+  }
+
+  let xPoint: { x: number; y: number; label: string; name: string; group: 'WR' | 'TE' };
+  if (xMode === 'wide_x') {
+    // If Z is wide left, offset X slightly so they do not overlap
+    const xCoord = zSide === 'left' && eleventhMode === 'wide_z' ? 125 : 175;
+    xPoint = { x: xCoord, y: 394, label: 'X', name: 'Wide X (Split End)', group: 'WR' as const };
+  } else {
+    xPoint = { x: 356, y: 394, label: 'X', name: 'Tight X (Tight End)', group: 'TE' as const };
+  }
 
   return {
     XTE: xPoint,
@@ -288,7 +360,7 @@ export const DEFENSIVE_FRONTS: Record<DefensiveFrontId, DefensiveFrontConfig> = 
   },
 };
 
-const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
+export const INSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
   C: {
     id: 'C',
     label: 'C',
@@ -299,7 +371,7 @@ const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
     aimingPoint: 'Playside A-Gap / Playside Hip of 0-Tech Nose',
     footwork: 'Snap & step 6 inches playside (right foot) to reach or combo Nose Tackle.',
     assignmentsByFront: {
-      '5-3': 'Ace Combo with RG on 0-Tech Nose to backside Will LB.',
+      '5-3': 'Ace Combo with RG on 0-Tech Nose to backside Will LB; prevent A-gap run-through.',
       '4-4': 'Reach-scoop weakside 2i-Tech DT; prevent A-gap run-through.',
       '4-3': 'Reach or scoop 1-Tech Nose with LG; prevent backside A-gap run-through.',
       '3-4': 'Ace Combo 0-Tech Nose with RG; control head-up two-gapper to backside ILB.',
@@ -307,7 +379,7 @@ const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
       '5-2': 'Scoop playside hip of slanting 0-Tech Nose with RG.',
     },
     coachingCue: 'Snap and step playside on the whistle — never step backwards.',
-    commonErrorsFix: 'Raising hips before snapping exposes the A-gap. Keep pad level lower than the Nose Guard chin and step with the playside foot first.',
+    commonErrorsFix: 'Raising hips before snapping exposes the A-gap. Keep pad level lower than the Nose Guard chin.',
   },
   RG: {
     id: 'RG',
@@ -317,17 +389,17 @@ const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
     split: '3 ft from Center',
     stance: '3-point weight-forward Veer stance; inside foot slightly up.',
     aimingPoint: 'Inside number of playside DT or 0-Tech Nose hip',
-    footwork: 'Inside power step; on Counter, pull flat across Center to weakside edge.',
+    footwork: 'Inside power step; drive feet through the whistle.',
     assignmentsByFront: {
-      '5-3': 'Inside Veer/Power: Combo 0-Tech Nose with Center. Counter: Pull flat left to kick out weak edge.',
-      '4-4': 'Inside Veer: Deuce combo 3-Tech with RT. Outside Veer/Power: Base down-block 3-Tech. Counter: Pull left.',
-      '4-3': 'Inside Veer: Deuce combo 3-Tech with RT to Mike LB. Outside Veer/Power: Base down-block 3-Tech. Counter: Pull left.',
-      '3-4': 'Inside Veer/Power: Combo 0-Tech Nose with Center to backside ILB. Counter: Pull left.',
+      '5-3': 'Combo 0-Tech Nose with Center to backside Will LB; ignore 4/5-Tech #1 Dive Key.',
+      '4-4': 'Deuce combo 3-Tech with RT to inside linebacker.',
+      '4-3': 'Deuce combo 3-Tech with RT to Mike LB.',
+      '3-4': 'Combo 0-Tech Nose with Center to backside ILB.',
       '6-2': 'Base drive 1-Tech Nose vertical into the lap of the LB.',
       '5-2': 'Cover playside A-gap; overtake slanting Nose Tackle.',
     },
-    coachingCue: 'On Veer, widen the running lane; on Counter, stay flat along the line of scrimmage and kick out.',
-    commonErrorsFix: 'Do not chase the 4-tech or 5-tech outward on Inside Veer — that defender is #1 (the QB\'s unblocked Dive Read). Stay on your track.',
+    coachingCue: 'Widen the interior running lane; stay on your track and ignore #1.',
+    commonErrorsFix: 'Do not chase the 4-tech outward — that defender is #1 (the QB\'s unblocked Dive Read).',
   },
   RT: {
     id: 'RT',
@@ -335,19 +407,19 @@ const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
     fullName: 'Right Tackle',
     group: 'OL',
     split: '3 ft from Right Guard',
-    stance: '3-point crouch, hands ready to punch second-level linebacker or execute down-block.',
-    aimingPoint: 'Inside Veer Release to Linebacker (Inside Veer) OR Down-Block on DT (Outside Veer/Power)',
-    footwork: 'Inside Veer: 45° inside Veer step past #1. Outside Veer/Power: Explosive 45° DOWN BLOCK on DT.',
+    stance: '3-point crouch, hands ready to strike second-level linebacker.',
+    aimingPoint: 'Inside Veer Release to Linebacker',
+    footwork: 'Violent 45° inside Veer step past #1 directly to second level.',
     assignmentsByFront: {
-      '5-3': 'Inside Veer: Release past #1 to Mike LB. Outside Veer/Power: Heavy down block on 4-tech DT.',
-      '4-4': 'Inside Veer: Combo 3-Tech with RG. Outside Veer/Power: Down block on 3-Tech DT.',
-      '4-3': 'Inside Veer: Inside release past 7-Tech End to Mike LB. Outside Veer/Power: Down block 3-Tech DT.',
-      '3-4': 'Inside Veer: Inside release past 4-Tech End to Strong ILB. Outside Veer/Power: Down block 4-Tech End.',
-      '6-2': 'Inside Veer: Veer release to LB. Outside Veer/Power: Down block 4-Tech.',
-      '5-2': 'Inside Veer: Veer release to SILB. Outside Veer/Power: Down block 4-Tech.',
+      '5-3': 'Inside Veer release past 4b-Tech (#1 Dive Key) directly to Mike LB.',
+      '4-4': 'Inside Veer release past 5-Tech (#1 Dive Key) to Strong ILB.',
+      '4-3': 'Inside release past 7-Tech End to Mike LB.',
+      '3-4': 'Inside release past 4-Tech End to Strong ILB.',
+      '6-2': 'Inside Veer release to Near Linebacker.',
+      '5-2': 'Inside Veer release to Strong Inside LB.',
     },
-    coachingCue: 'Inside Veer: Rip past #1 without contact to the LB. Outside Veer/Power: Wash the DT inside with a leveraged down block.',
-    commonErrorsFix: 'Linemen instinctively block the defender aligned head-up on Inside Veer. Drill "Ignore #1, hunt the Backer" to keep reads clean.',
+    coachingCue: 'Ignore #1 Dive Key — rip past him without contact directly to the LB.',
+    commonErrorsFix: 'Linemen instinctively block the defender aligned head-up. Drill "Ignore #1, hunt the Backer".',
   },
   YTE: {
     id: 'YTE',
@@ -356,38 +428,38 @@ const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'TE',
     split: '3 ft from Right Tackle',
     stance: '3-point tight end stance, outside foot staggered back.',
-    aimingPoint: 'Arc Release (Inside Veer) / Veer Release to LB (Outside Veer) / Down Block (Power) / Pop Seam (Power Pass)',
-    footwork: 'Inside Veer: Arc to Safety. Outside Veer: Veer inside #1 to LB. Power: Down block on DE. Power Pass: Sell down-block 1 count, then pop 8 yds vertical.',
+    aimingPoint: 'Arc Release outside past edge to Safety',
+    footwork: 'Arc release to perimeter; seal secondary force.',
     assignmentsByFront: {
-      '5-3': 'Inside Veer: Arc to FS. Outside Veer: Veer inside 9-Tech to Sam LB. Power: Down block 9-Tech. Power Pass: Pop Seam.',
-      '4-4': 'Inside Veer: Arc to SS. Outside Veer: Veer release to SOLB. Power: Down block 5-Tech. Power Pass: Pop Seam.',
-      '4-3': 'Inside Veer: Arc release to Sam LB / Strong Safety. Outside Veer: Release to Sam LB. Power: Down block on End. Power Pass: Pop Seam.',
-      '3-4': 'Inside Veer: Arc release to Strong OLB / Safety. Outside Veer: Release to SILB. Power: Down block on OLB. Power Pass: Pop Seam.',
-      '6-2': 'Inside Veer: Release to Near Safety. Outside Veer: Release to SLB. Power: Down block 9-Tech. Power Pass: Pop Seam.',
-      '5-2': 'Inside Veer: Stalk Monster. Outside Veer: Release to SLB. Power: Down block 7-Tech. Power Pass: Pop Seam.',
+      '5-3': 'Arc release outside to Free Safety / strong perimeter.',
+      '4-4': 'Arc release to Strong Safety / alley force.',
+      '4-3': 'Arc release to Sam LB / Strong Safety.',
+      '3-4': 'Arc release to Strong OLB / Safety.',
+      '6-2': 'Arc release to Near Safety on perimeter.',
+      '5-2': 'Arc release to Monster back.',
     },
-    coachingCue: 'Inside Veer: Arc outside. Outside Veer: Release inside. Power: Down block. Power Pass: Pop the seam.',
-    commonErrorsFix: 'On Power Pass, releasing too early alerts linebackers to drop. Sell the down block for one full second ("One-thousand-one") before bursting into the seam.',
+    coachingCue: 'Arc outside — seal the alley for the option pitch.',
+    commonErrorsFix: 'Never block the Pitch Key (#2) by mistake — release cleanly to the secondary.',
   },
   LG: {
     id: 'LG',
     label: 'LG',
-    fullName: 'Left Guard (Pulling Guard on Power)',
+    fullName: 'Left Guard',
     group: 'OL',
     split: '3 ft from Center',
-    stance: '3-point stance, balanced enough to flat-scoop or skip-pull across Center.',
-    aimingPoint: 'Backside A-gap cutoff (Veer) / Playside Edge Kickout (Power)',
-    footwork: 'Veer: Deep flat scoop playside. Power: Skip-pull flat across Center, wrap tight around RT down-block, kick out EMLOS.',
+    stance: '3-point stance, balanced and ready to scoop playside.',
+    aimingPoint: 'Backside A-gap cutoff',
+    footwork: 'Deep flat scoop playside; cut off interior pursuit.',
     assignmentsByFront: {
-      '5-3': 'Inside/Outside Veer: Scoop backside A-gap. Power: Pull flat across Center, kick out 9-Tech End. Power Pass: Pull to pass protect.',
-      '4-4': 'Veer: Scoop 2i-Tech DT. Power: Pull flat right, kick out 5-Tech End/OLB. Power Pass: Pull to protect.',
-      '4-3': 'Veer: Scoop 1-Tech Nose. Power: Skip-pull flat across Center, kick out 7-Tech End. Power Pass: Pull to protect.',
-      '3-4': 'Veer: Cutoff 0-Tech Nose / scoop B-gap. Power: Skip-pull flat across Center, kick out edge OLB. Power Pass: Pull to protect.',
-      '6-2': 'Veer: Cut off backside 1-Tech. Power: Pull flat right, kick out 9-Tech End. Power Pass: Pull to protect.',
-      '5-2': 'Veer: Flat scoop A/B gap. Power: Pull flat right, kick out 7-Tech End. Power Pass: Pull to protect.',
+      '5-3': 'Scoop backside A-gap; seal interior penetration.',
+      '4-4': 'Scoop backside 2i-Tech DT; protect backside cutoff.',
+      '4-3': 'Scoop backside 1-Tech Nose; anchor pocket.',
+      '3-4': 'Cutoff 0-Tech Nose / scoop backside B-gap.',
+      '6-2': 'Cut off backside 1-Tech Nose.',
+      '5-2': 'Flat scoop A/B gap against slanter.',
     },
-    coachingCue: 'On Power: Pull tight to the down blocks and kick out the edge with your inside shoulder.',
-    commonErrorsFix: 'Pulling guards often loop too deep in the backfield. Stay tight along the hip line of the Center and Tackle to prevent leakage.',
+    coachingCue: 'Deep flat scoop playside — prevent backside pursuit.',
+    commonErrorsFix: 'Do not allow the backside DT across your face.',
   },
   LT: {
     id: 'LT',
@@ -406,8 +478,8 @@ const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
       '6-2': 'Cutoff backside 4i-Tech DT.',
       '5-2': 'Scoop backside 3-Tech DT.',
     },
-    coachingCue: 'No leakage from the backside; sprint your helmet across the defender beltline.',
-    commonErrorsFix: 'Standing straight up at the snap ruins leverage. Keep pad level low and climb directly to the safety if no lineman crosses your face.',
+    coachingCue: 'No leakage from backside — sprint helmet across defender beltline.',
+    commonErrorsFix: 'Standing straight up at the snap ruins leverage. Keep pad level low.',
   },
   XTE: {
     id: 'XTE',
@@ -416,18 +488,18 @@ const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'TE',
     split: 'Tight X: 3 ft from Left Tackle | Wide X: 8–10 yds split wide',
     stance: '3-point stance (Tight X) or 2-point stance (Wide X).',
-    aimingPoint: 'Deep Middle Third Cutoff (Free Safety) / Shallow Drag (Power Pass) / Stalk Corner (Wide X)',
-    footwork: 'Tight X: Sprint across field to cut off Free Safety. Wide X: Stalk playside Corner or run shallow drag.',
+    aimingPoint: 'Deep Middle Third Cutoff (Free Safety) or Stalk CB',
+    footwork: 'Tight X: Sprint across field to cut off Free Safety. Wide X: Stalk playside Corner.',
     assignmentsByFront: {
-      '5-3': 'Veer/Power: Sprint across field to cut off Free Safety (or stalk CB). Counter: Down block 7-Tech. Power Pass: Shallow drag.',
-      '4-4': 'Veer/Power: Sprint across field to cut off Free Safety (or stalk CB). Counter: Down block 5-Tech. Power Pass: Shallow drag.',
-      '4-3': 'Veer/Power: Sprint across field to cut off Free Safety (or stalk CB). Counter: Down block 5-Tech. Power Pass: Shallow drag.',
-      '3-4': 'Veer/Power: Sprint across field to cut off Free Safety (or stalk CB). Counter: Down block Rush OLB. Power Pass: Shallow drag.',
-      '6-2': 'Veer/Power: Cut off Free Safety (or stalk CB). Counter: Down block 9-Tech. Power Pass: Shallow drag.',
-      '5-2': 'Veer/Power: Cut off Free Safety (or stalk CB). Counter: Down block 6-Tech. Power Pass: Shallow drag.',
+      '5-3': 'Sprint across field to cut off Free Safety (if tight) or stalk CB (if wide).',
+      '4-4': 'Sprint across field to cut off Free Safety (if tight) or stalk CB (if wide).',
+      '4-3': 'Sprint across field to cut off Free Safety (if tight) or stalk CB (if wide).',
+      '3-4': 'Sprint across field to cut off Free Safety (if tight) or stalk CB (if wide).',
+      '6-2': 'Cut off Free Safety in deep middle (or stalk CB).',
+      '5-2': 'Cut off Free Safety in deep middle (or stalk CB).',
     },
     coachingCue: 'Erase the touchdown-saving Safety or stalk the Cornerback in space.',
-    commonErrorsFix: 'Wasting energy chipping the backside defensive end on strongside runs allows the Free Safety to tackle the play. Sprint directly to your target.',
+    commonErrorsFix: 'Sprint directly to your target without hesitating.',
   },
   QB: {
     id: 'QB',
@@ -436,18 +508,18 @@ const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'BACK',
     split: 'Under Center',
     stance: 'Knees bent, thumbs together, scanning keys pre-snap.',
-    aimingPoint: 'Playside Mesh Point / Option Alley / 3-Step Power Pass Drop',
-    footwork: 'Inside Veer: 4:30 step, ride B-gap mesh with 3. Outside Veer: 5:00 step, ride C-gap mesh with 3. Power: 4:30 open, seat to 3, boot weak. Power Pass: Fake Power, 2 gather steps, throw Y Pop.',
+    aimingPoint: 'Playside Mesh Point / Option Alley',
+    footwork: '4:30 step, ride B-gap mesh with 3; read #1 Dive Key then #2 Pitch Key.',
     assignmentsByFront: {
-      '5-3': 'Inside Veer: Read 4b-Tech (#1) & 9-Tech (#2). Outside Veer: Read 9-Tech (#1) & Corner (#2). Power: Seat to 3. Power Pass: Hit Y Pop.',
-      '4-4': 'Inside Veer: Read 5-Tech (#1) & OLB (#2). Outside Veer: Read 5-Tech (#1) & OLB (#2). Power: Seat to 3. Power Pass: Hit Y Pop.',
-      '4-3': 'Inside Veer: Read Strong End (#1) & Sam LB (#2). Outside Veer: Read End (#1) & Sam (#2). Power: Seat to 3. Power Pass: Hit Y Pop.',
-      '3-4': 'Inside Veer: Read 4-Tech End (#1) & Strong OLB (#2). Outside Veer: Read End & OLB. Power: Seat to 3. Power Pass: Hit Y Pop.',
-      '6-2': 'Inside Veer: Read 4-Tech & 9-Tech. Outside Veer: Read 9-Tech & Corner. Power: Seat to 3. Power Pass: Hit Y Pop.',
-      '5-2': 'Inside Veer: Read 4-Tech & 7-Tech. Outside Veer: Read 7-Tech & Monster. Power: Seat to 3. Power Pass: Hit Y Pop.',
+      '5-3': 'Read #1 4b-Tech DT; pull if he crashes, give to 3 if he widens/bull rushes. If pull, attack #2 9-Tech.',
+      '4-4': 'Read #1 5-Tech End; pull if he crashes, give to 3 if he widens. If pull, attack #2 SOLB.',
+      '4-3': 'Read #1 Strong End; pull if he crashes, give to 3 if he widens. If pull, attack #2 Sam LB.',
+      '3-4': 'Read #1 4-Tech End; pull if he crashes, give to 3 if he widens. If pull, attack #2 Strong OLB.',
+      '6-2': 'Read #1 4-Tech DT; pull if he crashes, give to 3 if he widens. If pull, attack #2 9-Tech End.',
+      '5-2': 'Read #1 4-Tech DT; pull if he crashes, give to 3 if he widens. If pull, attack #2 Monster.',
     },
-    coachingCue: 'Veer: Eyes glued to Read Key. Power: Seat ball deep into 3. Power Pass: Rhythm strike to Y.',
-    commonErrorsFix: 'Looking down at the football during the mesh ruins option reads. Keep your eyes locked on the defender\'s jersey numbers from snap to disconnect.',
+    coachingCue: 'Eyes glued to #1 Dive Key jersey numbers from snap to disconnect.',
+    commonErrorsFix: 'Looking down at the football during the mesh ruins option reads.',
   },
   LH: {
     id: 'LH',
@@ -456,18 +528,18 @@ const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'BACK',
     split: '4 yards deep, inside foot behind Left Guard outside heel',
     stance: '2-point stance, hands on knees, zero false steps.',
-    aimingPoint: 'Inside Veer: RG outside hip (B-Gap) / Outside Veer: RT outside hip (C-Gap) / Power: Off-Tackle C-Gap behind Pulling LG',
-    footwork: 'Inside Veer: 45° crossover to RG hip. Outside Veer: Wider 45° track to RT outside hip. Power: Press C-gap, cut inside LG kickout. Counter: Violent flash fake right.',
+    aimingPoint: 'Playside B-Gap (RG Outside Hip)',
+    footwork: '45° crossover to RG hip; soft pocket shelf; hammer downhill.',
     assignmentsByFront: {
-      '5-3': 'Inside Veer: Hammer B-Gap. Outside Veer: Hammer C-Gap. Power: Carry off-tackle behind LG kickout. Counter: Flash fake right.',
-      '4-4': 'Inside Veer: Cut off Deuce combo. Outside Veer: Press C-gap. Power: Follow LG kickout. Counter: Flash fake right.',
-      '4-3': 'Inside Veer: Hammer B-Gap off 3-Tech hip. Outside Veer: Hammer C-Gap. Power: Follow LG kickout. Counter: Flash fake right.',
-      '3-4': 'Inside Veer: Hammer B-Gap off RT hip. Outside Veer: Hammer C-Gap. Power: Follow LG kickout. Counter: Flash fake right.',
-      '6-2': 'Inside Veer: B-Gap seam. Outside Veer: C-Gap seam. Power: Follow LG kickout. Counter: Flash fake right.',
-      '5-2': 'Inside Veer: RG hip explosion. Outside Veer: RT hip explosion. Power: Follow LG kickout. Counter: Flash fake right.',
+      '5-3': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
+      '4-4': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
+      '4-3': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
+      '3-4': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
+      '6-2': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
+      '5-2': 'Explode at RG outside hip (B-Gap) on 4:30 dive track; hammer downhill unless QB pulls.',
     },
-    coachingCue: 'Inside Veer: Tight on Guard. Outside Veer: Outside hip of Tackle. Power: Follow the Pulling Guard.',
-    commonErrorsFix: 'Curving too wide toward the Tackle on Inside Veer lets #1 tackle both backs. Stay tight to the Guard\'s hip to force the defender to commit.',
+    coachingCue: 'Tight on Guard\'s hip — soft pocket shelf for the football.',
+    commonErrorsFix: 'Curving too wide toward the Tackle on Inside Veer lets #1 tackle both backs.',
   },
   RH: {
     id: 'RH',
@@ -476,18 +548,18 @@ const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'BACK',
     split: '4 yards deep, inside foot behind Right Guard outside heel',
     stance: '2-point stance facing straight ahead so defense gets no tip.',
-    aimingPoint: '5x2 Pitch Track (Veer) / Lead ISO Block on Linebacker (Power) / Flat Checkdown (Power Pass)',
-    footwork: 'Inside/Outside Veer: Drop-step, sprint to 5x2 pitch relationship. Power: Fire through C-gap, ISO block playside LB. Power Pass: Fake lead, leak to flat.',
+    aimingPoint: '5x2 Pitch Track',
+    footwork: 'Drop-step, sprint to 5x2 pitch relationship outside #2.',
     assignmentsByFront: {
-      '5-3': 'Veer: 5x2 pitch trail outside #2. Power: Fire through C-gap and block Mike LB. Counter: Pitch trail left. Power Pass: Flat route.',
-      '4-4': 'Veer: Pitch trail outside OLB. Power: Fire through C-gap and block Strong ILB. Counter: Pitch trail left. Power Pass: Flat route.',
-      '4-3': 'Veer: 5x2 pitch trail outside Sam LB. Power: Fire through C-gap and block Mike LB. Counter: Pitch trail left. Power Pass: Flat route.',
-      '3-4': 'Veer: 5x2 pitch trail outside Strong OLB. Power: Fire through C-gap and block Strong ILB. Counter: Pitch trail left. Power Pass: Flat route.',
-      '6-2': 'Veer: Pitch trail outside End. Power: Fire through C-gap and block Right LB. Counter: Pitch trail left. Power Pass: Flat route.',
-      '5-2': 'Veer: Pitch trail outside Monster. Power: Fire through C-gap and block SILB. Counter: Pitch trail left. Power Pass: Flat route.',
+      '5-3': 'Sprint to 5x2 pitch trail relationship outside #2 (Pitch Key).',
+      '4-4': 'Sprint to 5x2 pitch trail relationship outside #2 SOLB.',
+      '4-3': 'Sprint to 5x2 pitch trail relationship outside #2 Sam LB.',
+      '3-4': 'Sprint to 5x2 pitch trail relationship outside #2 Strong OLB.',
+      '6-2': 'Sprint to 5x2 pitch trail relationship outside #2 9-Tech End.',
+      '5-2': 'Sprint to 5x2 pitch trail relationship outside #2 Monster.',
     },
-    coachingCue: 'Veer: Stay 5 yards wide, 2 yards deep. Power: Attack the inside Linebacker in the hole.',
-    commonErrorsFix: 'Trailing too close behind the 1 on option pitches allows one defender to tackle both players. Maintain exact 5x2 width and depth.',
+    coachingCue: 'Maintain exact 5 yards width x 2 yards depth relationship with QB.',
+    commonErrorsFix: 'Trailing too close behind the 1 on option pitches allows one defender to tackle both.',
   },
   W: {
     id: 'W',
@@ -496,20 +568,679 @@ const BASE_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'WR',
     split: 'Wide Z: 8–10 yds split wide | Wing Z: 1 yd outside x 1 yd behind YTE',
     stance: '2-point athletic stance, inside foot forward, eyes on secondary coverage.',
-    aimingPoint: 'Stalk Playside Cornerback / Clear Route (Power Pass)',
-    footwork: 'Veer/Power: Release to stalk/seal Playside Cornerback. Power Pass: 12-yard corner route to clear safety.',
+    aimingPoint: 'Stalk Playside Cornerback',
+    footwork: 'Release to stalk/seal Playside Cornerback; never block read keys.',
     assignmentsByFront: {
-      '5-3': 'Veer/Power: Stalk Playside Cornerback. Power Pass: Corner route.',
-      '4-4': 'Veer/Power: Crack Strong Safety / stalk Corner. Power Pass: Corner route.',
-      '4-3': 'Veer/Power: Stalk Playside Cornerback / crack Safety. Power Pass: Corner route.',
-      '3-4': 'Veer/Power: Stalk Playside Cornerback / crack Safety. Power Pass: Corner route.',
-      '6-2': 'Veer/Power: Stalk Playside Cornerback. Power Pass: Corner route.',
-      '5-2': 'Veer/Power: Stalk Playside Cornerback. Power Pass: Corner route.',
+      '5-3': 'Stalk playside cornerback; never block unblocked read keys.',
+      '4-4': 'Crack Strong Safety or stalk cornerback.',
+      '4-3': 'Stalk playside cornerback / seal perimeter.',
+      '3-4': 'Stalk playside cornerback / seal perimeter.',
+      '6-2': 'Stalk playside cornerback.',
+      '5-2': 'Stalk playside cornerback.',
     },
-    coachingCue: 'Own the sideline perimeter for the ball carrier; stalk block the Cornerback and never block unblocked read keys.',
-    commonErrorsFix: 'Blocking the Pitch Key (#2) by mistake breaks the option read. Release clean past the edge defender directly to the defensive back.',
+    coachingCue: 'Own the sideline perimeter — stalk the Cornerback.',
+    commonErrorsFix: 'Blocking the Pitch Key (#2) by mistake breaks the option read.',
   },
 };
+
+export const OUTSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
+  C: {
+    ...INSIDE_VEER_POSITION_RULES.C,
+    assignmentsByFront: {
+      '5-3': 'Reach-scoop 0-Tech Nose; control interior A-gap.',
+      '4-4': 'Reach weakside 2i-Tech DT; seal A-gap.',
+      '4-3': 'Scoop 1-Tech Nose with LG.',
+      '3-4': 'Ace scoop 0-Tech Nose.',
+      '6-2': 'Base drive 1-Tech Nose.',
+      '5-2': 'Scoop slanting Nose.',
+    },
+    coachingCue: 'Reach and scoop playside — prevent interior leakage.',
+  },
+  RG: {
+    ...INSIDE_VEER_POSITION_RULES.RG,
+    aimingPoint: 'Base Down-Block on DT',
+    footwork: 'Inside power step; wash defender inside.',
+    assignmentsByFront: {
+      '5-3': 'Down block 0-Tech Nose or combo with Center.',
+      '4-4': 'Base down block 3-Tech DT; wash inside.',
+      '4-3': 'Base down block 3-Tech DT.',
+      '3-4': 'Down block 0-Tech Nose with Center.',
+      '6-2': 'Base drive 1-Tech Nose.',
+      '5-2': 'Down block interior slanter.',
+    },
+    coachingCue: 'Wash the defensive tackle inside with a leveraged down block.',
+  },
+  RT: {
+    ...INSIDE_VEER_POSITION_RULES.RT,
+    aimingPoint: 'Heavy Down-Block on 4/5-Tech DT',
+    footwork: 'Violent 45° inside down block; drive feet and wash defender inside.',
+    assignmentsByFront: {
+      '5-3': 'Heavy down block on 4b-Tech DT; wash inside.',
+      '4-4': 'Heavy down block on 3-Tech DT; wash inside.',
+      '4-3': 'Heavy down block on 3-Tech DT; wash inside.',
+      '3-4': 'Heavy down block on 4-Tech End; wash inside.',
+      '6-2': 'Heavy down block on 4-Tech DT; wash inside.',
+      '5-2': 'Heavy down block on 4-Tech DT; wash inside.',
+    },
+    coachingCue: 'On Outside Veer, do not release to LB — wash the DT inside.',
+    commonErrorsFix: 'Hesitating allows the DT to penetrate the C-gap track. Fire out flat.',
+  },
+  YTE: {
+    ...INSIDE_VEER_POSITION_RULES.YTE,
+    aimingPoint: 'Inside Veer Release past EMLOS to Linebacker',
+    footwork: '45° inside release underneath the DE straight onto Sam/Mike Linebacker.',
+    assignmentsByFront: {
+      '5-3': 'Veer inside 9-Tech End to Mike/Sam Linebacker.',
+      '4-4': 'Veer release inside to Strong Inside LB.',
+      '4-3': 'Veer release inside to Sam Linebacker.',
+      '3-4': 'Veer release inside to Strong Inside LB.',
+      '6-2': 'Veer release inside to Right Linebacker.',
+      '5-2': 'Veer release inside to Strong Inside LB.',
+    },
+    coachingCue: 'Leave the Defensive End unblocked — hunt the Linebacker.',
+    commonErrorsFix: 'Chipping the EMLOS End ruins the 1 read timing. Rip directly to the second level.',
+  },
+  LG: {
+    ...INSIDE_VEER_POSITION_RULES.LG,
+    assignmentsByFront: {
+      '5-3': 'Scoop backside A-gap.',
+      '4-4': 'Scoop 2i-Tech DT.',
+      '4-3': 'Scoop 1-Tech Nose.',
+      '3-4': 'Cutoff 0-Tech Nose.',
+      '6-2': 'Cut off backside 1-Tech.',
+      '5-2': 'Flat scoop A/B gap.',
+    },
+  },
+  LT: {
+    ...INSIDE_VEER_POSITION_RULES.LT,
+    assignmentsByFront: {
+      '5-3': 'Cutoff backside 4-Tech DT.',
+      '4-4': 'Scoop backside B-gap to Weak ILB.',
+      '4-3': 'Cutoff backside 5-Tech End.',
+      '3-4': 'Cutoff backside 4-Tech End.',
+      '6-2': 'Cutoff backside 4i-Tech DT.',
+      '5-2': 'Scoop backside 3-Tech DT.',
+    },
+  },
+  XTE: {
+    ...INSIDE_VEER_POSITION_RULES.XTE,
+    assignmentsByFront: {
+      '5-3': 'Sprint across field to cut off Free Safety (or stalk CB).',
+      '4-4': 'Sprint across field to cut off Free Safety (or stalk CB).',
+      '4-3': 'Sprint across field to cut off Free Safety (or stalk CB).',
+      '3-4': 'Sprint across field to cut off Free Safety (if tight) or stalk CB.',
+      '6-2': 'Cut off Free Safety in deep middle.',
+      '5-2': 'Cut off Free Safety in deep middle.',
+    },
+  },
+  QB: {
+    ...INSIDE_VEER_POSITION_RULES.QB,
+    aimingPoint: 'C-Gap Mesh Point / D-Gap Option Alley',
+    footwork: '5:00 step, ride C-gap mesh with 3; read EMLOS (#1) then Corner (#2).',
+    assignmentsByFront: {
+      '5-3': 'Read #1 9-Tech End; pull if he crashes, give to 3 if he widens. If pull, attack Corner #2.',
+      '4-4': 'Read #1 5-Tech End; pull if he crashes, give to 3 if he widens. If pull, attack OLB #2.',
+      '4-3': 'Read #1 Strong End; pull if he crashes, give to 3 if he widens. If pull, attack Sam #2.',
+      '3-4': 'Read #1 Strong OLB; pull if he crashes, give to 3 if he widens. If pull, attack Safety #2.',
+      '6-2': 'Read #1 9-Tech End; pull if he crashes, give to 3 if he widens. If pull, attack Corner #2.',
+      '5-2': 'Read #1 Monster End; pull if he crashes, give to 3 if he widens. If pull, attack Monster #2.',
+    },
+    coachingCue: 'Read the EMLOS End; force the perimeter defender to declare.',
+  },
+  LH: {
+    ...INSIDE_VEER_POSITION_RULES.LH,
+    aimingPoint: 'Outside Hip of Right Tackle (Playside C-Gap)',
+    footwork: 'Wider 45° crossover track aiming 1 yard wider than Inside Veer.',
+    assignmentsByFront: {
+      '5-3': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+      '4-4': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+      '4-3': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+      '3-4': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+      '6-2': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+      '5-2': 'Explode at RT outside hip (C-Gap) on 5:00 track; press off-tackle seam.',
+    },
+    coachingCue: 'Hit the Tackle\'s outside hip full speed — press the C-Gap.',
+  },
+  RH: {
+    ...INSIDE_VEER_POSITION_RULES.RH,
+    assignmentsByFront: {
+      '5-3': 'Sprint to wider 5x2 pitch trail outside #2 Corner.',
+      '4-4': 'Sprint to 5x2 pitch trail outside #2 OLB.',
+      '4-3': 'Sprint to 5x2 pitch trail outside #2 Sam LB.',
+      '3-4': 'Sprint to 5x2 pitch trail outside #2 Strong OLB.',
+      '6-2': 'Sprint to 5x2 pitch trail outside #2 Corner.',
+      '5-2': 'Sprint to 5x2 pitch trail outside #2 Monster.',
+    },
+    coachingCue: 'Wider pitch track — stay outside the numbers.',
+  },
+  W: {
+    ...INSIDE_VEER_POSITION_RULES.W,
+    assignmentsByFront: {
+      '5-3': 'Stalk playside Cornerback / seal perimeter alley.',
+      '4-4': 'Stalk playside Cornerback / seal perimeter alley.',
+      '4-3': 'Stalk playside Cornerback / seal perimeter alley.',
+      '3-4': 'Stalk playside Cornerback / seal perimeter alley.',
+      '6-2': 'Stalk playside Cornerback / seal perimeter alley.',
+      '5-2': 'Stalk playside Cornerback / seal perimeter alley.',
+    },
+  },
+};
+
+export const COUNTER_POSITION_RULES: Record<string, PlayerPositionRule> = {
+  C: {
+    ...INSIDE_VEER_POSITION_RULES.C,
+    assignmentsByFront: {
+      '5-3': 'Block back on 0-Tech Nose; prevent A-gap penetration.',
+      '4-4': 'Block back on 3-Tech DT.',
+      '4-3': 'Block back on 3-Tech DT.',
+      '3-4': 'Block back on 0-Tech Nose.',
+      '6-2': 'Block back on 1-Tech Nose.',
+      '5-2': 'Block back on 0-Tech Nose.',
+    },
+    coachingCue: 'Block back — protect the pulling guard\'s vacate.',
+  },
+  RG: {
+    ...INSIDE_VEER_POSITION_RULES.RG,
+    aimingPoint: 'Pull Flat Left across Center — Kick Out Weakside EMLOS',
+    footwork: 'Drop-step left, stay tight along Center\'s hips, pull flat and kick out first defender outside XTE.',
+    assignmentsByFront: {
+      '5-3': 'Pull flat left across Center to kick out weak edge (7-Tech End).',
+      '4-4': 'Pull flat left across Center to kick out weak edge (5-Tech End).',
+      '4-3': 'Pull flat left across Center to kick out weak edge (5-Tech End).',
+      '3-4': 'Pull flat left across Center to kick out weak edge (Rush OLB).',
+      '6-2': 'Pull flat left across Center to kick out weak edge (9-Tech End).',
+      '5-2': 'Pull flat left across Center to kick out weak edge (6-Tech End).',
+    },
+    coachingCue: 'Pull flat down the line — kick out the weak edge with your inside shoulder.',
+    commonErrorsFix: 'Looping backwards creates penetration. Step flat along the line of scrimmage immediately.',
+  },
+  RT: {
+    ...INSIDE_VEER_POSITION_RULES.RT,
+    assignmentsByFront: {
+      '5-3': 'Base down block on 4b-Tech DT.',
+      '4-4': 'Base down block on 3-Tech DT.',
+      '4-3': 'Base down block on 3-Tech DT.',
+      '3-4': 'Base down block on 4-Tech End.',
+      '6-2': 'Base down block on 4-Tech DT.',
+      '5-2': 'Base down block on 4-Tech DT.',
+    },
+    coachingCue: 'Pin the defensive front inside with down block.',
+  },
+  YTE: {
+    ...INSIDE_VEER_POSITION_RULES.YTE,
+    assignmentsByFront: {
+      '5-3': 'Down block on 9-Tech End.',
+      '4-4': 'Down block on 5-Tech End.',
+      '4-3': 'Down block on Strong End.',
+      '3-4': 'Down block on Strong OLB.',
+      '6-2': 'Down block on 9-Tech End.',
+      '5-2': 'Down block on 7-Tech End.',
+    },
+    coachingCue: 'Seal the strongside edge to sell Veer flow.',
+  },
+  LG: {
+    ...INSIDE_VEER_POSITION_RULES.LG,
+    assignmentsByFront: {
+      '5-3': 'Down block on 4-Tech DT; seal inside.',
+      '4-4': 'Down block on 2i-Tech DT.',
+      '4-3': 'Down block on 1-Tech Nose.',
+      '3-4': 'Down block on 4-Tech End.',
+      '6-2': 'Down block on 4i-Tech DT.',
+      '5-2': 'Down block on 3-Tech DT.',
+    },
+    coachingCue: 'Down block inside — build the wall for the pulling RG.',
+  },
+  LT: {
+    ...INSIDE_VEER_POSITION_RULES.LT,
+    assignmentsByFront: {
+      '5-3': 'Down block on 4-Tech DT; climb to Will LB.',
+      '4-4': 'Down block on weak DT; climb to Weak ILB.',
+      '4-3': 'Down block on weak DT; climb to Will LB.',
+      '3-4': 'Down block on weak End; climb to Weak ILB.',
+      '6-2': 'Down block on 4i-Tech DT.',
+      '5-2': 'Down block on 3-Tech DT.',
+    },
+    coachingCue: 'Double team with LG to second level.',
+  },
+  XTE: {
+    ...INSIDE_VEER_POSITION_RULES.XTE,
+    assignmentsByFront: {
+      '5-3': 'Down block 7-Tech End inside (or stalk CB if wide).',
+      '4-4': 'Down block 5-Tech End inside (or stalk CB if wide).',
+      '4-3': 'Down block 5-Tech End inside (or stalk CB if wide).',
+      '3-4': 'Down block Rush OLB inside (or stalk CB if wide).',
+      '6-2': 'Down block 9-Tech End inside (or stalk CB if wide).',
+      '5-2': 'Down block 6-Tech End inside (or stalk CB if wide).',
+    },
+    coachingCue: 'Pin the weak edge inside for RG kickout.',
+  },
+  QB: {
+    ...INSIDE_VEER_POSITION_RULES.QB,
+    aimingPoint: 'Reverse Pivot Left ➔ Option Pitch to 2 on Weak Perimeter',
+    footwork: 'Reverse pivot, flash fake to 3 in right B-gap, attack left perimeter behind pulling RG.',
+    assignmentsByFront: {
+      '5-3': 'Flash fake to 3 in right B-gap; disconnect and attack weak edge behind pulling RG.',
+      '4-4': 'Flash fake to 3 in right B-gap; disconnect and attack weak edge behind pulling RG.',
+      '4-3': 'Flash fake to 3 in right B-gap; disconnect and attack weak edge behind pulling RG.',
+      '3-4': 'Flash fake to 3 in right B-gap; disconnect and attack weak edge behind pulling RG.',
+      '6-2': 'Flash fake to 3 in right B-gap; disconnect and attack weak edge behind pulling RG.',
+      '5-2': 'Flash fake to 3 in right B-gap; disconnect and attack weak edge behind pulling RG.',
+    },
+    coachingCue: 'Violent flash fake right, quick reverse pivot left.',
+  },
+  LH: {
+    ...INSIDE_VEER_POSITION_RULES.LH,
+    aimingPoint: 'Token Flash Fake into Right B-Gap',
+    footwork: 'Explode 2 violent steps into right B-gap to freeze linebackers, then chop feet.',
+    assignmentsByFront: {
+      '5-3': 'Flash fake into right B-gap to hold inside linebackers.',
+      '4-4': 'Flash fake into right B-gap to hold inside linebackers.',
+      '4-3': 'Flash fake into right B-gap to hold inside linebackers.',
+      '3-4': 'Flash fake into right B-gap to hold inside linebackers.',
+      '6-2': 'Flash fake into right B-gap to hold inside linebackers.',
+      '5-2': 'Flash fake into right B-gap to hold inside linebackers.',
+    },
+    coachingCue: 'Sell the Veer dive with 100% conviction to freeze the defense.',
+  },
+  RH: {
+    ...INSIDE_VEER_POSITION_RULES.RH,
+    aimingPoint: 'Left Perimeter Pitch Track',
+    footwork: 'Drop-step left, sprint to 5x2 pitch relationship with QB on weak sideline.',
+    assignmentsByFront: {
+      '5-3': 'Sprint to left perimeter; maintain 5x2 pitch leverage with QB.',
+      '4-4': 'Sprint to left perimeter; maintain 5x2 pitch leverage with QB.',
+      '4-3': 'Sprint to left perimeter; maintain 5x2 pitch leverage with QB.',
+      '3-4': 'Sprint to left perimeter; maintain 5x2 pitch leverage with QB.',
+      '6-2': 'Sprint to left perimeter; maintain 5x2 pitch leverage with QB.',
+      '5-2': 'Sprint to left perimeter; maintain 5x2 pitch leverage with QB.',
+    },
+    coachingCue: 'Get in pitch position fast — outrun the flowing defense.',
+  },
+  W: {
+    ...INSIDE_VEER_POSITION_RULES.W,
+    assignmentsByFront: {
+      '5-3': 'Stalk cornerback / crack safety on backside.',
+      '4-4': 'Stalk cornerback / crack safety on backside.',
+      '4-3': 'Stalk cornerback / crack safety on backside.',
+      '3-4': 'Stalk cornerback / crack safety on backside.',
+      '6-2': 'Stalk cornerback.',
+      '5-2': 'Stalk cornerback.',
+    },
+  },
+};
+
+export const POWER_POSITION_RULES: Record<string, PlayerPositionRule> = {
+  C: {
+    ...INSIDE_VEER_POSITION_RULES.C,
+    assignmentsByFront: {
+      '5-3': 'Ace combo 0-Tech Nose with RG to backside Will LB.',
+      '4-4': 'Base reach 2i-Tech DT; secure backside A-gap.',
+      '4-3': 'Combo 1-Tech Nose with LG.',
+      '3-4': 'Ace combo 0-Tech Nose with RG.',
+      '6-2': 'Base drive 1-Tech Nose.',
+      '5-2': 'Scoop slanting Nose.',
+    },
+    coachingCue: 'Anchor Center of down-block wall.',
+  },
+  RG: {
+    ...INSIDE_VEER_POSITION_RULES.RG,
+    assignmentsByFront: {
+      '5-3': 'Combo 0-Tech Nose with Center.',
+      '4-4': 'Base down block on 3-Tech DT.',
+      '4-3': 'Base down block on 3-Tech DT.',
+      '3-4': 'Combo 0-Tech Nose with Center.',
+      '6-2': 'Base drive 1-Tech Nose.',
+      '5-2': 'Down block interior slanter.',
+    },
+    coachingCue: 'Down block inside — create running lane for 3.',
+  },
+  RT: {
+    ...INSIDE_VEER_POSITION_RULES.RT,
+    aimingPoint: 'Heavy Down-Block on 4/5-Tech DT',
+    footwork: 'Violent 45° inside down block; wash defender inside.',
+    assignmentsByFront: {
+      '5-3': 'Heavy down block on 4b-Tech DT; wash inside.',
+      '4-4': 'Heavy down block on 3-Tech DT; wash inside.',
+      '4-3': 'Heavy down block on 3-Tech DT; wash inside.',
+      '3-4': 'Heavy down block on 4-Tech End; wash inside.',
+      '6-2': 'Heavy down block on 4-Tech DT; wash inside.',
+      '5-2': 'Heavy down block on 4-Tech DT; wash inside.',
+    },
+    coachingCue: 'Heavy down block — seal the inside wall.',
+  },
+  YTE: {
+    ...INSIDE_VEER_POSITION_RULES.YTE,
+    aimingPoint: 'Heavy Down-Block on Defensive End',
+    footwork: 'Explosive down block on edge defender; collapse the line.',
+    assignmentsByFront: {
+      '5-3': 'Down block on 9-Tech End; collapse inside.',
+      '4-4': 'Down block on 5-Tech End.',
+      '4-3': 'Down block on Strong End.',
+      '3-4': 'Down block on Strong OLB.',
+      '6-2': 'Down block on 9-Tech End.',
+      '5-2': 'Down block on 7-Tech End.',
+    },
+    coachingCue: 'Heavy down block on the edge — seal the wall for LG kickout.',
+  },
+  LG: {
+    ...INSIDE_VEER_POSITION_RULES.LG,
+    aimingPoint: 'Pull Flat across Center — Kick Out Playside Edge Defender (EMLOS)',
+    footwork: 'Skip-pull flat along Center/Tackle hips, wrap tight around RT down block, strike edge defender.',
+    assignmentsByFront: {
+      '5-3': 'Pull flat across Center, kick out 9-Tech End with inside shoulder.',
+      '4-4': 'Pull flat across Center, kick out 5-Tech End/OLB.',
+      '4-3': 'Skip-pull flat across Center, kick out 7-Tech End.',
+      '3-4': 'Skip-pull flat across Center, kick out edge OLB.',
+      '6-2': 'Pull flat right, kick out 9-Tech End.',
+      '5-2': 'Pull flat right, kick out 7-Tech End.',
+    },
+    coachingCue: 'Pull flat, stay tight to the wall, kick out edge defender with inside shoulder.',
+    commonErrorsFix: 'Drifting into backfield allows penetration. Skim hips of down-blockers.',
+  },
+  LT: {
+    ...INSIDE_VEER_POSITION_RULES.LT,
+    assignmentsByFront: {
+      '5-3': 'Cutoff backside 4-Tech DT; do not allow chase.',
+      '4-4': 'Cutoff backside DT; protect backside B-gap.',
+      '4-3': 'Cutoff backside 5-Tech End.',
+      '3-4': 'Cutoff backside 4-Tech End.',
+      '6-2': 'Cutoff backside 4i-Tech DT.',
+      '5-2': 'Scoop backside 3-Tech DT.',
+    },
+    coachingCue: 'No penetration from backside.',
+  },
+  XTE: {
+    ...INSIDE_VEER_POSITION_RULES.XTE,
+    assignmentsByFront: {
+      '5-3': 'Sprint across field to cut off Free Safety (or stalk CB).',
+      '4-4': 'Sprint across field to cut off Free Safety (or stalk CB).',
+      '4-3': 'Sprint across field to cut off Free Safety (or stalk CB).',
+      '3-4': 'Sprint across field to cut off Free Safety (or stalk CB).',
+      '6-2': 'Cut off Free Safety in deep middle.',
+      '5-2': 'Cut off Free Safety in deep middle.',
+    },
+  },
+  QB: {
+    ...INSIDE_VEER_POSITION_RULES.QB,
+    aimingPoint: 'Direct Handoff to 3 ➔ Bootleg Fake Weakside',
+    footwork: 'Open at 4:30, seat ball firmly into 3-back, carry out naked bootleg fake left.',
+    assignmentsByFront: {
+      '5-3': 'Open 4:30, seat ball firmly into 3, bootleg fake left to hold backside end.',
+      '4-4': 'Open 4:30, seat ball firmly into 3, bootleg fake left to hold backside end.',
+      '4-3': 'Open 4:30, seat ball firmly into 3, bootleg fake left to hold backside end.',
+      '3-4': 'Open 4:30, seat ball firmly into 3, bootleg fake left to hold backside end.',
+      '6-2': 'Open 4:30, seat ball firmly into 3, bootleg fake left to hold backside end.',
+      '5-2': 'Open 4:30, seat ball firmly into 3, bootleg fake left to hold backside end.',
+    },
+    coachingCue: 'Seat ball deep into 3; sprint out naked bootleg fake.',
+  },
+  LH: {
+    ...INSIDE_VEER_POSITION_RULES.LH,
+    aimingPoint: 'Playside C-Gap behind Pulling LG and Lead RH',
+    footwork: 'One gather step, secure handoff, press line, cut vertical inside kickout block.',
+    assignmentsByFront: {
+      '5-3': 'Press C-gap behind pulling LG, cut vertical inside kickout block, run North-South.',
+      '4-4': 'Press C-gap behind pulling LG, cut vertical inside kickout block, run North-South.',
+      '4-3': 'Press C-gap behind pulling LG, cut vertical inside kickout block, run North-South.',
+      '3-4': 'Press C-gap behind pulling LG, cut vertical inside kickout block, run North-South.',
+      '6-2': 'Press C-gap behind pulling LG, cut vertical inside kickout block, run North-South.',
+      '5-2': 'Press C-gap behind pulling LG, cut vertical inside kickout block, run North-South.',
+    },
+    coachingCue: 'Soft hands on handoff, violent legs in the hole — run North-South.',
+    commonErrorsFix: 'Bouncing outside before the kickout opens ruins the play. Press tackle hip and cut vertical.',
+  },
+  RH: {
+    ...INSIDE_VEER_POSITION_RULES.RH,
+    aimingPoint: 'Lead through C-Gap — Isolate Playside Linebacker (Mike/Sam LB)',
+    footwork: 'Explode downhill at 45°, fire through C-gap, fit and drive linebacker backwards.',
+    assignmentsByFront: {
+      '5-3': 'Lead through C-gap, isolate and drive Mike LB backwards.',
+      '4-4': 'Lead through C-gap, isolate Strong Inside LB.',
+      '4-3': 'Lead through C-gap, isolate Mike LB.',
+      '3-4': 'Lead through C-gap, isolate Strong Inside LB.',
+      '6-2': 'Lead through C-gap, isolate Right LB.',
+      '5-2': 'Lead through C-gap, isolate Strong Inside LB.',
+    },
+    coachingCue: 'You are the Lead Blocker on Power — blow up the Linebacker.',
+    commonErrorsFix: 'Hesitating at mesh ruins the hole. Hit C-gap at full speed and drive.',
+  },
+  W: {
+    ...INSIDE_VEER_POSITION_RULES.W,
+    assignmentsByFront: {
+      '5-3': 'Stalk playside cornerback / crack safety.',
+      '4-4': 'Crack Strong Safety or stalk cornerback.',
+      '4-3': 'Stalk playside cornerback / seal perimeter.',
+      '3-4': 'Stalk playside cornerback / seal perimeter.',
+      '6-2': 'Stalk playside cornerback.',
+      '5-2': 'Stalk playside cornerback.',
+    },
+  },
+};
+
+export const FLOOD_POSITION_RULES: Record<string, PlayerPositionRule> = {
+  W: {
+    id: 'W',
+    label: 'Z',
+    fullName: 'Z Receiver (Wide Z / Wing Z)',
+    group: 'WR',
+    split: 'Wide Z: 8–10 yds split wide | Wing Z: 1 yd outside x 1 yd behind YTE',
+    stance: '2-point athletic stance, inside foot forward, eyes on secondary coverage.',
+    aimingPoint: 'Post Corner (Deep Corner Pylon)',
+    footwork: 'Drive vertical 10 yds, fake post hard to freeze safety, cut 45° to corner pylon.',
+    assignmentsByFront: {
+      '5-3': 'Z - post corner (drive 10 yds, stem post to freeze safety, cut 45° to corner pylon).',
+      '4-4': 'Z - post corner (drive 10 yds, stem post to freeze safety, cut 45° to corner pylon).',
+      '4-3': 'Z - post corner (drive 10 yds, stem post to freeze safety, cut 45° to corner pylon).',
+      '3-4': 'Z - post corner (drive 10 yds, stem post to freeze safety, cut 45° to corner pylon).',
+      '6-2': 'Z - post corner (drive 10 yds, stem post to freeze safety, cut 45° to corner pylon).',
+      '5-2': 'Z - post corner (drive 10 yds, stem post to freeze safety, cut 45° to corner pylon).',
+    },
+    coachingCue: 'Sell post inside to freeze safety, then snap 45° to corner pylon.',
+    commonErrorsFix: 'Drifting on the break lets the safety recover. Make a sharp, violent 45° plant and cut.',
+  },
+  RG: {
+    id: 'RG',
+    label: 'RG',
+    fullName: 'Right Guard',
+    group: 'OL',
+    split: '3 ft from Center',
+    stance: '3-point pass pro stance; weight balanced.',
+    aimingPoint: 'Pull to Backside DE (Pass Protection)',
+    footwork: 'Drop-step flat, pull across Center behind LOS, square up and stone the backside DE.',
+    assignmentsByFront: {
+      '5-3': 'RG - Pull to backside DE (pass pro kick out / wall off backside end).',
+      '4-4': 'RG - Pull to backside DE (pass pro kick out / wall off backside end).',
+      '4-3': 'RG - Pull to backside DE (pass pro kick out / wall off backside end).',
+      '3-4': 'RG - Pull to backside DE (pass pro kick out / wall off backside end).',
+      '6-2': 'RG - Pull to backside DE (pass pro kick out / wall off backside end).',
+      '5-2': 'RG - Pull to backside DE (pass pro kick out / wall off backside end).',
+    },
+    coachingCue: 'Skip-pull flat across Center to backside DE — keep him off the QB.',
+    commonErrorsFix: 'Pulling too deep lets the DE penetrate inside. Skim the heels of the interior linemen.',
+  },
+  RH: {
+    id: 'RH',
+    label: '2',
+    fullName: '2 (Right Halfback / 2-Back)',
+    group: 'BACK',
+    split: '4 yards deep, inside foot behind Right Guard outside heel',
+    stance: '2-point stance facing straight ahead so defense gets no tip.',
+    aimingPoint: 'Outside Shoulder of Backside DE (2 Count) ➔ Release to Flat',
+    footwork: 'Sprint across to outside shoulder of backside DE, engage for 2 count ("One-thousand-one, one-thousand-two"), then release into the flat.',
+    assignmentsByFront: {
+      '5-3': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
+      '4-4': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
+      '4-3': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
+      '3-4': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
+      '6-2': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
+      '5-2': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
+    },
+    coachingCue: 'Attack outside shoulder of backside DE for 2 count, then release to the flat.',
+    commonErrorsFix: 'Releasing too early allows the backside DE a free rush on the QB. Hold for the full 2 count.',
+  },
+  RT: {
+    id: 'RT',
+    label: 'RT',
+    fullName: 'Right Tackle',
+    group: 'OL',
+    split: '3 ft from Right Guard',
+    stance: '3-point pass pro crouch; maintain low pad level.',
+    aimingPoint: 'Shift Inside for Pass Pro (Secure Inside B-Gap)',
+    footwork: 'Short inside shift step, maintain inside leverage and lock down B-gap rusher.',
+    assignmentsByFront: {
+      '5-3': 'RT shifts for inside pass pro (secure inside B-gap against interior rush).',
+      '4-4': 'RT shifts for inside pass pro (secure inside B-gap against interior rush).',
+      '4-3': 'RT shifts for inside pass pro (secure inside B-gap against interior rush).',
+      '3-4': 'RT shifts for inside pass pro (secure inside B-gap against interior rush).',
+      '6-2': 'RT shifts for inside pass pro (secure inside B-gap against interior rush).',
+      '5-2': 'RT shifts for inside pass pro (secure inside B-gap against interior rush).',
+    },
+    coachingCue: 'Shift inside for pass pro — give up zero inside penetration.',
+    commonErrorsFix: 'Over-setting outside opens the B-gap. Protect your inside gap first.',
+  },
+  LH: {
+    id: 'LH',
+    label: '3',
+    fullName: '3 (Left Halfback / 3-Back)',
+    group: 'BACK',
+    split: '4 yards deep, inside foot behind Left Guard outside heel',
+    stance: '2-point stance, hands on knees, zero false steps.',
+    aimingPoint: 'Outside Shoulder of SDE ➔ Release Arrow to Flat',
+    footwork: 'Fire at outside shoulder of SDE, deliver two-hand punch, then release to right flat on arrow route.',
+    assignmentsByFront: {
+      '5-3': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
+      '4-4': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
+      '4-3': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
+      '3-4': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
+      '6-2': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
+      '5-2': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
+    },
+    coachingCue: 'Block outside shoulder of SDE then release on arrow route to the flat.',
+    commonErrorsFix: 'Whiffing on the chip allows immediate edge rush. Fit your hands on his shoulder pads before releasing.',
+  },
+  XTE: {
+    id: 'XTE',
+    label: 'X',
+    fullName: 'X (Tight End / Wide X Split End)',
+    group: 'TE',
+    split: 'Tight X: 3 ft from Left Tackle | Wide X: 8–10 yds split wide',
+    stance: '3-point stance (Tight X) or 2-point stance (Wide X).',
+    aimingPoint: 'Left Side CB Outside Shoulder ➔ Cut Post',
+    footwork: 'Attack left side CB stem hard directly at his outside shoulder for 8 yards, then cut sharp across middle on Post.',
+    assignmentsByFront: {
+      '5-3': 'X drives directly at outside shoulder of left side CB for 8 yards, then cuts sharply post across middle.',
+      '4-4': 'X drives directly at outside shoulder of left side CB for 8 yards, then cuts sharply post across middle.',
+      '4-3': 'X drives directly at outside shoulder of left side CB for 8 yards, then cuts sharply post across middle.',
+      '3-4': 'X drives directly at outside shoulder of left side CB for 8 yards, then cuts sharply post across middle.',
+      '6-2': 'X drives directly at outside shoulder of left side CB for 8 yards, then cuts sharply post across middle.',
+      '5-2': 'X drives directly at outside shoulder of left side CB for 8 yards, then cuts sharply post across middle.',
+    },
+    coachingCue: 'Drive directly at outside shoulder of CB to turn his hips, then break post.',
+    commonErrorsFix: 'Rounding the stem tips off the route. Drive at his outside shoulder at full speed.',
+  },
+  YTE: {
+    id: 'YTE',
+    label: 'Y',
+    fullName: 'Y (Tight End)',
+    group: 'TE',
+    split: '3 ft from Right Tackle',
+    stance: '3-point tight end stance, outside foot staggered back.',
+    aimingPoint: '7-Yard Whip Out (Sideline Break)',
+    footwork: 'Drive 7 yards vertical, break inside 2 steps to freeze defender, pivot back out to the sideline.',
+    assignmentsByFront: {
+      '5-3': 'Y is running 7 yard whip out (drive 7 yds, break inside 2 steps, pivot out to sideline).',
+      '4-4': 'Y is running 7 yard whip out (drive 7 yds, break inside 2 steps, pivot out to sideline).',
+      '4-3': 'Y is running 7 yard whip out (drive 7 yds, break inside 2 steps, pivot out to sideline).',
+      '3-4': 'Y is running 7 yard whip out (drive 7 yds, break inside 2 steps, pivot out to sideline).',
+      '6-2': 'Y is running 7 yard whip out (drive 7 yds, break inside 2 steps, pivot out to sideline).',
+      '5-2': 'Y is running 7 yard whip out (drive 7 yds, break inside 2 steps, pivot out to sideline).',
+    },
+    coachingCue: 'Drive 7 yards, whip inside 2 steps, plant hard and explode out to sideline.',
+    commonErrorsFix: 'Breaking too shallow brings the pass into linebacker reach. Reach full 7 yards before whipping out.',
+  },
+  C: {
+    id: 'C',
+    label: 'C',
+    fullName: 'Center',
+    group: 'OL',
+    split: '0 ft (Ball Spot)',
+    stance: 'Balanced pass pro stance.',
+    aimingPoint: 'Playside A-Gap Pass Pro',
+    footwork: 'Snap and short post step; anchor Center of pocket.',
+    assignmentsByFront: {
+      '5-3': 'Pass pro inside slide — anchor A-gap against interior rush.',
+      '4-4': 'Pass pro inside slide — anchor A-gap against interior rush.',
+      '4-3': 'Pass pro inside slide — anchor A-gap against interior rush.',
+      '3-4': 'Pass pro inside slide — anchor A-gap against interior rush.',
+      '6-2': 'Pass pro inside slide — anchor A-gap against interior rush.',
+      '5-2': 'Pass pro inside slide — anchor A-gap against interior rush.',
+    },
+    coachingCue: 'Anchor Center of pocket — give zero interior push.',
+    commonErrorsFix: 'Giving up depth collapses the QB pocket. Play with low pads and wide base.',
+  },
+  LG: {
+    id: 'LG',
+    label: 'LG',
+    fullName: 'Left Guard',
+    group: 'OL',
+    split: '3 ft from Center',
+    stance: '3-point pass pro stance.',
+    aimingPoint: 'Pass Pro Step Inside (Lock Down B-Gap with LT)',
+    footwork: 'Inside step, maintain low center of gravity, punch rusher.',
+    assignmentsByFront: {
+      '5-3': 'Pass pro step inside — lock down B-gap with LT.',
+      '4-4': 'Pass pro step inside — lock down B-gap with LT.',
+      '4-3': 'Pass pro step inside — lock down B-gap with LT.',
+      '3-4': 'Pass pro step inside — lock down B-gap with LT.',
+      '6-2': 'Pass pro step inside — lock down B-gap with LT.',
+      '5-2': 'Pass pro step inside — lock down B-gap with LT.',
+    },
+    coachingCue: 'Step inside, keep low center of gravity, maintain firm pocket.',
+    commonErrorsFix: 'Do not chase outside rushers; trust LT and pulling RG.',
+  },
+  LT: {
+    id: 'LT',
+    label: 'LT',
+    fullName: 'Left Tackle',
+    group: 'OL',
+    split: '3 ft from Left Guard',
+    stance: '3-point pass pro stance.',
+    aimingPoint: 'Pass Pro Vertical Set (Secure Backside C-Gap with Pulling RG)',
+    footwork: 'Kick step, vertical set, punch and mirror edge rusher.',
+    assignmentsByFront: {
+      '5-3': 'Pass pro vertical set — secure backside C-gap with pulling RG.',
+      '4-4': 'Pass pro vertical set — secure backside C-gap with pulling RG.',
+      '4-3': 'Pass pro vertical set — secure backside C-gap with pulling RG.',
+      '3-4': 'Pass pro vertical set — secure backside C-gap with pulling RG.',
+      '6-2': 'Pass pro vertical set — secure backside C-gap with pulling RG.',
+      '5-2': 'Pass pro vertical set — secure backside C-gap with pulling RG.',
+    },
+    coachingCue: 'Vertical set, punch and mirror edge rusher.',
+    commonErrorsFix: 'Lunging forward ruins balance. Let the rusher come to you and punch.',
+  },
+  QB: {
+    id: 'QB',
+    label: '1',
+    fullName: '1 (Quarterback)',
+    group: 'BACK',
+    split: 'Under Center',
+    stance: 'Knees bent, scanning secondary coverage pre-snap.',
+    aimingPoint: '1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns',
+    footwork: 'Play-action fake to 3-back, 3-step gather drop behind RT inside pass pro.',
+    assignmentsByFront: {
+      '5-3': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
+      '4-4': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
+      '4-3': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
+      '3-4': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
+      '6-2': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
+      '5-2': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
+    },
+    coachingCue: 'Fake Power, plant back foot, deliver rhythm strike to Y whip out or Z post corner.',
+    commonErrorsFix: 'Rushing the throw before Y breaks out causes incompletions. Throw with anticipation as Y plants.',
+  },
+};
+
+export const BASE_POSITION_RULES = INSIDE_VEER_POSITION_RULES;
 
 export const VEER_PLAYBOOK: PlayDefinition[] = [
   // 1. INSIDE VEER
@@ -558,9 +1289,9 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
         detail: 'Y and Z seal the perimeter while X sprints across the field to cut off the Free Safety (or stalk-blocks if wide).',
       },
     ],
-    positionRules: BASE_POSITION_RULES,
-    getOffensivePaths: (_front, diveBehavior, pitchBehavior, eleventhMode, xMode = 'tight_x') => {
-      const base = getBaseOffensiveAlignment(eleventhMode, xMode);
+    positionRules: INSIDE_VEER_POSITION_RULES,
+    getOffensivePaths: (_front, diveBehavior, pitchBehavior, eleventhMode, xMode = 'tight_x', zSide = 'right', targetSide = 'right') => {
+      const base = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
       const diveGive = diveBehavior !== 'crash';
       const qbKeep = !diveGive && pitchBehavior === 'feather_pitch';
       const pitchTriggered = !diveGive && pitchBehavior === 'commit_qb';
@@ -572,56 +1303,60 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
         ? 'PITCH TO 2 (Perimeter Alley)'
         : '1 KEEPER (Off-Tackle Seam)';
 
-      return {
-        paths: {
-          C: { role: 'block_scoop', points: [base.C, { x: 506, y: 350 }, { x: 488, y: 318 }] },
-          RG: { role: 'block_down', points: [base.RG, { x: 538, y: 350 }, { x: 532, y: 315 }] },
-          RT: { role: 'block_veer', points: [base.RT, { x: 572, y: 344 }, { x: 530, y: 278 }] },
-          YTE: { role: 'block_veer', points: [base.YTE, { x: 632, y: 340 }, { x: 590, y: 262 }] },
-          LG: { role: 'block_scoop', points: [base.LG, { x: 472, y: 356 }, { x: 444, y: 288 }] },
-          LT: { role: 'block_scoop', points: [base.LT, { x: 422, y: 350 }, { x: 418, y: 312 }] },
-          XTE: {
-            role: 'block_veer',
-            points: xMode === 'wide_x'
-              ? [base.XTE, { x: 195, y: 340 }, { x: 245, y: 265 }]
-              : [base.XTE, { x: 405, y: 325 }, { x: 486, y: 192 }],
-          },
-          W: { role: 'block_veer', points: [base.W, { x: base.W.x + 28, y: 335 }, { x: 742, y: 268 }] },
-          LH: {
-            role: 'dive',
-            points: diveGive
-              ? [base.LH, { x: 526, y: 408 }, { x: 556, y: 332 }, { x: 562, y: 185 }]
-              : [base.LH, { x: 526, y: 408 }, { x: 564, y: 354 }, { x: 575, y: 325 }],
-          },
-          QB: {
-            role: 'qb',
-            points: diveGive
-              ? [base.QB, { x: 524, y: 412 }, { x: 618, y: 406 }, { x: 658, y: 375 }]
-              : qbKeep
-              ? [base.QB, { x: 524, y: 412 }, { x: 626, y: 402 }, { x: 642, y: 320 }, { x: 648, y: 175 }]
-              : [base.QB, { x: 524, y: 412 }, { x: 628, y: 404 }, { x: 644, y: 392 }],
-          },
-          RH: {
-            role: 'pitch',
-            points: pitchTriggered
-              ? [base.RH, { x: 636, y: 476 }, { x: 716, y: 418 }, { x: 748, y: 300 }, { x: 758, y: 155 }]
-              : [base.RH, { x: 636, y: 476 }, { x: 716, y: 418 }, { x: 754, y: 345 }],
-          },
+      const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
+        C: { role: 'block_scoop', points: [base.C, { x: 506, y: 350 }, { x: 488, y: 318 }] },
+        RG: { role: 'block_down', points: [base.RG, { x: 538, y: 350 }, { x: 532, y: 315 }] },
+        RT: { role: 'block_veer', points: [base.RT, { x: 572, y: 344 }, { x: 530, y: 278 }] },
+        YTE: { role: 'block_veer', points: [base.YTE, { x: 632, y: 340 }, { x: 590, y: 262 }] },
+        LG: { role: 'block_scoop', points: [base.LG, { x: 472, y: 356 }, { x: 444, y: 288 }] },
+        LT: { role: 'block_scoop', points: [base.LT, { x: 422, y: 350 }, { x: 418, y: 312 }] },
+        XTE: {
+          role: 'block_veer',
+          points: xMode === 'wide_x'
+            ? [base.XTE, { x: 195, y: 340 }, { x: 245, y: 265 }]
+            : [base.XTE, { x: 405, y: 325 }, { x: 486, y: 192 }],
         },
+        W: { role: 'block_veer', points: [base.W, { x: base.W.x + 28, y: 335 }, { x: 742, y: 268 }] },
+        LH: {
+          role: 'dive',
+          points: diveGive
+            ? [base.LH, { x: 526, y: 408 }, { x: 556, y: 332 }, { x: 562, y: 185 }]
+            : [base.LH, { x: 526, y: 408 }, { x: 564, y: 354 }, { x: 575, y: 325 }],
+        },
+        QB: {
+          role: 'qb',
+          points: diveGive
+            ? [base.QB, { x: 524, y: 412 }, { x: 618, y: 406 }, { x: 658, y: 375 }]
+            : qbKeep
+            ? [base.QB, { x: 524, y: 412 }, { x: 626, y: 402 }, { x: 642, y: 320 }, { x: 648, y: 175 }]
+            : [base.QB, { x: 524, y: 412 }, { x: 628, y: 404 }, { x: 644, y: 392 }],
+        },
+        RH: {
+          role: 'pitch',
+          points: pitchTriggered
+            ? [base.RH, { x: 636, y: 476 }, { x: 716, y: 418 }, { x: 748, y: 300 }, { x: 758, y: 155 }]
+            : [base.RH, { x: 636, y: 476 }, { x: 716, y: 418 }, { x: 754, y: 345 }],
+        },
+      };
+
+      const paths = targetSide === 'left' ? mirrorPaths(rawPaths) : rawPaths;
+
+      return {
+        paths,
         ballCarrierSequence: {
           diveGive,
           qbKeep,
           pitchTriggered,
-          finalCarrier,
-          outcomeLabel,
+          finalCarrier: targetSide === 'left' ? (finalCarrier === 'LH' ? 'RH' : finalCarrier === 'RH' ? 'LH' : 'QB') : finalCarrier,
+          outcomeLabel: targetSide === 'left' ? outcomeLabel.replace('3', '2').replace('2', '3') : outcomeLabel,
           expectedYards: diveGive ? '+6.5 Yds (Interior B-Gap)' : pitchTriggered ? '+14.5 Yds (Perimeter Alley)' : '+9.0 Yds (Off-Tackle Seam)',
           coachingExplanation: diveGive
             ? (diveBehavior === 'upfield'
-              ? '#1 executed a Bull Rush into the line — 1 leaves ball in 3\'s stomach as 3 creases right past the rush into the secondary.'
-              : '#1 Dive Key stayed square/wide. 1 leaves ball in 3\'s stomach for a clean 6+ yard B-gap crease.')
+              ? '#1 executed a Bull Rush into the line — 1 leaves ball in stomach of dive back creasing right past the rush into the secondary.'
+              : '#1 Dive Key stayed square/wide. 1 leaves ball in dive back stomach for a clean 6+ yard B-gap crease.')
             : pitchTriggered
-            ? '#1 crashed on 3 and #2 committed to 1 — 1 flips a clean wrist-pitch to 2 in the open perimeter.'
-            : '#1 crashed on 3 and #2 feathered wide with 2 — 1 plants outside foot and cuts upfield inside #2.',
+            ? '#1 crashed and #2 committed to 1 — 1 flips a clean wrist-pitch to pitch back in the open perimeter.'
+            : '#1 crashed and #2 feathered wide — 1 plants outside foot and cuts upfield inside #2.',
         },
       };
     },
@@ -673,32 +1408,9 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
         detail: '1 forces the Cornerback (#2) to declare: pitch to 2 for the sideline or 1 keeper off-tackle.',
       },
     ],
-    positionRules: {
-      ...BASE_POSITION_RULES,
-      RT: {
-        ...BASE_POSITION_RULES.RT,
-        aimingPoint: 'Heavy Down-Block on 4/5-Tech DT',
-        footwork: 'Violent 45° inside down-block; drive feet and wash the defender inside.',
-        coachingCue: 'On Outside Veer, do not release to LB — wash the DT inside.',
-        commonErrorsFix: 'Hesitating on the snap allows the DT to penetrate the C-gap track. Fire out flat and attack the near hip.',
-      },
-      YTE: {
-        ...BASE_POSITION_RULES.YTE,
-        aimingPoint: 'Inside Veer Release past EMLOS to Linebacker',
-        footwork: '45° inside release underneath the DE straight onto Sam/Mike Linebacker.',
-        coachingCue: 'Leave the Defensive End unblocked — hunt the Linebacker.',
-        commonErrorsFix: 'Chipping the EMLOS End ruins the 1 read timing. Dip your shoulder and rip directly to the second level.',
-      },
-      LH: {
-        ...BASE_POSITION_RULES.LH,
-        aimingPoint: 'Outside Hip of Right Tackle (Playside C-Gap)',
-        footwork: 'Wider 45° crossover track aiming 1 yard wider than Inside Veer.',
-        coachingCue: 'Hit the Tackle\'s outside hip full speed — press the C-Gap.',
-        commonErrorsFix: 'Cutting inside too early muddles the read. Press the C-gap cylinder so the Defensive End must declare.',
-      },
-    },
-    getOffensivePaths: (_front, diveBehavior, pitchBehavior, eleventhMode, xMode = 'tight_x') => {
-      const base = getBaseOffensiveAlignment(eleventhMode, xMode);
+    positionRules: OUTSIDE_VEER_POSITION_RULES,
+    getOffensivePaths: (_front, diveBehavior, pitchBehavior, eleventhMode, xMode = 'tight_x', zSide = 'right', targetSide = 'right') => {
+      const base = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
       const diveGive = diveBehavior !== 'crash';
       const qbKeep = !diveGive && pitchBehavior === 'feather_pitch';
       const pitchTriggered = !diveGive && pitchBehavior === 'commit_qb';
@@ -710,56 +1422,60 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
         ? 'PITCH TO 2 (Sideline Alley)'
         : '1 KEEPER (D-Gap Burst)';
 
-      return {
-        paths: {
-          C: { role: 'block_scoop', points: [base.C, { x: 504, y: 350 }, { x: 492, y: 318 }] },
-          RG: { role: 'block_down', points: [base.RG, { x: 532, y: 348 }, { x: 525, y: 318 }] },
-          RT: { role: 'block_down', points: [base.RT, { x: 574, y: 350 }, { x: 560, y: 315 }] },
-          YTE: { role: 'block_veer', points: [base.YTE, { x: 618, y: 344 }, { x: 585, y: 278 }] },
-          LG: { role: 'block_scoop', points: [base.LG, { x: 468, y: 354 }, { x: 448, y: 295 }] },
-          LT: { role: 'block_scoop', points: [base.LT, { x: 418, y: 352 }, { x: 412, y: 318 }] },
-          XTE: {
-            role: 'block_veer',
-            points: xMode === 'wide_x'
-              ? [base.XTE, { x: 190, y: 340 }, { x: 240, y: 260 }]
-              : [base.XTE, { x: 408, y: 325 }, { x: 488, y: 195 }],
-          },
-          W: { role: 'block_veer', points: [base.W, { x: base.W.x + 35, y: 330 }, { x: 760, y: 260 }] },
-          LH: {
-            role: 'dive',
-            points: diveGive
-              ? [base.LH, { x: 542, y: 412 }, { x: 612, y: 348 }, { x: 622, y: 185 }]
-              : [base.LH, { x: 542, y: 412 }, { x: 612, y: 360 }],
-          },
-          QB: {
-            role: 'qb',
-            points: diveGive
-              ? [base.QB, { x: 540, y: 416 }, { x: 642, y: 410 }, { x: 685, y: 375 }]
-              : qbKeep
-              ? [base.QB, { x: 540, y: 416 }, { x: 658, y: 408 }, { x: 688, y: 325 }, { x: 694, y: 175 }]
-              : [base.QB, { x: 540, y: 416 }, { x: 662, y: 408 }, { x: 685, y: 395 }],
-          },
-          RH: {
-            role: 'pitch',
-            points: pitchTriggered
-              ? [base.RH, { x: 654, y: 472 }, { x: 742, y: 415 }, { x: 772, y: 295 }, { x: 780, y: 155 }]
-              : [base.RH, { x: 654, y: 472 }, { x: 742, y: 415 }, { x: 776, y: 345 }],
-          },
+      const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
+        C: { role: 'block_scoop', points: [base.C, { x: 504, y: 350 }, { x: 492, y: 318 }] },
+        RG: { role: 'block_down', points: [base.RG, { x: 532, y: 348 }, { x: 525, y: 318 }] },
+        RT: { role: 'block_down', points: [base.RT, { x: 574, y: 350 }, { x: 560, y: 315 }] },
+        YTE: { role: 'block_veer', points: [base.YTE, { x: 618, y: 344 }, { x: 585, y: 278 }] },
+        LG: { role: 'block_scoop', points: [base.LG, { x: 468, y: 354 }, { x: 448, y: 295 }] },
+        LT: { role: 'block_scoop', points: [base.LT, { x: 418, y: 352 }, { x: 412, y: 318 }] },
+        XTE: {
+          role: 'block_veer',
+          points: xMode === 'wide_x'
+            ? [base.XTE, { x: 190, y: 340 }, { x: 240, y: 260 }]
+            : [base.XTE, { x: 408, y: 325 }, { x: 488, y: 195 }],
         },
+        W: { role: 'block_veer', points: [base.W, { x: base.W.x + 35, y: 330 }, { x: 760, y: 260 }] },
+        LH: {
+          role: 'dive',
+          points: diveGive
+            ? [base.LH, { x: 542, y: 412 }, { x: 612, y: 348 }, { x: 622, y: 185 }]
+            : [base.LH, { x: 542, y: 412 }, { x: 612, y: 360 }],
+        },
+        QB: {
+          role: 'qb',
+          points: diveGive
+            ? [base.QB, { x: 540, y: 416 }, { x: 642, y: 410 }, { x: 685, y: 375 }]
+            : qbKeep
+            ? [base.QB, { x: 540, y: 416 }, { x: 658, y: 408 }, { x: 688, y: 325 }, { x: 694, y: 175 }]
+            : [base.QB, { x: 540, y: 416 }, { x: 662, y: 408 }, { x: 685, y: 395 }],
+        },
+        RH: {
+          role: 'pitch',
+          points: pitchTriggered
+            ? [base.RH, { x: 654, y: 472 }, { x: 742, y: 415 }, { x: 772, y: 295 }, { x: 780, y: 155 }]
+            : [base.RH, { x: 654, y: 472 }, { x: 742, y: 415 }, { x: 776, y: 345 }],
+        },
+      };
+
+      const paths = targetSide === 'left' ? mirrorPaths(rawPaths) : rawPaths;
+
+      return {
+        paths,
         ballCarrierSequence: {
           diveGive,
           qbKeep,
           pitchTriggered,
-          finalCarrier,
-          outcomeLabel,
+          finalCarrier: targetSide === 'left' ? (finalCarrier === 'LH' ? 'RH' : finalCarrier === 'RH' ? 'LH' : 'QB') : finalCarrier,
+          outcomeLabel: targetSide === 'left' ? outcomeLabel.replace('3', '2').replace('2', '3') : outcomeLabel,
           expectedYards: diveGive ? '+7.5 Yds (Off-Tackle C-Gap)' : pitchTriggered ? '+16.0 Yds (Sideline Strike)' : '+9.5 Yds (1 Keeper)',
           coachingExplanation: diveGive
             ? (diveBehavior === 'upfield'
-              ? '#1 EMLOS End executed a Bull Rush — 1 leaves ball in 3\'s stomach as 3 creases off RT\'s down block for huge yards.'
-              : 'EMLOS End widened or sat flat — 3 hits the C-gap crease off RT\'s down block for huge off-tackle yards.')
+              ? '#1 EMLOS End executed a Bull Rush — 1 leaves ball in dive back\'s stomach as dive back creases off down block.'
+              : 'EMLOS End widened or sat flat — dive back hits C-gap crease off down block for big off-tackle yards.')
             : pitchTriggered
-            ? 'EMLOS End crashed hard on 3\'s C-gap dive, and the Corner came up on 1 — 1 pitches to 2 on the perimeter for big yardage.'
-            : 'EMLOS End crashed on Dive, and the Corner backed off with 2 — 1 keeps and accelerates North-South into the alley.',
+            ? 'EMLOS End crashed hard on C-gap dive, and Corner came up on 1 — 1 pitches to perimeter for big yardage.'
+            : 'EMLOS End crashed on Dive, and Corner backed off — 1 keeps and accelerates North-South into the alley.',
         },
       };
     },
@@ -811,62 +1527,57 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
         detail: 'With the entire defense flowing right on the fake, QB and RH create a 2-on-1 on the left sideline.',
       },
     ],
-    positionRules: {
-      ...BASE_POSITION_RULES,
-      RG: {
-        ...BASE_POSITION_RULES.RG,
-        aimingPoint: 'Pull Flat Left across Center — Kick Out Weakside EMLOS',
-        footwork: 'Drop-step left, stay tight along Center\'s hips, pull flat and kick out first defender outside XTE.',
-        coachingCue: 'Pull flat down the line — kick out the weak edge with your inside shoulder.',
-        commonErrorsFix: 'Looping backwards creates penetration. Step flat along the line of scrimmage immediately on the snap.',
-      },
-    },
-    getOffensivePaths: (_front, _diveBehavior, pitchBehavior, eleventhMode, xMode = 'tight_x') => {
-      const base = getBaseOffensiveAlignment(eleventhMode, xMode);
+    positionRules: COUNTER_POSITION_RULES,
+    getOffensivePaths: (_front, _diveBehavior, pitchBehavior, eleventhMode, xMode = 'tight_x', zSide = 'right', targetSide = 'left') => {
+      const base = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
       const pitchTriggered = pitchBehavior === 'commit_qb';
       const finalCarrier = pitchTriggered ? 'RH' : 'QB';
 
-      return {
-        paths: {
-          C: { role: 'block_down', points: [base.C, { x: 518, y: 354 }, { x: 526, y: 325 }] },
-          RG: { role: 'block_pull', points: [base.RG, { x: 515, y: 416 }, { x: 375, y: 412 }, { x: 332, y: 342 }, { x: 325, y: 275 }] },
-          RT: { role: 'block_down', points: [base.RT, { x: 562, y: 352 }, { x: 545, y: 322 }] },
-          YTE: { role: 'block_down', points: [base.YTE, { x: 608, y: 352 }, { x: 595, y: 320 }] },
-          LG: { role: 'block_down', points: [base.LG, { x: 468, y: 352 }, { x: 478, y: 320 }] },
-          LT: { role: 'block_down', points: [base.LT, { x: 418, y: 350 }, { x: 432, y: 318 }] },
-          XTE: {
-            role: 'block_down',
-            points: xMode === 'wide_x'
-              ? [base.XTE, { x: 220, y: 345 }, { x: 255, y: 280 }]
-              : [base.XTE, { x: 388, y: 348 }, { x: 402, y: 315 }],
-          },
-          W: { role: 'block_veer', points: [base.W, { x: base.W.x - 35, y: 335 }, { x: 510, y: 210 }] },
-          LH: {
-            role: 'fake',
-            points: [base.LH, { x: 525, y: 408 }, { x: 572, y: 348 }, { x: 585, y: 310 }],
-          },
-          QB: {
-            role: 'qb',
-            points: pitchTriggered
-              ? [base.QB, { x: 512, y: 416 }, { x: 410, y: 418 }, { x: 342, y: 392 }]
-              : [base.QB, { x: 512, y: 416 }, { x: 410, y: 418 }, { x: 336, y: 368 }, { x: 318, y: 175 }],
-          },
-          RH: {
-            role: 'pitch',
-            points: pitchTriggered
-              ? [base.RH, { x: 455, y: 488 }, { x: 315, y: 448 }, { x: 258, y: 342 }, { x: 245, y: 155 }]
-              : [base.RH, { x: 455, y: 488 }, { x: 315, y: 448 }, { x: 258, y: 342 }],
-          },
+      const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
+        C: { role: 'block_down', points: [base.C, { x: 518, y: 354 }, { x: 526, y: 325 }] },
+        RG: { role: 'block_pull', points: [base.RG, { x: 515, y: 416 }, { x: 375, y: 412 }, { x: 332, y: 342 }, { x: 325, y: 275 }] },
+        RT: { role: 'block_down', points: [base.RT, { x: 562, y: 352 }, { x: 545, y: 322 }] },
+        YTE: { role: 'block_down', points: [base.YTE, { x: 608, y: 352 }, { x: 595, y: 320 }] },
+        LG: { role: 'block_down', points: [base.LG, { x: 468, y: 352 }, { x: 478, y: 320 }] },
+        LT: { role: 'block_down', points: [base.LT, { x: 418, y: 350 }, { x: 432, y: 318 }] },
+        XTE: {
+          role: 'block_down',
+          points: xMode === 'wide_x'
+            ? [base.XTE, { x: 220, y: 345 }, { x: 255, y: 280 }]
+            : [base.XTE, { x: 388, y: 348 }, { x: 402, y: 315 }],
         },
+        W: { role: 'block_veer', points: [base.W, { x: base.W.x - 35, y: 335 }, { x: 510, y: 210 }] },
+        LH: {
+          role: 'fake',
+          points: [base.LH, { x: 525, y: 408 }, { x: 572, y: 348 }, { x: 585, y: 310 }],
+        },
+        QB: {
+          role: 'qb',
+          points: pitchTriggered
+            ? [base.QB, { x: 512, y: 416 }, { x: 410, y: 418 }, { x: 342, y: 392 }]
+            : [base.QB, { x: 512, y: 416 }, { x: 410, y: 418 }, { x: 336, y: 368 }, { x: 318, y: 175 }],
+        },
+        RH: {
+          role: 'pitch',
+          points: pitchTriggered
+            ? [base.RH, { x: 455, y: 488 }, { x: 315, y: 448 }, { x: 258, y: 342 }, { x: 245, y: 155 }]
+            : [base.RH, { x: 455, y: 488 }, { x: 315, y: 448 }, { x: 258, y: 342 }],
+        },
+      };
+
+      const paths = targetSide === 'right' ? mirrorPaths(rawPaths) : rawPaths;
+
+      return {
+        paths,
         ballCarrierSequence: {
           diveGive: false,
           qbKeep: !pitchTriggered,
           pitchTriggered,
           finalCarrier,
-          outcomeLabel: pitchTriggered ? 'COUNTER PITCH TO 2 (Left Alley)' : 'COUNTER 1 KEEP (Behind Pulling RG)',
+          outcomeLabel: pitchTriggered ? 'COUNTER PITCH TO 2 (Perimeter Alley)' : 'COUNTER 1 KEEP (Behind Pulling Guard)',
           expectedYards: '+16.5 Yds (Explosive Misdirection)',
           coachingExplanation:
-            '3\'s violent fake to right B-gap froze the linebackers. X pinned the weakside DE inside (or stalked CB) while RG pulled around the horn to lead the Counter.',
+            'Violent fake to the opposite B-gap froze the linebackers. Backside end was pinned inside while pulling Guard led the Counter.',
         },
       };
     },
@@ -918,193 +1629,238 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
         detail: 'LH follows RH\'s lead block, presses into the secondary, and finishes with high-and-tight ball security.',
       },
     ],
-    positionRules: {
-      ...BASE_POSITION_RULES,
-      LG: {
-        ...BASE_POSITION_RULES.LG,
-        aimingPoint: 'Pull Flat across Center — Kick Out Playside Edge Defender (EMLOS)',
-        footwork: 'Skip-pull flat along Center/Tackle hips, wrap tight around RT down-block, strike edge defender.',
-        coachingCue: 'Pull flat, stay tight to the wall, kick out the edge defender with your inside shoulder.',
-        commonErrorsFix: 'Drifting into the backfield allows the edge defender to penetrate. Skim the hips of the down-blockers.',
-      },
-      RH: {
-        ...BASE_POSITION_RULES.RH,
-        aimingPoint: 'Lead through C-Gap — Isolate Playside Linebacker (Mike/Sam LB)',
-        footwork: 'Explode downhill at 45°, fire through C-gap, fit and drive the linebacker backwards.',
-        coachingCue: 'You are the Lead Blocker on Power — blow up the Linebacker.',
-        commonErrorsFix: 'Hesitating at the mesh ruins the hole. Hit the C-gap at full speed and drive through the linebacker.',
-      },
-      LH: {
-        ...BASE_POSITION_RULES.LH,
-        aimingPoint: 'Playside C-Gap behind Pulling LG and Lead RH',
-        footwork: 'One gather step, secure handoff, press line, cut vertical inside kickout.',
-        coachingCue: 'Soft hands on handoff, violent legs in the hole — run North-South.',
-        commonErrorsFix: 'Bouncing outside before the kickout block opens ruins the play. Press the tackle hip and cut vertical.',
-      },
-    },
-    getOffensivePaths: (_front, _diveBehavior, _pitchBehavior, eleventhMode, xMode = 'tight_x') => {
-      const base = getBaseOffensiveAlignment(eleventhMode, xMode);
-      return {
-        paths: {
-          C: { role: 'block_down', points: [base.C, { x: 488, y: 350 }, { x: 480, y: 320 }] },
-          RG: { role: 'block_down', points: [base.RG, { x: 536, y: 348 }, { x: 528, y: 318 }] },
-          RT: { role: 'block_down', points: [base.RT, { x: 574, y: 350 }, { x: 560, y: 316 }] },
-          YTE: { role: 'block_down', points: [base.YTE, { x: 616, y: 350 }, { x: 602, y: 320 }] },
-          LG: {
-            role: 'block_pull',
-            points: [base.LG, { x: 508, y: 418 }, { x: 602, y: 412 }, { x: 652, y: 382 }, { x: 668, y: 340 }],
-          },
-          LT: { role: 'block_scoop', points: [base.LT, { x: 412, y: 354 }, { x: 408, y: 318 }] },
-          XTE: {
-            role: 'block_veer',
-            points: xMode === 'wide_x'
-              ? [base.XTE, { x: 195, y: 340 }, { x: 245, y: 265 }]
-              : [base.XTE, { x: 415, y: 325 }, { x: 488, y: 195 }],
-          },
-          W: { role: 'block_veer', points: [base.W, { x: base.W.x + 22, y: 332 }, { x: 745, y: 265 }] },
-          LH: {
-            role: 'dive',
-            points: [base.LH, { x: 528, y: 425 }, { x: 618, y: 385 }, { x: 636, y: 305 }, { x: 640, y: 165 }],
-          },
-          QB: {
-            role: 'qb',
-            points: [base.QB, { x: 524, y: 425 }, { x: 440, y: 450 }, { x: 380, y: 465 }],
-          },
-          RH: {
-            role: 'block_veer',
-            points: [base.RH, { x: 588, y: 420 }, { x: 615, y: 348 }, { x: 608, y: 280 }],
-          },
+    positionRules: POWER_POSITION_RULES,
+    getOffensivePaths: (_front, _diveBehavior, _pitchBehavior, eleventhMode, xMode = 'tight_x', zSide = 'right', targetSide = 'right') => {
+      const base = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
+      const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
+        C: { role: 'block_down', points: [base.C, { x: 488, y: 350 }, { x: 480, y: 320 }] },
+        RG: { role: 'block_down', points: [base.RG, { x: 536, y: 348 }, { x: 528, y: 318 }] },
+        RT: { role: 'block_down', points: [base.RT, { x: 574, y: 350 }, { x: 560, y: 316 }] },
+        YTE: { role: 'block_down', points: [base.YTE, { x: 616, y: 350 }, { x: 602, y: 320 }] },
+        LG: {
+          role: 'block_pull',
+          points: [base.LG, { x: 508, y: 418 }, { x: 602, y: 412 }, { x: 652, y: 382 }, { x: 668, y: 340 }],
         },
+        LT: { role: 'block_scoop', points: [base.LT, { x: 412, y: 354 }, { x: 408, y: 318 }] },
+        XTE: {
+          role: 'block_veer',
+          points: xMode === 'wide_x'
+            ? [base.XTE, { x: 195, y: 340 }, { x: 245, y: 265 }]
+            : [base.XTE, { x: 415, y: 325 }, { x: 488, y: 195 }],
+        },
+        W: { role: 'block_veer', points: [base.W, { x: base.W.x + 22, y: 332 }, { x: 745, y: 265 }] },
+        LH: {
+          role: 'dive',
+          points: [base.LH, { x: 528, y: 425 }, { x: 618, y: 385 }, { x: 636, y: 305 }, { x: 640, y: 165 }],
+        },
+        QB: {
+          role: 'qb',
+          points: [base.QB, { x: 524, y: 425 }, { x: 440, y: 450 }, { x: 380, y: 465 }],
+        },
+        RH: {
+          role: 'block_veer',
+          points: [base.RH, { x: 588, y: 420 }, { x: 615, y: 348 }, { x: 608, y: 280 }],
+        },
+      };
+
+      const paths = targetSide === 'left' ? mirrorPaths(rawPaths) : rawPaths;
+
+      return {
+        paths,
         ballCarrierSequence: {
           diveGive: true,
           qbKeep: false,
           pitchTriggered: false,
-          finalCarrier: 'LH',
-          outcomeLabel: 'DIRECT HANDOFF TO 3 (24 Power Off-Tackle)',
-          expectedYards: '+8.0 Yds (Down-Block Wall + LG Kickout)',
+          finalCarrier: targetSide === 'left' ? 'RH' : 'LH',
+          outcomeLabel: targetSide === 'left' ? 'DIRECT HANDOFF TO 2 (23 Power Off-Tackle)' : 'DIRECT HANDOFF TO 3 (24 Power Off-Tackle)',
+          expectedYards: '+8.0 Yds (Down-Block Wall + Kickout)',
           coachingExplanation:
-            'Y and RT pinned the defensive front inside with heavy down blocks. Backside LG pulled and kicked out the edge defender, while 2 led through to erase the linebacker — giving 3 an open power tunnel.',
+            'Down-blocks pinned the defensive front inside. Backside Guard pulled and kicked out the edge defender, while the lead back erased the linebacker.',
         },
       };
     },
   },
 
-  // 5. POWER PASS (Y POP)
+  // 5. DOUBLE TIGHT RIGHT 36 FLOOD (PLAY-ACTION FLOOD PASS)
   {
     id: '324-power-pass',
-    code: '324 POWER PASS',
-    name: '324 Power Pass (Y Pop Seam)',
-    subtitle: 'Exact 24 Power Action — Y Sells Down-Block for 1 Count, Then Pops into 10-Yd Seam',
+    code: '36 FLOOD',
+    name: 'Double Tight Right 36 Flood',
+    subtitle: 'Play-Action Flood — Z Post Corner · Y 7-Yd Whip Out · 3 Back Block SDE & Release Arrow · 2 Back Block Backside DE (2 Count) & Release Flat · RG Pull to Backside DE · RT Inside Shift · X Post',
     seriesTag: 'Core 05',
     playType: 'Play-Action Pass',
-    targetGap: 'Playside Y Pop Seam (8–12 Yards Deep)',
-    primaryReadLabel: 'Primary Target: Y Pop Seam',
-    secondaryReadLabel: 'Checkdown: 2 Flat / X Drag',
+    targetGap: 'Flood Concept (Y 7-Yd Whip Out / Z Post Corner / 3 & 2 Flat Releases)',
+    primaryReadLabel: 'Progression: 1) Y 7-Yd Whip Out ➔ 2) Z Post Corner',
+    secondaryReadLabel: 'Checkdown: 3 Arrow (Right Flat) / 2 Flat (Left Flat) | Backside: X Post',
     summary:
-      'The ultimate big-play counter. Once you run 24 Power and Veer, the linebackers and safeties sprint to the line of scrimmage the moment they see the Power run action. 324 Power Pass fakes the exact same Power: LG pulls, 3 executes a violent power dive fake, and Y sells down block for 1 count before popping wide open into the vacated seam.',
+      'Double Tight Right 36 Flood. Play-action flood concept off the power look. Z runs a post corner to stretch the deep coverage. Y drives 7 yards and whips back out to the sideline. 3 back (LH) blocks the outside shoulder of the SDE then releases to the flat on an arrow route. 2 back (RH) attacks the outside shoulder of the backside DE for a 2 count then releases to the flat. RT shifts inside for interior pass protection, and RG pulls across to pick up the backside DE. X drives directly at the outside shoulder of the left side CB before going post.',
     whenToCall:
-      'When linebackers bite hard on the run or Free Safety creeps inside 8 yards of the line of scrimmage.',
+      'When the defense bites hard on 24 Power run action or stacks the box against Veer, leaving perimeter zones vulnerable to flood overload.',
     qbDecisionMatrix: {
-      crashPull: 'Fake direct handoff to 3 (who chips edge rusher); take 2 quick gather steps behind RT.',
-      squeezeGive: '1st Read: Y running the Pop Seam right behind the biting inside linebackers.',
-      pitchPhase: '2nd Read: 2 in the right flat checkdown OR X dragging across middle at 6 yards.',
+      crashPull: 'Play-action fake to 3 back, 3-step gather drop behind RT inside pass pro.',
+      squeezeGive: '1st Read: Y on the 7-yard whip out beating flat defenders inside-out.',
+      pitchPhase: '2nd Read: Z on post-corner; Checkdowns: 3 arrow to right flat or 2 to left flat; Backside Alert: X cutting post.',
     },
     coachingPhases: [
       {
         phase: 1,
         timeRange: [0, 0.25],
-        title: 'Phase 1: Full-Speed Power Run Sell',
-        detail: 'O-line fires low, LG pulls right, and 3 explodes toward the C-gap just like 24 Power.',
+        title: 'Phase 1: Power Fake & Pass Pro Setup',
+        detail: 'O-line sets: RG pulls to backside DE, RT shifts inside for pass pro, 2 back attacks outside shoulder of backside DE for a 2 count, and 3 back attacks outside shoulder of SDE.',
       },
       {
         phase: 2,
         timeRange: [0.25, 0.55],
-        title: 'Phase 2: Y Down-Block Hesitation & Pop Release',
-        detail: 'Y initiates contact on the DE for 1 count ("One-thousand-one"), then slips vertical into the open seam.',
+        title: 'Phase 2: Route Stems & Dual Flat Releases',
+        detail: 'Y drives 7 yards, X drives directly at outside shoulder of CB before going post, Z stems vertical on post move, 3 back releases arrow to right flat, and 2 back releases to left flat.',
       },
       {
         phase: 3,
         timeRange: [0.55, 0.8],
-        title: 'Phase 3: 1 Gather Steps & Rhythm Strike',
-        detail: '1 fakes to 3, plants back foot at 3-step depth, and throws a firm chest strike to Y.',
+        title: 'Phase 3: Route Breaks & Flood Overload',
+        detail: 'Y whips out to the sideline, Z snaps 45° to corner pylon, and X cuts post across the middle. QB reads 1) Y Whip Out ➔ 2) Z Post Corner.',
       },
       {
         phase: 4,
         timeRange: [0.8, 1.0],
-        title: 'Phase 4: Catch & Run in Empty Secondary',
-        detail: 'With linebackers sucked into the line and safety frozen, Y catches in stride for an explosive touchdown.',
+        title: 'Phase 4: High-Percentage Strike & RAC',
+        detail: 'QB delivers in rhythm to Y on whip out, hits Z over the top, or dumps off to 3 or 2 releasing to the flats.',
       },
     ],
-    positionRules: {
-      ...BASE_POSITION_RULES,
-      YTE: {
-        ...BASE_POSITION_RULES.YTE,
-        aimingPoint: 'Y Pop Seam (8–10 Yards between Hashes and Numbers)',
-        footwork: 'Punch DE for 1 count, disengage, burst 8 yards vertical behind linebackers.',
-        coachingCue: 'Sell the down block 1-thousand-1, then pop straight down the seam.',
-        commonErrorsFix: 'Slipping out without initial contact tips off the pass. Make firm shoulder contact before releasing.',
-      },
-      QB: {
-        ...BASE_POSITION_RULES.QB,
-        aimingPoint: 'Y on 10-Yard Seam Pop',
-        footwork: 'Fake Power handoff, 2 quick gather steps, plant back foot and deliver to Y\'s numbers.',
-        coachingCue: 'Fake Power, eye the linebackers, throw firm strike to Y.',
-        commonErrorsFix: 'Floating the pass allows the safety to recover. Throw on a line right over the linebacker helmet level.',
-      },
-    },
-    getOffensivePaths: (_front, _diveBehavior, _pitchBehavior, eleventhMode, xMode = 'tight_x') => {
-      const base = getBaseOffensiveAlignment(eleventhMode, xMode);
-      return {
-        paths: {
-          C: { role: 'block_down', points: [base.C, { x: 500, y: 368 }] },
-          RG: { role: 'block_down', points: [base.RG, { x: 548, y: 368 }] },
-          RT: { role: 'block_down', points: [base.RT, { x: 594, y: 368 }] },
-          LG: {
-            role: 'block_pull',
-            points: [base.LG, { x: 512, y: 418 }, { x: 588, y: 412 }, { x: 615, y: 382 }],
-          },
-          LT: { role: 'block_down', points: [base.LT, { x: 406, y: 368 }] },
-          YTE: {
-            role: 'route_pass',
-            points: [base.YTE, { x: 636, y: 360 }, { x: 630, y: 260 }, { x: 626, y: 135 }],
-          },
-          XTE: {
-            role: 'route_pass',
-            points: xMode === 'wide_x'
-              ? [base.XTE, { x: 200, y: 340 }, { x: 340, y: 280 }, { x: 520, y: 260 }]
-              : [base.XTE, { x: 375, y: 345 }, { x: 485, y: 290 }, { x: 565, y: 285 }],
-          },
-          W: {
-            role: 'route_pass',
-            points: [base.W, { x: base.W.x + 25, y: 310 }, { x: 795, y: 190 }],
-          },
-          LH: {
-            role: 'fake',
-            points: [base.LH, { x: 526, y: 415 }, { x: 602, y: 370 }, { x: 624, y: 350 }],
-          },
-          QB: {
-            role: 'qb',
-            points: [base.QB, { x: 524, y: 418 }, { x: 562, y: 442 }, { x: 566, y: 448 }],
-          },
-          RH: {
-            role: 'route_pass',
-            points: [base.RH, { x: 635, y: 450 }, { x: 730, y: 390 }, { x: 765, y: 335 }],
-          },
+    positionRules: FLOOD_POSITION_RULES,
+    getOffensivePaths: (_front, _diveBehavior, _pitchBehavior, eleventhMode, xMode = 'tight_x', zSide = 'right', targetSide = 'right') => {
+      const base = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
+
+      const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
+        C: { role: 'block_down', points: [base.C, { x: 500, y: 368 }] },
+        // RG pulls to backside DE
+        RG: {
+          role: 'block_pull',
+          points: [base.RG, { x: 490, y: 405 }, { x: 420, y: 400 }, { x: 375, y: 355 }],
         },
+        // RT shifts for inside pass pro
+        RT: {
+          role: 'block_down',
+          points: [base.RT, { x: base.RT.x - 14, y: 365 }],
+        },
+        LG: {
+          role: 'block_down',
+          points: [base.LG, { x: 460, y: 368 }],
+        },
+        LT: {
+          role: 'block_down',
+          points: [base.LT, { x: 410, y: 368 }],
+        },
+        // Y is running 7 yard whip out (drives up 7 yds, breaks in 2 steps, whips out to sideline)
+        YTE: {
+          role: 'route_pass',
+          points: [
+            base.YTE,
+            { x: 630, y: 320 },
+            { x: 625, y: 280 },
+            { x: 605, y: 272 },
+            { x: 660, y: 265 },
+            { x: 720, y: 260 },
+          ],
+        },
+        // X drives directly at outside shoulder of left side CB before going post
+        XTE: {
+          role: 'route_pass',
+          points: [base.XTE, { x: 195, y: 310 }, { x: 185, y: 260 }, { x: 420, y: 145 }],
+        },
+        // Z - post corner (stems vertical 10 yds, fakes post inside to freeze safety, cuts to corner pylon)
+        W: {
+          role: 'route_pass',
+          points: [
+            base.W,
+            { x: base.W.x + 8, y: 300 },
+            { x: base.W.x - 18, y: 220 },
+            { x: base.W.x + 38, y: 135 },
+          ],
+        },
+        // 3 back blocking outside shoulder of SDE then releasing arrow
+        LH: {
+          role: 'route_pass',
+          points: [
+            base.LH,
+            { x: 575, y: 410 },
+            { x: 650, y: 365 },
+            { x: 730, y: 350 },
+            { x: 800, y: 325 },
+          ],
+        },
+        QB: {
+          role: 'qb',
+          points: [base.QB, { x: 508, y: 420 }, { x: 506, y: 445 }, { x: 506, y: 450 }],
+        },
+        // 2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats
+        RH: {
+          role: 'route_pass',
+          points: [
+            base.RH,
+            { x: 480, y: 425 },
+            { x: 370, y: 385 },
+            { x: 355, y: 365 },
+            { x: 260, y: 345 },
+            { x: 190, y: 330 },
+          ],
+        },
+      };
+
+      const paths = targetSide === 'left' ? mirrorPaths(rawPaths) : rawPaths;
+
+      return {
+        paths,
         ballCarrierSequence: {
           diveGive: false,
           qbKeep: false,
           pitchTriggered: false,
-          finalCarrier: 'YTE',
-          outcomeLabel: 'POWER PASS COMPLETION TO Y (Y Pop)',
-          expectedYards: '+24.0 Yds (Wide Open Tight End Seam)',
+          finalCarrier: targetSide === 'left' ? 'XTE' : 'YTE',
+          outcomeLabel: targetSide === 'left' ? '35 FLOOD PASS TO X (7-Yd Whip Out)' : '36 FLOOD PASS TO Y (7-Yd Whip Out)',
+          expectedYards: targetSide === 'left' ? '+18.0 Yds (Double Tight Left 35 Flood)' : '+18.0 Yds (Double Tight Right 36 Flood)',
           coachingExplanation:
-            'Linebackers stepped up hard on the 24 Power run action and LG pull fake, leaving Y running wide open down the seam for an uncontested touchdown.',
+            'Play-action flood concept off the power look. Backside guard pulled to backside DE, RT shifted inside, 3 back chipped SDE before releasing arrow, and 2 back attacked outside shoulder of backside DE for a 2 count before releasing to the flat. Y whipped open to the sideline while Z stretched deep on the post corner and X threatened the CB before cutting post.',
         },
       };
     },
   },
 ];
+
+// Helper to mirror points and paths horizontally across X = 500
+function mirrorPoints(points: Point[]): Point[] {
+  return points.map((p) => ({ x: 1000 - p.x, y: p.y }));
+}
+
+function mirrorPaths(
+  paths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }>
+): Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> {
+  const mirrored: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {};
+
+  const swapMap: Record<string, string> = {
+    C: 'C',
+    QB: 'QB',
+    RG: 'LG',
+    LG: 'RG',
+    RT: 'LT',
+    LT: 'RT',
+    YTE: 'XTE',
+    XTE: 'YTE',
+    RH: 'LH',
+    LH: 'RH',
+    W: 'W',
+  };
+
+  for (const [key, val] of Object.entries(paths)) {
+    const targetKey = swapMap[key] || key;
+    mirrored[targetKey] = {
+      role: val.role,
+      points: mirrorPoints(val.points),
+      label: val.label,
+    };
+  }
+
+  return mirrored;
+}
 
 export const PRACTICE_DRILLS: PracticeDrill[] = [
   {
@@ -1155,25 +1911,55 @@ export const PRACTICE_DRILLS: PracticeDrill[] = [
   },
   {
     id: 'drill-power-pass-pop',
-    title: '03. Power Pass Y-Pop Play-Action Timing Drill',
+    title: '03. 36 Flood Play-Action Timing & Route Progression Drill',
     durationMin: 10,
-    playersInvolved: 'QBs, Tight Ends (YTE), Halfbacks (LH/RH), Safeties/LBs',
-    equipment: '3 Footballs, 2 Sideline Cones',
-    objective: 'Perfect the "1-thousand-1" down-block hesitation by YTE before popping into the seam on the 324 Power Pass.',
+    playersInvolved: 'QBs, Tight Ends (YTE), Wideouts (Z/X), Halfbacks (LH/RH)',
+    equipment: '3 Footballs, 4 Sideline Cones, 2 Pass Rush Dummies',
+    objective: 'Train the Double Tight Right 36 Flood pass protection and rhythm passing: 1) Y 7-yd whip out, 2) Z post-corner, 3) 3-back chip & arrow release.',
     setupSteps: [
-      'Align QB, LH, RH, and YTE in base Split Back formation.',
-      'Coach positions 2 linebackers at 4 yards depth with instructions to bite hard on run action.',
-      'On snap: LH fakes Power, YTE makes contact on DE dummy for 1 second, then bursts into seam.',
+      'Align QB, LH, RH, YTE, Z, and X in Double Tight Right 36 Flood formation.',
+      'Dummy on SDE for 3-back to strike before releasing arrow to flat; backside dummy for RG pull pickup.',
+      'On snap: Play-action fake, RG pulls to backside DE, 2-back attacks outside shoulder of backside DE for 2 count then releases to flat, RT shifts inside, Y drives 7 yards and whips out.',
     ],
     coachingPoints: [
-      'YTE must sell the run. If you release immediately, the linebacker will read pass and drop.',
-      'QB rhythm: fake Power, take 2 gather steps, plant back foot, throw firm strike.',
-      'Catch the ball with two hands away from the body in the open secondary.',
+      'Y must drive hard 7 yards, sell inside 2 steps, then snap whip out to the sideline.',
+      'Z sell the post move with eyes and shoulders before cutting 45° to the corner pylon.',
+      'QB rhythm: fake to 3 back, 3-step gather drop, throw on time to Y whip out or Z post corner.',
     ],
     levelProgression: {
-      beginner: 'Count out loud: "One-thousand-one... POP!" to build route patience before release.',
-      intermediate: 'Add Free Safety who starts at 10 yards and must react to run vs pass flow.',
-      advanced: 'Incorporate live checkdown to RH in the flat if safety stays deep over YTE.',
+      beginner: 'Routes-on-air focusing on Y whip out break at exactly 7 yards and Z corner pylon angle.',
+      intermediate: 'Add linebackers and cornerbacks to read run vs pass and test QB flood progression.',
+      advanced: 'Live 7-on-7 against Cover 2 and Cover 3 secondary looks.',
     },
   },
 ];
+
+export function getActivePlayDefinition(
+  concept: OffensiveConcept,
+  targetSide: TargetSide,
+  xMode: XPlayerMode,
+  zSide: ZAlignmentSide,
+  zType: ZAlignmentType
+): PlayDefinition {
+  const baseMap: Record<OffensiveConcept, PlayDefinition> = {
+    inside_veer: VEER_PLAYBOOK[0],
+    outside_veer: VEER_PLAYBOOK[1],
+    counter: VEER_PLAYBOOK[2],
+    power: VEER_PLAYBOOK[3],
+    flood: VEER_PLAYBOOK[4],
+  };
+
+  const basePlay = baseMap[concept] || VEER_PLAYBOOK[0];
+  const callInfo = formatOffensivePlayCall(concept, targetSide, xMode, zSide, zType);
+
+  return {
+    ...basePlay,
+    concept,
+    targetSide,
+    code: `${callInfo.numberCode} ${callInfo.conceptName.toUpperCase()}`,
+    name: callInfo.fullPlayCall,
+    subtitle: `${callInfo.fullPlayCall} vs Defense · Target: ${callInfo.numberCode}-Hole (${targetSide === 'right' ? 'Right' : 'Left'})`,
+    getOffensivePaths: (front, diveBehavior, pitchBehavior, eleventhMode) =>
+      basePlay.getOffensivePaths(front, diveBehavior, pitchBehavior, eleventhMode, xMode, zSide, targetSide),
+  };
+}

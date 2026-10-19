@@ -19,7 +19,7 @@ export const WristbandModal: React.FC<WristbandModalProps> = ({ isOpen, onClose 
               Wristband & Sideline Play Call Sheet — Split Back Veer
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              5 Core Plays: Inside Veer · Outside Veer · Counter · Power (Pulling Guard) · Power Pass (Y Pop)
+              5 Core Plays: Inside Veer · Outside Veer · Counter · Power (Pulling Guard) · Double Tight Right 36 Flood
             </p>
           </div>
           <div className="flex items-center gap-3">

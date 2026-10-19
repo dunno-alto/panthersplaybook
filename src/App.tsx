@@ -24,10 +24,15 @@ import {
   DefensiveFrontId,
   DiveKeyBehavior,
   EleventhPlayerMode,
+  OffensiveConcept,
   PitchKeyBehavior,
   Point,
+  TargetSide,
   VEER_PLAYBOOK,
   XPlayerMode,
+  ZAlignmentSide,
+  ZAlignmentType,
+  getActivePlayDefinition,
   getBaseOffensiveAlignment,
 } from './data/veerPlaybookData';
 import { TacticalFieldCanvas } from './components/TacticalFieldCanvas';
@@ -46,6 +51,10 @@ export default function App() {
 
   // OFFENSE STATE (Split Back Veer)
   const [selectedPlayId, setSelectedPlayId] = useState<string>('42-inside-veer');
+  const [concept, setConcept] = useState<OffensiveConcept>('inside_veer');
+  const [targetSide, setTargetSide] = useState<TargetSide>('right');
+  const [zSide, setZSide] = useState<ZAlignmentSide>('right');
+  const [zType, setZType] = useState<ZAlignmentType>('wide');
   const [frontId, setFrontId] = useState<DefensiveFrontId>('5-3');
   const [diveBehavior, setDiveBehavior] = useState<DiveKeyBehavior>('squeeze');
   const [pitchBehavior, setPitchBehavior] = useState<PitchKeyBehavior>('commit_qb');
@@ -74,16 +83,17 @@ export default function App() {
   const [isDefenseWristbandOpen, setIsDefenseWristbandOpen] = useState<boolean>(false);
   const [isSpecialTeamsPrintOpen, setIsSpecialTeamsPrintOpen] = useState<boolean>(false);
 
-  const activePlay =
-    VEER_PLAYBOOK.find((p) => p.id === selectedPlayId) || VEER_PLAYBOOK[0];
+  const activePlay = getActivePlayDefinition(concept, targetSide, xMode, zSide, zType);
   const activeFront = DEFENSIVE_FRONTS[frontId];
-  const baseOffense = getBaseOffensiveAlignment(eleventhMode, xMode);
+  const baseOffense = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
   const simResult = activePlay.getOffensivePaths(
     frontId,
     diveBehavior,
     pitchBehavior,
     eleventhMode,
-    xMode
+    xMode,
+    zSide,
+    targetSide
   );
 
   const isLoopingRef = React.useRef(isLooping);
@@ -154,12 +164,30 @@ export default function App() {
 
   const handleSelectPlay = (playId: string) => {
     setSelectedPlayId(playId);
+    if (playId.includes('inside-veer')) setConcept('inside_veer');
+    else if (playId.includes('outside-veer')) setConcept('outside_veer');
+    else if (playId.includes('counter')) setConcept('counter');
+    else if (playId.includes('power-pass') || playId.includes('flood')) setConcept('flood');
+    else if (playId.includes('power')) setConcept('power');
     setIsPlaying(false);
     setProgress(0);
     if (playId === '24-power') {
       setSelectedPlayerId('LG');
-    } else if (playId === '324-power-pass') {
-      setSelectedPlayerId('YTE');
+    } else if (playId.includes('flood') || playId === '324-power-pass') {
+      setSelectedPlayerId('W');
+    } else {
+      setSelectedPlayerId('LH');
+    }
+  };
+
+  const handleSelectConcept = (newConcept: OffensiveConcept) => {
+    setConcept(newConcept);
+    setIsPlaying(false);
+    setProgress(0);
+    if (newConcept === 'power') {
+      setSelectedPlayerId('LG');
+    } else if (newConcept === 'flood') {
+      setSelectedPlayerId('W');
     } else {
       setSelectedPlayerId('LH');
     }
@@ -327,6 +355,27 @@ export default function App() {
             <PlaySetupConsole
               selectedPlay={activePlay}
               onSelectPlay={handleSelectPlay}
+              selectedConcept={concept}
+              onSelectConcept={handleSelectConcept}
+              targetSide={targetSide}
+              onChangeTargetSide={(side) => {
+                setTargetSide(side);
+                setIsPlaying(false);
+                setProgress(0);
+              }}
+              zSide={zSide}
+              onChangeZSide={(side) => {
+                setZSide(side);
+                setIsPlaying(false);
+                setProgress(0);
+              }}
+              zType={zType}
+              onChangeZType={(type) => {
+                setZType(type);
+                setEleventhMode(type === 'wing' ? 'wing_z' : 'wide_z');
+                setIsPlaying(false);
+                setProgress(0);
+              }}
               eleventhMode={eleventhMode}
               onChangeEleventhMode={setEleventhMode}
               xMode={xMode}
@@ -463,6 +512,8 @@ export default function App() {
                   pitchBehavior={pitchBehavior}
                   eleventhMode={eleventhMode}
                   xMode={xMode}
+                  zSide={zSide}
+                  targetSide={targetSide}
                   progress={progress}
                   fieldTheme={fieldTheme}
                   onChangeFieldTheme={setFieldTheme}
@@ -777,38 +828,61 @@ export default function App() {
               </div>
             </section>
 
-            {/* SECTION 4: MASTER DEFENSIVE FRONT MATRIX */}
+            {/* SECTION 4: MATCHUP BLOCKING RULES MATRIX */}
             <section
               id="defense-fronts"
-              aria-label="Master Front Matrix"
+              aria-label="Matchup Blocking Rules Matrix"
               className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 lg:p-6 shadow-2xl space-y-4"
             >
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pb-3 border-b border-[#162A33]/80">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-3 border-b border-[#162A33]/80">
                 <div>
-                  <p className="text-xs text-teal-400 font-mono uppercase tracking-wider font-semibold">
-                    Offense vs All 6 Defenses ({activePlay.code})
-                  </p>
-                  <h2 className="text-2xl font-bold text-white mt-0.5 font-display">
-                    Blocking Rules Matrix (5-3, 4-4, 4-3, 3-4, 6-2, 5-2)
+                  <div className="flex items-center gap-2 text-xs font-mono">
+                    <span className="text-teal-400 uppercase tracking-wider font-semibold">
+                      Matchup Assignment Matrix
+                    </span>
+                    <span className="text-slate-600">·</span>
+                    <span className="text-slate-400">{activePlay.name}</span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white mt-1 font-display tracking-tight flex items-center gap-2">
+                    <span>Blocking & Route Rules vs</span>
+                    <span className="text-amber-400">{activeFront.name}</span>
                   </h2>
                 </div>
-                <span className="text-xs text-slate-400 font-mono">
-                  Click any row to inspect that position
-                </span>
+
+                {/* Quick Defense Switcher */}
+                <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
+                  <span className="text-slate-400 text-[11px] mr-1">Defense:</span>
+                  {(Object.keys(DEFENSIVE_FRONTS) as DefensiveFrontId[]).map((fKey) => {
+                    const f = DEFENSIVE_FRONTS[fKey];
+                    const isSelected = frontId === fKey;
+                    return (
+                      <button
+                        key={fKey}
+                        onClick={() => setFrontId(fKey)}
+                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-400 text-slate-950 shadow-sm'
+                            : 'bg-[#0B151C] text-slate-400 hover:text-white border border-[#162A33]'
+                        }`}
+                      >
+                        {f.shortLabel}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="overflow-x-auto rounded-xl border border-[#162A33] bg-[#0A1318]">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-[#162A33] bg-[#060D11] text-slate-300 font-mono">
-                      <th className="py-3 px-4 font-semibold">Position</th>
-                      <th className="py-3 px-4 font-semibold">Split</th>
-                      <th className="py-3 px-4 font-semibold">vs 5-3 Bear</th>
-                      <th className="py-3 px-4 font-semibold">vs 4-4 Stack</th>
-                      <th className="py-3 px-4 font-semibold">vs 4-3 Base</th>
-                      <th className="py-3 px-4 font-semibold">vs 3-4 Okie</th>
-                      <th className="py-3 px-4 font-semibold">vs 6-2 Wide</th>
-                      <th className="py-3 px-4 font-semibold">vs 5-2 Monster</th>
+                      <th className="py-3 px-4 font-semibold">Pos</th>
+                      <th className="py-3 px-4 font-semibold">Player & Role</th>
+                      <th className="py-3 px-4 font-semibold">Split / Alignment</th>
+                      <th className="py-3 px-4 font-semibold text-amber-300">
+                        Assignment vs {activeFront.shortLabel}
+                      </th>
+                      <th className="py-3 px-4 font-semibold text-teal-300">Coaching Cue</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#162A33]/70">
@@ -825,17 +899,22 @@ export default function App() {
                           }`}
                         >
                           <td className="py-3 px-4 font-mono font-bold text-teal-400 whitespace-nowrap">
-                            {rule.label}
+                            <span className="px-2 py-0.5 rounded bg-teal-500/15 border border-teal-500/30">
+                              {rule.label}
+                            </span>
                           </td>
-                          <td className="py-3 px-4 font-mono text-slate-300 whitespace-nowrap">
+                          <td className="py-3 px-4 font-semibold text-white whitespace-nowrap">
+                            {rule.fullName.split('(')[0].trim()}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-slate-300 text-[11px] whitespace-nowrap">
                             {rule.split}
                           </td>
-                          <td className="py-3 px-4 text-slate-200">{rule.assignmentsByFront['5-3']}</td>
-                          <td className="py-3 px-4 text-slate-200">{rule.assignmentsByFront['4-4']}</td>
-                          <td className="py-3 px-4 text-slate-200">{rule.assignmentsByFront['4-3']}</td>
-                          <td className="py-3 px-4 text-slate-200">{rule.assignmentsByFront['3-4']}</td>
-                          <td className="py-3 px-4 text-slate-200">{rule.assignmentsByFront['6-2']}</td>
-                          <td className="py-3 px-4 text-slate-200">{rule.assignmentsByFront['5-2']}</td>
+                          <td className="py-3 px-4 text-slate-100 font-medium leading-relaxed max-w-md">
+                            {rule.assignmentsByFront[frontId]}
+                          </td>
+                          <td className="py-3 px-4 text-teal-300 font-mono text-[11px] italic">
+                            &ldquo;{rule.coachingCue}&rdquo;
+                          </td>
                         </tr>
                       );
                     })}
