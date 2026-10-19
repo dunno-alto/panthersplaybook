@@ -8,14 +8,12 @@ import {
   Info,
   CheckCircle2,
   Sliders,
-  Sparkles,
   BookOpen,
-  ArrowRight,
-  Eye,
   Crosshair,
   Compass,
   Users,
   Layers,
+  RotateCcw,
 } from 'lucide-react';
 import {
   COVERAGE_SCHEMES,
@@ -27,10 +25,13 @@ import {
   FORMATION_INFO,
   LINE_SLANTS,
   LineSlant,
+  SELECTABLE_FRONTS,
+  SelectableFront,
   StrengthCall,
   OffensiveFormationId,
   COMMON_OFFENSE_FORMATIONS,
   SEQUENTIAL_TECH_RULES,
+  FormationCoord,
 } from '../data/defensePrimerData';
 
 interface DefenseCoordinatorProps {
@@ -38,47 +39,71 @@ interface DefenseCoordinatorProps {
 }
 
 export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinatorProps) {
+  // 4 Core Live Call Components: <Formation-Front-Coverage-Blitz>
   const [formation, setFormation] = useState<DefenseFormation>('base');
+  const [frontCall, setFrontCall] = useState<SelectableFront | null>(null); // null = Base gap integrity (default)
   const [coverageScheme, setCoverageScheme] = useState<CoverageScheme>('green');
-  const [lineSlant, setLineSlant] = useState<LineSlant>('base_gap');
+  const [blitzCall, setBlitzCall] = useState<'MIKE' | 'WILL' | 'SAM' | 'ROV' | null>(null);
+
+  // Field & Scout Setup
   const [strengthCall, setStrengthCall] = useState<StrengthCall>('rip');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('SAM');
-  const [activeIndividualPressures, setActiveIndividualPressures] = useState<string[]>([]);
   const [showCoverageZones, setShowCoverageZones] = useState<boolean>(true);
   const [showPressureArrows, setShowPressureArrows] = useState<boolean>(true);
   const [showGaps, setShowGaps] = useState<boolean>(true);
   const [showTechniqueOverlay, setShowTechniqueOverlay] = useState<boolean>(true);
   const [offenseFormation, setOffenseFormation] = useState<OffensiveFormationId>('pro_i');
-  const [alignmentMode, setAlignmentMode] = useState<'offense_adjust' | 'base_fronts'>('offense_adjust');
-  const [showSequentialTechGuide, setShowSequentialTechGuide] = useState<boolean>(true);
+  const [alignmentMode, setAlignmentMode] = useState<'base_fronts' | 'offense_adjust'>('base_fronts');
   const [activePrimerChapter, setActivePrimerChapter] = useState<string>('philosophy');
 
-  // Coach notes state
-  const [coachNotes, setCoachNotes] = useState<string>(
-    'Primer Rule: If you don’t hear a slant call, either pick the gap in front of you or if you’re heads up default pick the strong direction gap.\nShield Rule: Sam & Rover walk up aligned 2x0 at outside OL at end of LOS.\nVanguard Rule: MLBs @ 2 yds, if stacked over a lineman, pick open gap and align over it.\nShell Rule: Pass expected—linemen go get us a sack!'
-  );
-  const [isSavedNotes, setIsSavedNotes] = useState<boolean>(false);
-
+  // Active configurations
   const activeFormationInfo = FORMATION_INFO[formation];
   const activeCoverage = COVERAGE_SCHEMES[coverageScheme];
-  const activeSlant = LINE_SLANTS[lineSlant];
+  const activeFront = frontCall ? LINE_SLANTS[frontCall] : null;
   const activeOffenseConfig = COMMON_OFFENSE_FORMATIONS[offenseFormation];
   const selectedPlayer =
     DEFENSE_PLAYERS.find((p) => p.id === selectedPlayerId) || DEFENSE_PLAYERS[4];
 
+  // Live call format: <Formation-Front-Coverage-Blitz>
+  // "there should not be bull rush or base. If no front is specified, that is base"
+  // "Base, Shield, Vanguard, Shell"
+  // "Slant, Pinch, Out"
+  // "Blue, Green, Black"
+  // "Mike, Will, Sam, Rover"
+  const formationCode = activeFormationInfo.codeName; // 'BASE' | 'SHIELD' | 'VANGUARD' | 'SHELL'
+  const frontCode = frontCall ? (LINE_SLANTS[frontCall]?.callCode || frontCall.toUpperCase()) : null; // 'SLANT' | 'PINCH' | 'OUT' | null
+  const coverageCode = activeCoverage.codeName; // 'BLUE' | 'GREEN' | 'BLACK'
+  const blitzCode = blitzCall
+    ? (DEFENSE_PLAYERS.find((p) => p.id === blitzCall)?.name.toUpperCase().split(' ')[0] || blitzCall)
+    : null; // 'MIKE' | 'WILL' | 'SAM' | 'ROVER' | null
+
+  // Spoken live call (e.g., BASE-PINCH-BLUE-MIKE or BASE-BLUE)
+  const liveCallParts = [formationCode, frontCode, coverageCode, blitzCode].filter(Boolean);
+  const liveCallFormatted = liveCallParts.join('-');
+
   const handleSelectFormation = (f: DefenseFormation) => {
     setFormation(f);
     setAlignmentMode('base_fronts');
-    // If selecting Shell, default to Bull Rush / sack mentality
-    if (f === 'shell') {
-      setLineSlant('bull_rush');
+  };
+
+  const handleSelectOffense = (ofId: OffensiveFormationId) => {
+    setOffenseFormation(ofId);
+    setAlignmentMode('offense_adjust');
+    setFormation('base');
+    if (COMMON_OFFENSE_FORMATIONS[ofId].defaultStrength) {
+      setStrengthCall(COMMON_OFFENSE_FORMATIONS[ofId].defaultStrength);
     }
   };
 
-  const lineCallSlug = (activeSlant.callCode || activeSlant.name).toUpperCase().trim();
-  const liveCallFormatted = `${activeFormationInfo.codeName}-${lineCallSlug}-${activeCoverage.codeName}`;
+  const handleResetCall = () => {
+    setFormation('base');
+    setFrontCall(null);
+    setCoverageScheme('green');
+    setBlitzCall(null);
+    setAlignmentMode('base_fronts');
+  };
 
-  const getPlayerCoords = (player: (typeof DEFENSE_PLAYERS)[0]) => {
+  const getPlayerCoords = (player: (typeof DEFENSE_PLAYERS)[0]): FormationCoord => {
     const formationBase = player.formations[formation];
     if (alignmentMode === 'base_fronts') {
       return formationBase;
@@ -112,7 +137,12 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
         };
       }
       return {
-        ...adj,
+        x: adj.x,
+        y: adj.y,
+        depthYards: adj.depthYards,
+        gap: adj.gap,
+        sequentialTech: adj.sequentialTech,
+        technique: adj.sequentialTech,
         alignmentDesc: player.formations.shield.alignmentDesc,
       };
     } else if (formation === 'vanguard') {
@@ -161,7 +191,12 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
         };
       }
       return {
-        ...adj,
+        x: adj.x,
+        y: adj.y,
+        depthYards: adj.depthYards,
+        gap: adj.gap,
+        sequentialTech: adj.sequentialTech,
+        technique: adj.sequentialTech,
         alignmentDesc: player.formations.vanguard.alignmentDesc,
       };
     } else if (formation === 'shell') {
@@ -210,7 +245,12 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
         };
       }
       return {
-        ...adj,
+        x: adj.x,
+        y: adj.y,
+        depthYards: adj.depthYards,
+        gap: adj.gap,
+        sequentialTech: adj.sequentialTech,
+        technique: adj.sequentialTech,
         alignmentDesc: player.formations.shell.alignmentDesc,
       };
     }
@@ -226,171 +266,79 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
     };
   };
 
-  const handleToggleIndividualPressure = (playerId: string) => {
-    setActiveIndividualPressures((prev) =>
-      prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]
-    );
-  };
-
-  const handleClearAllPressures = () => {
-    setActiveIndividualPressures([]);
-  };
-
-  const handleSaveNotes = () => {
-    setIsSavedNotes(true);
-    setTimeout(() => setIsSavedNotes(false), 2000);
-  };
-
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Defensive Command Console Header (matches Offense Tab format) */}
-      <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#162A33]/80">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/15 border border-teal-500/40 text-teal-300 font-bold uppercase tracking-wider text-[11px]">
-                <Shield className="w-3 h-3 text-teal-400" />
-                Defensive Coordinator Console · Base 3-4 System
-              </span>
-              <span aria-hidden="true" className="text-slate-600">·</span>
-              <span className="text-slate-400">Front:</span>
-              <span className="text-teal-300 font-bold">{activeFormationInfo.name} ({activeFormationInfo.codeName})</span>
-              <span aria-hidden="true" className="text-slate-600">·</span>
-              <span className="text-slate-400">Signal:</span>
-              <span className="text-slate-200">{activeFormationInfo.handSignal}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-slate-400 flex items-center gap-2 mr-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-mono text-[11px]">Tempo: &ldquo;RELOAD!&rdquo;</span>
-            </div>
-            <button
-              onClick={onOpenPrintModal}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold text-xs bg-teal-400 text-slate-950 hover:bg-teal-300 transition-all shadow-sm cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              Print Defensive Call Sheet
-            </button>
-          </div>
-        </div>
-
-        {/* Live Call Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+    <div className="space-y-6 animate-fadeIn">
+      {/* UNIFIED DEFENSIVE CALL SIMULATOR CONSOLE (Directly Before Playart) */}
+      <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-4 lg:p-5 shadow-xl space-y-4">
+        {/* Top Header & Live Call Row */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#162A33]/80">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <span className="text-slate-400 uppercase tracking-wider font-semibold text-[11px]">Live Call:</span>
-            <span className="px-3.5 py-1.5 rounded-lg bg-teal-500/20 text-teal-300 font-extrabold border border-teal-500/50 text-xs sm:text-sm tracking-wide shadow-sm font-mono">
-              {liveCallFormatted}
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-500/15 border border-teal-500/40 text-teal-300 font-bold uppercase tracking-wider text-xs font-mono">
+              <Shield className="w-3.5 h-3.5 text-teal-400" />
+              Call Simulator
             </span>
-            <span className="text-slate-400 text-[11px] hidden sm:inline">
-              ({activeFormationInfo.handSignal.split(' ')[0]} · {activeCoverage.handSignal.split(' ')[0]})
-            </span>
-            {activeIndividualPressures.length > 0 && (
-              <span className="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40 text-[11px]">
-                BLITZ: {activeIndividualPressures.join(' + ')}
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 text-xs font-mono uppercase tracking-wider">Live Call:</span>
+              <span className="px-3.5 py-1 rounded-lg bg-teal-500/20 text-teal-300 font-extrabold border border-teal-500/50 text-sm sm:text-base tracking-wide shadow-sm font-mono">
+                {liveCallFormatted}
               </span>
-            )}
-            <span className="px-2 py-1 rounded-md bg-slate-800 text-slate-200 font-bold border border-slate-700 text-[11px]">
-              STR: {strengthCall.toUpperCase()} ({strengthCall === 'rip' ? 'Right' : 'Left'})
-            </span>
+              <span className="text-slate-400 text-xs font-mono hidden sm:inline">
+                &lt;Formation-Front-Coverage-Blitz&gt;
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-slate-400">Offense Scouting:</span>
-            <span className="px-2 py-0.5 rounded bg-teal-950 border border-teal-500/40 text-teal-300 font-bold text-[11px]">
-              {activeOffenseConfig.shortName}
-            </span>
+          {/* Call Slot Breakdown Chips & Actions */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="hidden md:flex items-center gap-1.5 text-xs font-mono">
+              <span className="px-2 py-0.5 rounded bg-teal-950/80 border border-teal-700/50 text-teal-300">
+                F: <strong className="text-white">{formationCode}</strong>
+              </span>
+              <span className="px-2 py-0.5 rounded bg-amber-950/80 border border-amber-700/50 text-amber-300">
+                Front: <strong className="text-white">{frontCode || 'Base'}</strong>
+              </span>
+              <span className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-700/50 text-sky-300">
+                Cov: <strong className="text-white">{coverageCode}</strong>
+              </span>
+              <span className={`px-2 py-0.5 rounded border ${blitzCode ? 'bg-purple-950/80 border-purple-700/50 text-purple-300' : 'bg-slate-900 border-slate-700 text-slate-400'}`}>
+                Blitz: <strong className="text-white">{blitzCode || 'None'}</strong>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={handleResetCall}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-mono text-slate-400 hover:text-white bg-[#09151E] border border-[#162A33] hover:border-slate-700 cursor-pointer transition-colors"
+                title="Reset Call to Base 3-4 Green"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset
+              </button>
+              <button
+                onClick={onOpenPrintModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs bg-teal-400 text-slate-950 hover:bg-teal-300 transition-all shadow-sm cursor-pointer whitespace-nowrap"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Print Call Sheet
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Control Console */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Formations, Slants & Individual Pressures */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Common Offense Formations & Alignment Adjustments */}
-          <div className="rounded-2xl border border-teal-500/30 bg-[#070E13] p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#162A33] pb-3">
-              <div className="flex items-center gap-2 text-white font-bold text-sm font-display">
-                <Users className="w-4 h-4 text-emerald-400" />
-                Common Offense Formations
-              </div>
-              <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">
-                6 Formations
+        {/* 4 Adjustment Inputs: Formation, Front, Coverage, Blitz */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* 1. FORMATION */}
+          <div className="p-3 rounded-xl border border-teal-500/25 bg-[#09151D] flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold font-mono text-teal-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-teal-400" />
+                1. Formation
+              </span>
+              <span className="text-[10px] font-mono font-bold text-teal-400 bg-teal-950/80 px-1.5 py-0.5 rounded border border-teal-800/40">
+                {activeFormationInfo.codeName}
               </span>
             </div>
-
-            <p className="text-[11px] text-slate-300 leading-relaxed">
-              Select an offensive look to see our 3-4 defense calibrate its sequential techniques, gap fits, and backer depths:
-            </p>
-
-            <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(COMMON_OFFENSE_FORMATIONS) as OffensiveFormationId[]).map((ofId) => {
-                const off = COMMON_OFFENSE_FORMATIONS[ofId];
-                const isSelected = offenseFormation === ofId;
-                return (
-                  <button
-                    key={ofId}
-                    onClick={() => {
-                      setOffenseFormation(ofId);
-                      setAlignmentMode('offense_adjust');
-                      setFormation('base');
-                      if (off.defaultStrength) setStrengthCall(off.defaultStrength);
-                    }}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative ${
-                      isSelected
-                        ? 'border-emerald-400 bg-emerald-950/40 text-white shadow-lg shadow-emerald-950/50'
-                        : 'border-[#162A33] bg-[#091318] text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs font-mono text-emerald-300">
-                        {off.shortName}
-                      </span>
-                      {isSelected && (
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      )}
-                    </div>
-                    <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                      {off.personnel.split('(')[0].trim()}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Active Offense Breakdown & Adjustment Rule */}
-            <div className="p-3 rounded-xl bg-[#091318] border border-emerald-500/20 text-xs space-y-2">
-              <div className="font-semibold text-emerald-300 flex items-center justify-between">
-                <span>{activeOffenseConfig.name}</span>
-                <span className="text-[10px] font-mono text-slate-400">
-                  {activeOffenseConfig.formationStyle}
-                </span>
-              </div>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
-                {activeOffenseConfig.description}
-              </p>
-              <div className="pt-2 border-t border-[#162A33] text-[11px] text-teal-200 bg-teal-950/30 p-2 rounded border border-teal-800/30">
-                <strong className="text-teal-300">Sequential Tech Adjustment: </strong>
-                {activeOffenseConfig.adjustmentSummary}
-              </div>
-            </div>
-          </div>
-
-          {/* 4 Formations Selector */}
-          <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#162A33] pb-3">
-              <div className="flex items-center gap-2 text-white font-bold text-sm font-display">
-                <Sliders className="w-4 h-4 text-teal-400" />
-                Defensive Formation & Hand Signal
-              </div>
-              <span className="text-[11px] font-mono text-teal-400 bg-teal-950/60 px-2 py-0.5 rounded border border-teal-800/40">
-                4 Formations
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-1.5">
               {(Object.keys(FORMATION_INFO) as DefenseFormation[]).map((fKey) => {
                 const info = FORMATION_INFO[fKey];
                 const isSelected = formation === fKey;
@@ -398,209 +346,80 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                   <button
                     key={fKey}
                     onClick={() => handleSelectFormation(fKey)}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative ${
+                    className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
                       isSelected
-                        ? 'border-teal-400 bg-teal-950/60 text-white shadow-lg shadow-teal-950/50'
-                        : 'border-[#162A33] bg-[#091318] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                        ? 'border-teal-400 bg-teal-950 text-white shadow ring-1 ring-teal-400/50'
+                        : 'border-[#162A33] bg-[#070E13] text-slate-400 hover:text-slate-200 hover:border-slate-700'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs uppercase font-mono text-teal-300">
-                        {info.codeName}
-                      </span>
-                      {isSelected && (
-                        <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-                      )}
+                    <div className="text-xs font-bold font-mono text-teal-300 truncate">
+                      {info.codeName}
                     </div>
-                    <div className="text-xs font-semibold text-slate-200 mt-0.5 truncate">
-                      {info.name}
-                    </div>
-                    <div className="text-[10px] text-amber-300 font-mono mt-1">
-                      {info.handSignal}
-                    </div>
+                    <div className="text-[10px] text-slate-300 truncate mt-0.5">{info.name.split(' ')[0]}</div>
+                    <div className="text-[9px] text-amber-300 font-mono truncate">{info.handSignal.split(' ')[0]}</div>
                   </button>
                 );
               })}
             </div>
-
-            {/* Active Formation Callout */}
-            <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] text-xs space-y-2">
-              <div className="font-semibold text-teal-300 flex items-center justify-between">
-                <span>{activeFormationInfo.name}</span>
-                <span className="font-mono text-[11px] text-amber-400">
-                  Signal: {activeFormationInfo.handSignal}
-                </span>
-              </div>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
-                {activeFormationInfo.doctrine}
-              </p>
-              <div className="pt-1.5 border-t border-[#162A33] space-y-1 text-[10px] text-slate-400">
-                <div>
-                  <strong className="text-teal-400">OLBs (Sam & Rover):</strong>{' '}
-                  {activeFormationInfo.olbRule}
-                </div>
-                <div>
-                  <strong className="text-teal-400">MLBs (Mike & Will):</strong>{' '}
-                  {activeFormationInfo.mlbRule}
-                </div>
-                <div>
-                  <strong className="text-teal-400">Linemen:</strong>{' '}
-                  {activeFormationInfo.linemenRule}
-                </div>
-              </div>
-            </div>
-
-            {/* Strength Switch (Rip / Liz) */}
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-xs text-slate-400 font-mono">Front Strength Call:</span>
-              <div className="inline-flex rounded-lg border border-[#162A33] bg-[#0A1318] p-0.5">
-                <button
-                  onClick={() => setStrengthCall('rip')}
-                  className={`px-3 py-1 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer ${
-                    strengthCall === 'rip'
-                      ? 'bg-teal-400 text-slate-950 shadow'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  RIP (Right / Strong)
-                </button>
-                <button
-                  onClick={() => setStrengthCall('liz')}
-                  className={`px-3 py-1 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer ${
-                    strengthCall === 'liz'
-                      ? 'bg-teal-400 text-slate-950 shadow'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  LIZ (Left / Weak)
-                </button>
-              </div>
+            <div className="text-[10px] text-slate-400 font-mono truncate pt-0.5">
+              Signal: <span className="text-slate-200">{activeFormationInfo.handSignal}</span>
             </div>
           </div>
 
-          {/* D-Line Slants & Gap Stunts */}
-          <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#162A33] pb-3">
-              <div className="flex items-center gap-2 text-white font-bold text-sm font-display">
-                <Crosshair className="w-4 h-4 text-amber-400" />
-                Line Slants & Gap Stunts
-              </div>
-              <span className="text-[11px] font-mono text-slate-400">
-                {activeSlant.slants.length} DL Tracks
+          {/* 2. FRONT (SLANTS) */}
+          <div className="p-3 rounded-xl border border-amber-500/25 bg-[#09151D] flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold font-mono text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                2. Front (Slants)
+              </span>
+              <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800/40">
+                {frontCode || 'BASE'}
               </span>
             </div>
-
-            <div className="space-y-2">
-              {(Object.keys(LINE_SLANTS) as LineSlant[]).map((sKey) => {
-                const slant = LINE_SLANTS[sKey];
-                const isSelected = lineSlant === sKey;
+            <div className="grid grid-cols-3 gap-1.5">
+              {SELECTABLE_FRONTS.map((front) => {
+                const isSelected = frontCall === front.id;
                 return (
                   <button
-                    key={sKey}
-                    onClick={() => setLineSlant(sKey)}
-                    className={`w-full p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                    key={front.id}
+                    onClick={() => setFrontCall(isSelected ? null : front.id)}
+                    className={`p-2 rounded-lg border text-center transition-all cursor-pointer ${
                       isSelected
-                        ? 'border-amber-400 bg-amber-950/30 text-white'
-                        : 'border-[#162A33] bg-[#091318] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                        ? 'border-amber-400 bg-amber-950 text-white shadow ring-1 ring-amber-400/50'
+                        : 'border-[#162A33] bg-[#070E13] text-slate-400 hover:text-slate-200 hover:border-slate-700'
                     }`}
                   >
-                    <div>
-                      <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                        <span>{slant.name}</span>
-                        {sKey === 'base_gap' && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-teal-900/60 text-teal-300 font-mono">
-                            Primer Default
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-slate-400">{slant.signal}</div>
-                    </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-black/40 text-amber-300 border border-amber-900/50">
-                      {slant.description.split('.')[0]}
-                    </span>
+                    <div className="text-xs font-bold font-mono text-amber-300">{front.callCode}</div>
+                    <div className="text-[9px] text-slate-400 truncate mt-0.5">{front.signal.split(' ')[0]}</div>
                   </button>
                 );
               })}
             </div>
-
-            <div className="p-2.5 rounded-lg bg-[#0A161E] border border-amber-500/20 text-[11px] text-slate-300">
-              <strong className="text-amber-400">Primer Gap Rule: </strong>
-              {activeSlant.linemenRule}
-            </div>
+            <button
+              onClick={() => setFrontCall(null)}
+              className={`w-full py-1 px-2 rounded-md border text-center text-[10px] font-mono transition-colors cursor-pointer truncate ${
+                frontCall === null
+                  ? 'border-amber-500/40 bg-amber-950/30 text-amber-300 font-bold'
+                  : 'border-[#162A33] bg-[#070E13] text-slate-400 hover:text-white'
+              }`}
+            >
+              {frontCall === null ? '✓ Base Gap Default (No Front)' : 'Click to Clear ➔ Base Gap'}
+            </button>
           </div>
 
-          {/* Individual Position Pressure Calls (No Packaged Blitzes) */}
-          {/* Individual Position Blitz Calls: Mike, Will, Sam, Rover Only */}
-          <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#162A33] pb-3">
-              <div className="flex items-center gap-2 text-white font-bold text-sm font-display">
-                <Zap className="w-4 h-4 text-purple-400" />
-                Blitz Calls (Linebackers Only)
-              </div>
-              {activeIndividualPressures.length > 0 && (
-                <button
-                  onClick={handleClearAllPressures}
-                  className="text-[10px] font-mono text-slate-400 hover:text-white underline cursor-pointer"
-                >
-                  Clear All
-                </button>
-              )}
-            </div>
-
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              From primer: Blitz calls are simply <strong className="text-purple-300">Mike, Will, Sam, Rover</strong>. No packaged blitzes, dog, or fire calls. Linebackers only shoot their assigned gap based on the DL alignment:
-            </p>
-
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: 'SAM', label: 'Sam', role: 'Assigned Edge / C-Gap' },
-                { id: 'ROV', label: 'Rover', role: 'Assigned Edge / C-Gap' },
-                { id: 'MIKE', label: 'Mike', role: 'Assigned Gap (DL Fit)' },
-                { id: 'WILL', label: 'Will', role: 'Assigned Gap (DL Fit)' },
-              ].map((b) => {
-                const isActive = activeIndividualPressures.includes(b.id);
-                return (
-                  <button
-                    key={b.id}
-                    onClick={() => handleToggleIndividualPressure(b.id)}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                      isActive
-                        ? 'border-purple-400 bg-purple-950/40 text-white shadow ring-1 ring-purple-400/50'
-                        : 'border-[#162A33] bg-[#091318] text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <div>
-                      <div className="text-xs font-bold text-slate-200 font-mono">{b.label}</div>
-                      <div className="text-[10px] text-slate-400 truncate max-w-[110px]">{b.role}</div>
-                    </div>
-                    <span
-                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
-                        isActive
-                          ? 'bg-purple-500 text-slate-950'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {isActive ? 'BLITZ' : 'OFF'}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Coverage Call Selector (Blue, Green, Black Only) */}
-          <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#162A33] pb-3">
-              <div className="flex items-center gap-2 text-white font-bold text-sm font-display">
-                <Radio className="w-4 h-4 text-teal-400" />
-                Coverage Signals (Blue · Green · Black)
-              </div>
-              <span className="text-[11px] font-mono text-slate-400">
-                {activeCoverage.deepCoverage.split('(')[0]}
+          {/* 3. COVERAGE */}
+          <div className="p-3 rounded-xl border border-sky-500/25 bg-[#09151D] flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold font-mono text-sky-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-sky-400" />
+                3. Coverage
+              </span>
+              <span className="text-[10px] font-mono font-bold text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-800/40">
+                {activeCoverage.codeName}
               </span>
             </div>
-
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5">
               {(Object.keys(COVERAGE_SCHEMES) as CoverageScheme[]).map((covKey) => {
                 const cov = COVERAGE_SCHEMES[covKey];
                 const isSelected = coverageScheme === covKey;
@@ -608,943 +427,855 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                   <button
                     key={covKey}
                     onClick={() => setCoverageScheme(covKey)}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden ${
+                    className={`p-2 rounded-lg border text-center transition-all cursor-pointer ${
                       isSelected
-                        ? 'border-white text-white shadow-lg'
-                        : 'border-[#162A33] bg-[#091318] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                        ? 'border-white bg-[#0D2230] text-white shadow ring-1 ring-sky-400/50'
+                        : 'border-[#162A33] bg-[#070E13] text-slate-400 hover:text-slate-200 hover:border-slate-700'
                     }`}
-                    style={{
-                      backgroundColor: isSelected ? `${cov.color}25` : undefined,
-                      borderColor: isSelected ? cov.color : undefined,
-                    }}
                   >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className="font-mono text-xs font-extrabold uppercase"
-                        style={{ color: cov.color }}
-                      >
-                        {cov.codeName}
-                      </span>
-                      {isSelected && (
-                        <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: cov.color }}
-                        />
-                      )}
+                    <div className="text-xs font-bold font-mono" style={{ color: cov.color }}>
+                      {cov.codeName}
                     </div>
-                    <div className="text-[10px] text-amber-300 font-sans mt-1">
-                      {cov.handSignal.split(' ')[0]} {cov.handSignal.split(' ').slice(1, 3).join(' ')}
-                    </div>
-                    <div className="text-[10px] text-slate-300 font-medium truncate mt-0.5">
-                      {cov.name.split('(')[0].trim()}
-                    </div>
+                    <div className="text-[10px] text-slate-300 truncate mt-0.5">{cov.name.split(' ')[0]}</div>
                   </button>
                 );
               })}
             </div>
-
-            <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] text-xs space-y-2">
-              <div className="font-semibold text-slate-200 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5 text-teal-400" />
-                  {activeCoverage.name} ({activeCoverage.codeName})
-                </span>
-                <span className="text-[11px] font-mono font-bold text-amber-300">
-                  {activeCoverage.handSignal}
-                </span>
-              </div>
-              <div className="p-2 rounded bg-black/40 border border-[#162A33] text-[11px] text-amber-200/90 font-mono">
-                <strong>Signal Action: </strong>{activeCoverage.handSignalDesc}
-              </div>
-              <p className="text-slate-400 text-[11px] leading-relaxed">
-                {activeCoverage.philosophy}
-              </p>
-              <div className="text-[11px] font-mono text-teal-300 pt-1">
-                Situation: {activeCoverage.situationalCall}
-              </div>
+            <div className="text-[10px] text-slate-400 font-mono truncate pt-0.5">
+              Scheme: <span className="text-slate-200">{activeCoverage.name}</span>
             </div>
+          </div>
+
+          {/* 4. BLITZ */}
+          <div className="p-3 rounded-xl border border-purple-500/25 bg-[#09151D] flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold font-mono text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-purple-400" />
+                4. Blitz (Linebackers)
+              </span>
+              <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${blitzCall ? 'bg-purple-950/80 border-purple-700/50 text-purple-300' : 'bg-slate-900 border-slate-700 text-slate-400'}`}>
+                {blitzCode || 'NONE'}
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-1">
+              {[
+                { id: 'MIKE' as const, label: 'Mike' },
+                { id: 'WILL' as const, label: 'Will' },
+                { id: 'SAM' as const, label: 'Sam' },
+                { id: 'ROV' as const, label: 'Rover' },
+              ].map((b) => {
+                const isSelected = blitzCall === b.id;
+                return (
+                  <button
+                    key={b.id}
+                    onClick={() => setBlitzCall(isSelected ? null : b.id)}
+                    className={`p-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-purple-400 bg-purple-950 text-white shadow ring-1 ring-purple-400/50'
+                        : 'border-[#162A33] bg-[#070E13] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="text-xs font-bold font-mono text-purple-300">{b.label}</div>
+                    <div className="text-[9px] text-slate-400 font-mono mt-0.5">{isSelected ? 'ON' : 'OFF'}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setBlitzCall(null)}
+              className={`w-full py-1 px-2 rounded-md border text-center text-[10px] font-mono transition-colors cursor-pointer truncate ${
+                blitzCall === null
+                  ? 'border-purple-500/40 bg-purple-950/30 text-purple-300 font-bold'
+                  : 'border-[#162A33] bg-[#070E13] text-slate-400 hover:text-white'
+              }`}
+            >
+              {blitzCall === null ? '✓ Coverage Only (No Blitz)' : 'Click to Clear ➔ No Blitz'}
+            </button>
           </div>
         </div>
 
-        {/* Right Column: Tactical Field Canvas & Chalkboard */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Canvas Wrapper */}
-          <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-4 lg:p-6 shadow-2xl space-y-4">
-            {/* Field Controls Header */}
-            {/* Alignment Mode & Offense Quick Switch Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3.5 rounded-xl bg-[#09151E] border border-teal-500/30">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-teal-400" />
-                  Mode:
-                </span>
-                <div className="inline-flex rounded-lg border border-[#162A33] bg-[#070E13] p-0.5">
-                  <button
-                    onClick={() => setAlignmentMode('offense_adjust')}
-                    className={`px-3 py-1 rounded-md text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      alignmentMode === 'offense_adjust'
-                        ? 'bg-emerald-400 text-slate-950 shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>🏈 Adjust to Offense ({activeOffenseConfig.shortName})</span>
-                  </button>
-                  <button
-                    onClick={() => setAlignmentMode('base_fronts')}
-                    className={`px-3 py-1 rounded-md text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      alignmentMode === 'base_fronts'
-                        ? 'bg-teal-400 text-slate-950 shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>🛡️ 4 Defense Fronts ({activeFormationInfo.codeName})</span>
-                  </button>
-                </div>
-              </div>
+        {/* Scout Offense & Field Calibration Strip */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-2.5 rounded-xl bg-[#09151E] border border-teal-500/20 text-xs">
+          {/* Scout Offense Switcher */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-mono font-bold text-emerald-400 uppercase flex items-center gap-1 mr-1">
+              <Users className="w-3.5 h-3.5" />
+              Scout:
+            </span>
+            {(Object.keys(COMMON_OFFENSE_FORMATIONS) as OffensiveFormationId[]).map((id) => (
+              <button
+                key={id}
+                onClick={() => handleSelectOffense(id)}
+                className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer ${
+                  offenseFormation === id && alignmentMode === 'offense_adjust'
+                    ? 'bg-emerald-400 text-slate-950 font-bold shadow'
+                    : 'bg-[#0A161E] text-slate-400 hover:text-slate-200 border border-[#162E3B]'
+                }`}
+              >
+                {COMMON_OFFENSE_FORMATIONS[id].shortName}
+              </button>
+            ))}
+          </div>
 
-              {/* Offense Quick Switch Pills */}
-              <div className="flex flex-wrap items-center gap-1 text-xs font-mono">
-                <span className="text-[11px] text-slate-400 mr-1">Scout Set:</span>
-                {(Object.keys(COMMON_OFFENSE_FORMATIONS) as OffensiveFormationId[]).map((id) => (
-                  <button
-                    key={id}
-                    onClick={() => {
-                      setOffenseFormation(id);
-                      setAlignmentMode('offense_adjust');
-                      setFormation('base');
-                    }}
-                    className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors cursor-pointer ${
-                      offenseFormation === id && alignmentMode === 'offense_adjust'
-                        ? 'bg-emerald-400 text-slate-950 font-bold shadow'
-                        : 'bg-[#0A161E] text-slate-400 hover:text-slate-200 border border-[#162E3B]'
-                    }`}
-                  >
-                    {COMMON_OFFENSE_FORMATIONS[id].shortName}
-                  </button>
-                ))}
-              </div>
+          {/* Mode & Strength Toggles */}
+          <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
+            <div className="inline-flex rounded-lg border border-[#162A33] bg-[#070E13] p-0.5">
+              <button
+                onClick={() => setAlignmentMode('base_fronts')}
+                className={`px-2.5 py-0.5 rounded font-bold cursor-pointer transition-colors ${
+                  alignmentMode === 'base_fronts' ? 'bg-teal-400 text-slate-950' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Base Fronts
+              </button>
+              <button
+                onClick={() => setAlignmentMode('offense_adjust')}
+                className={`px-2.5 py-0.5 rounded font-bold cursor-pointer transition-colors ${
+                  alignmentMode === 'offense_adjust' ? 'bg-emerald-400 text-slate-950' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Scout Fit
+              </button>
             </div>
 
-            {/* Field Controls Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#162A33] pb-3">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Compass className="w-3.5 h-3.5" />
-                  Tactical Chalkboard
-                </span>
-                <span className="text-xs text-slate-300">
-                  {alignmentMode === 'offense_adjust' ? (
-                    <span className="text-emerald-300 font-medium">
-                      · Calibrated to: <strong>{activeOffenseConfig.name}</strong> ({activeOffenseConfig.personnel})
-                    </span>
-                  ) : (
-                    <span className="text-teal-300 font-medium">
-                      · Defense Front: <strong>{activeFormationInfo.name}</strong> ({activeFormationInfo.handSignal})
-                    </span>
-                  )}
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 text-xs">
-                <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
-                  <input
-                    type="checkbox"
-                    checked={showCoverageZones}
-                    onChange={(e) => setShowCoverageZones(e.target.checked)}
-                    className="rounded border-slate-700 text-teal-400 focus:ring-0"
-                  />
-                  <span>Coverage Zones</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
-                  <input
-                    type="checkbox"
-                    checked={showPressureArrows}
-                    onChange={(e) => setShowPressureArrows(e.target.checked)}
-                    className="rounded border-slate-700 text-purple-400 focus:ring-0"
-                  />
-                  <span>Pressure / Slants</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
-                  <input
-                    type="checkbox"
-                    checked={showGaps}
-                    onChange={(e) => setShowGaps(e.target.checked)}
-                    className="rounded border-slate-700 text-teal-400 focus:ring-0"
-                  />
-                  <span>Gap Badges</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
-                  <input
-                    type="checkbox"
-                    checked={showTechniqueOverlay}
-                    onChange={(e) => setShowTechniqueOverlay(e.target.checked)}
-                    className="rounded border-slate-700 text-amber-400 focus:ring-0"
-                  />
-                  <span>Sequential Tech System</span>
-                </label>
-              </div>
+            <div className="inline-flex rounded-lg border border-[#162A33] bg-[#070E13] p-0.5">
+              <button
+                onClick={() => setStrengthCall('rip')}
+                className={`px-2 py-0.5 rounded font-bold cursor-pointer transition-colors ${
+                  strengthCall === 'rip' ? 'bg-teal-400 text-slate-950' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                RIP (Rt)
+              </button>
+              <button
+                onClick={() => setStrengthCall('liz')}
+                className={`px-2 py-0.5 rounded font-bold cursor-pointer transition-colors ${
+                  strengthCall === 'liz' ? 'bg-teal-400 text-slate-950' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                LIZ (Lt)
+              </button>
             </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Sequential Tech System Reference Panel */}
-            {showTechniqueOverlay && (
-              <div className="p-3.5 rounded-xl bg-[#08131A] border border-amber-500/30 text-xs space-y-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 pb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-amber-300 font-bold font-mono uppercase tracking-wider">
-                      ★ Sequential Tech System:
-                    </span>
-                    <span className="text-[11px] text-slate-300">
-                      Center 0 · Guard 1,2,3 · Tackle 4,5,6 · TE 7,8,9 · Backers (Depth then Tech)
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono text-teal-300 bg-teal-950/60 px-2 py-0.5 rounded border border-teal-800/40">
-                    Base 3-4 Rules
-                  </span>
-                </div>
+      {/* TACTICAL PLAYART CANVAS (Directly Below User Inputs) */}
+      <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-4 lg:p-5 shadow-2xl space-y-3">
+        {/* Playart Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#162A33] pb-3 text-xs">
+          <div className="flex items-center gap-3">
+            <span className="font-mono font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Compass className="w-4 h-4" />
+              Tactical Playart Canvas
+            </span>
+            <span className="text-slate-300 font-mono">
+              Live Call: <strong className="text-teal-300 font-extrabold">{liveCallFormatted}</strong>
+              {alignmentMode === 'offense_adjust' && (
+                <span className="text-emerald-300 ml-2">vs {activeOffenseConfig.name}</span>
+              )}
+            </span>
+          </div>
 
-                {/* 4 Linemen Categories from Prompt */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-[11px] font-mono">
-                  <div className="p-2 rounded bg-black/40 border border-[#182C37] space-y-1">
-                    <div className="text-amber-400 font-bold">Center: 0 / 0W / 0S</div>
-                    <div className="text-slate-300 text-[10px] leading-tight">
-                      <strong>0:</strong> Head-up on C<br />
-                      <strong>0 Weak:</strong> Weak A gap<br />
-                      <strong>0 Strong:</strong> Strong A gap
-                    </div>
-                  </div>
+          {/* Overlay Toggles */}
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
+              <input
+                type="checkbox"
+                checked={showCoverageZones}
+                onChange={(e) => setShowCoverageZones(e.target.checked)}
+                className="rounded border-slate-700 text-teal-400 focus:ring-0"
+              />
+              <span>Coverage Zones</span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
+              <input
+                type="checkbox"
+                checked={showPressureArrows}
+                onChange={(e) => setShowPressureArrows(e.target.checked)}
+                className="rounded border-slate-700 text-amber-400 focus:ring-0"
+              />
+              <span>Pressure / Slants</span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
+              <input
+                type="checkbox"
+                checked={showGaps}
+                onChange={(e) => setShowGaps(e.target.checked)}
+                className="rounded border-slate-700 text-teal-400 focus:ring-0"
+              />
+              <span>Gap Badges</span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
+              <input
+                type="checkbox"
+                checked={showTechniqueOverlay}
+                onChange={(e) => setShowTechniqueOverlay(e.target.checked)}
+                className="rounded border-slate-700 text-amber-400 focus:ring-0"
+              />
+              <span>Sequential Tech</span>
+            </label>
+          </div>
+        </div>
 
-                  <div className="p-2 rounded bg-black/40 border border-[#182C37] space-y-1">
-                    <div className="text-amber-400 font-bold">Guard: 1, 2, 3</div>
-                    <div className="text-slate-300 text-[10px] leading-tight">
-                      <strong>1:</strong> Inside shade (A)<br />
-                      <strong>2:</strong> Head-up on G<br />
-                      <strong>3:</strong> Outside shade (B)
-                    </div>
-                  </div>
+        {/* Sequential Tech Reference Strip */}
+        {showTechniqueOverlay && (
+          <div className="p-3 rounded-xl bg-[#08131A] border border-amber-500/20 text-xs flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]">
+            <span className="text-amber-300 font-bold">
+              ★ Sequential Tech: Center 0 · Guard 1,2,3 · Tackle 4,5,6 · TE 7,8,9 · Backers (Depth then Tech)
+            </span>
+            <span className="text-slate-400">
+              Base Formula: NG 0 · SDE 6 · WDE 4 · Rover/Sam 2x2 · Mike 34 · Will 14
+            </span>
+          </div>
+        )}
 
-                  <div className="p-2 rounded bg-black/40 border border-[#182C37] space-y-1">
-                    <div className="text-amber-400 font-bold">Tackle: 4, 5, 6</div>
-                    <div className="text-slate-300 text-[10px] leading-tight">
-                      <strong>4:</strong> Inside shade (B)<br />
-                      <strong>5:</strong> Head-up on OT<br />
-                      <strong>6:</strong> Outside shade (C)
-                    </div>
-                  </div>
+        {/* Interactive SVG Chalkboard Canvas */}
+        <div className="relative w-full aspect-[16/10] bg-[#050C10] rounded-xl border border-[#162A33] overflow-hidden select-none">
+          <svg viewBox="0 0 1000 620" className="w-full h-full">
+            <defs>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#102531" strokeWidth="0.6" />
+              </pattern>
+              <marker
+                id="slantArrow"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#F59E0B" />
+              </marker>
+              <marker
+                id="pressureArrow"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#C084FC" />
+              </marker>
+            </defs>
 
-                  <div className="p-2 rounded bg-black/40 border border-[#182C37] space-y-1">
-                    <div className="text-amber-400 font-bold">TE: 7, 8, 9</div>
-                    <div className="text-slate-300 text-[10px] leading-tight">
-                      <strong>7:</strong> Inside shade (C)<br />
-                      <strong>8:</strong> Head-up on TE<br />
-                      <strong>9:</strong> Outside shade / 2x0 Edge
-                    </div>
-                  </div>
-                </div>
+            {/* Field Grid */}
+            <rect width="1000" height="620" fill="#04090D" />
+            <rect width="1000" height="620" fill="url(#grid)" />
 
-                {/* Backers: Depth then Tech + Base 3-4 Exact Formula Callout */}
-                <div className="p-2.5 rounded-lg bg-teal-950/20 border border-teal-500/30 text-[11px] space-y-1.5">
-                  <div className="flex flex-wrap items-center justify-between gap-1 text-teal-300 font-bold font-mono">
-                    <span>Backers Rule: Depth then Tech (e.g. 34 Tech = 3 Tech outside shade G, 4 yds depth)</span>
-                    <span className="text-amber-300">Base 3-4 Alignment Blueprint</span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-[10.5px] font-mono text-slate-300">
-                    <div>• <strong className="text-teal-300">NG:</strong> 0 Tech with Strong A gap</div>
-                    <div>• <strong className="text-teal-300">SDE:</strong> 6 Tech (outside shade OT) Strong C Gap</div>
-                    <div>• <strong className="text-teal-300">WDE:</strong> 4 Tech B Gap (inside shade OT)</div>
-                    <div>• <strong className="text-teal-300">Rover:</strong> 2x2 yards outside LOS Outside contain for cutback/reverse</div>
-                    <div>• <strong className="text-teal-300">Sam:</strong> 2x2 Outside Contain Strong side take blocks on inside shoulder</div>
-                    <div>• <strong className="text-teal-300">Mike:</strong> 34 Tech, outside shade of G, 4 yds depth, Strong B Gap</div>
-                    <div>• <strong className="text-teal-300">Will:</strong> 14 Tech, inside shade WG, 4 yds depth, Weak A Gap</div>
-                  </div>
-                </div>
-              </div>
+            {/* Yard lines: LOS is at y=390 (Defense is above y=390, Offense below) */}
+            <line x1="60" y1="210" x2="940" y2="210" stroke="#162D38" strokeWidth="1" strokeDasharray="3 3" />
+            <text x="75" y="214" fill="#334E5C" fontSize="10" fontFamily="monospace">15 YDS (SECONDARY)</text>
+
+            <line x1="60" y1="295" x2="940" y2="295" stroke="#1C3847" strokeWidth="1" strokeDasharray="4 4" />
+            <text x="75" y="299" fill="#4B6A7A" fontSize="10" fontFamily="monospace">5 YDS (LINEBACKERS)</text>
+
+            <line x1="60" y1="390" x2="940" y2="390" stroke="#38BDF8" strokeWidth="2.5" />
+            <text x="75" y="386" fill="#38BDF8" fontSize="11" fontFamily="monospace" fontWeight="bold">LINE OF SCRIMMAGE</text>
+
+            <line x1="60" y1="480" x2="940" y2="480" stroke="#162D38" strokeWidth="1" strokeDasharray="3 3" />
+            <text x="75" y="484" fill="#334E5C" fontSize="10" fontFamily="monospace">OFFENSIVE BACKFIELD</text>
+
+            {/* Sideline boundaries */}
+            <line x1="60" y1="40" x2="60" y2="580" stroke="#1E3A4A" strokeWidth="2" />
+            <line x1="940" y1="40" x2="940" y2="580" stroke="#1E3A4A" strokeWidth="2" />
+            <text x="45" y="320" fill="#334E5C" fontSize="10" fontFamily="monospace" transform="rotate(-90 45 320)">LEFT SIDELINE</text>
+            <text x="965" y="320" fill="#334E5C" fontSize="10" fontFamily="monospace" transform="rotate(90 965 320)">RIGHT SIDELINE</text>
+
+            {/* Strength indicator (RIP / LIZ) */}
+            <g opacity="0.45">
+              <rect
+                x={strengthCall === 'rip' ? 820 : 80}
+                y="55"
+                width="100"
+                height="24"
+                rx="4"
+                fill="#0F2833"
+                stroke="#14B8A6"
+                strokeWidth="1"
+              />
+              <text
+                x={strengthCall === 'rip' ? 870 : 130}
+                y="71"
+                fill="#2DD4BF"
+                fontSize="10"
+                fontFamily="monospace"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                ★ STRENGTH: {strengthCall.toUpperCase()}
+              </text>
+            </g>
+
+            {/* Gap Labels across LOS */}
+            {showGaps && (
+              <g opacity="0.6" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                <text x="310" y="405" fill="#94A3B8">D-GAP</text>
+                <text x="360" y="405" fill="#94A3B8">C-GAP</text>
+                <text x="420" y="405" fill="#94A3B8">B-GAP</text>
+                <text x="475" y="405" fill="#94A3B8">A-GAP</text>
+                <text x="500" y="405" fill="#38BDF8">C</text>
+                <text x="525" y="405" fill="#94A3B8">A-GAP</text>
+                <text x="585" y="405" fill="#94A3B8">B-GAP</text>
+                <text x="640" y="405" fill="#94A3B8">C-GAP</text>
+                <text x="690" y="405" fill="#94A3B8">D-GAP</text>
+              </g>
             )}
 
-            {/* Interactive SVG Chalkboard */}
-            <div className="relative w-full aspect-[16/10] bg-[#050C10] rounded-xl border border-[#162A33] overflow-hidden select-none">
-              <svg
-                viewBox="0 0 1000 620"
-                className="w-full h-full"
-                preserveAspectRatio="xMidYMid meet"
+            {/* Scout Offensive Formation */}
+            <g id="offense-scout-look" opacity="0.88">
+              {activeOffenseConfig.players.map((o) => (
+                <g key={o.id} className="cursor-pointer group">
+                  <circle
+                    cx={o.x}
+                    cy={o.y}
+                    r="14"
+                    fill="#101B23"
+                    stroke={o.isEligible ? '#38BDF8' : '#64748B'}
+                    strokeWidth={o.isEligible ? '1.8' : '1.4'}
+                  />
+                  <text
+                    x={o.x}
+                    y={o.y + 4}
+                    fill={o.isEligible ? '#7DD3FC' : '#CBD5E1'}
+                    fontSize="9"
+                    fontFamily="monospace"
+                    fontWeight="bold"
+                    textAnchor="middle"
+                  >
+                    {o.label}
+                  </text>
+                </g>
+              ))}
+              <text
+                x="500"
+                y="555"
+                fill="#38BDF8"
+                fontSize="11"
+                fontFamily="monospace"
+                fontWeight="bold"
+                textAnchor="middle"
               >
-                <defs>
-                  {/* Field hash pattern */}
-                  <pattern id="defFieldGrid" width="100" height="100" patternUnits="userSpaceOnUse">
-                    <line x1="0" y1="0" x2="100" y2="0" stroke="#0E232E" strokeWidth="1" strokeDasharray="4 4" />
-                    <line x1="0" y1="0" x2="0" y2="100" stroke="#0E232E" strokeWidth="1" strokeDasharray="4 4" />
-                  </pattern>
+                Offense: {activeOffenseConfig.name} · {activeOffenseConfig.formationStyle} ({activeOffenseConfig.personnel})
+              </text>
+            </g>
 
-                  {/* Marker arrow for slant */}
-                  <marker
-                    id="slantArrow"
-                    viewBox="0 0 10 10"
-                    refX="6"
-                    refY="5"
-                    markerWidth="6"
-                    markerHeight="6"
-                    orient="auto-start-reverse"
-                  >
-                    <path d="M 0 1 L 8 5 L 0 9 z" fill="#F59E0B" />
-                  </marker>
-
-                  {/* Marker arrow for individual pressure */}
-                  <marker
-                    id="pressureArrow"
-                    viewBox="0 0 10 10"
-                    refX="6"
-                    refY="5"
-                    markerWidth="6"
-                    markerHeight="6"
-                    orient="auto-start-reverse"
-                  >
-                    <path d="M 0 1 L 8 5 L 0 9 z" fill="#C084FC" />
-                  </marker>
-                </defs>
-
-                {/* Field Grass Background */}
-                <rect width="1000" height="620" fill="#04090D" />
-                <rect width="1000" height="620" fill="url(#defFieldGrid)" opacity="0.6" />
-
-                {/* Yard Lines */}
-                <line x1="50" y1="170" x2="950" y2="170" stroke="#162E3B" strokeWidth="1.5" />
-                <line x1="50" y1="280" x2="950" y2="280" stroke="#162E3B" strokeWidth="1.5" />
-                <line x1="50" y1="390" x2="950" y2="390" stroke="#2DD4BF" strokeWidth="2.5" opacity="0.8" />
-                <line x1="50" y1="500" x2="950" y2="500" stroke="#162E3B" strokeWidth="1.5" />
-
-                {/* LOS Label */}
-                <text x="70" y="384" fill="#2DD4BF" fontSize="12" fontFamily="monospace" fontWeight="bold">
-                  LINE OF SCRIMMAGE (LOS)
-                </text>
-                <text x="780" y="384" fill="#2DD4BF" fontSize="11" fontFamily="monospace" fontWeight="bold">
-                  FORMATION: {activeFormationInfo.codeName}
-                </text>
-
-                {/* Hash marks */}
-                {[200, 300, 400, 500, 600, 700, 800].map((x) => (
-                  <g key={x} stroke="#1D3E4F" strokeWidth="1">
-                    <line x1={x} y1="380" x2={x} y2="400" />
-                    <line x1={x} y1="270" x2={x} y2="290" />
-                    <line x1={x} y1="160" x2={x} y2="180" />
-                  </g>
-                ))}
-
-                {/* Gaps Label across LOS */}
-                {showGaps && (
-                  <g opacity="0.85">
-                    <rect x="462" y="378" width="32" height="18" rx="4" fill="#0B232E" stroke="#14B8A6" strokeWidth="1" />
-                    <text x="478" y="391" fill="#5EEAD4" fontSize="10" fontFamily="monospace" textAnchor="middle" fontWeight="bold">
-                      A
-                    </text>
-
-                    <rect x="506" y="378" width="32" height="18" rx="4" fill="#0B232E" stroke="#14B8A6" strokeWidth="1" />
-                    <text x="522" y="391" fill="#5EEAD4" fontSize="10" fontFamily="monospace" textAnchor="middle" fontWeight="bold">
-                      A
-                    </text>
-
-                    <rect x="424" y="378" width="32" height="18" rx="4" fill="#0B232E" stroke="#14B8A6" strokeWidth="1" />
-                    <text x="440" y="391" fill="#5EEAD4" fontSize="10" fontFamily="monospace" textAnchor="middle" fontWeight="bold">
-                      B
-                    </text>
-
-                    <rect x="544" y="378" width="32" height="18" rx="4" fill="#0B232E" stroke="#14B8A6" strokeWidth="1" />
-                    <text x="560" y="391" fill="#5EEAD4" fontSize="10" fontFamily="monospace" textAnchor="middle" fontWeight="bold">
-                      B
-                    </text>
-
-                    <rect x="360" y="378" width="32" height="18" rx="4" fill="#0B232E" stroke="#14B8A6" strokeWidth="1" />
-                    <text x="376" y="391" fill="#5EEAD4" fontSize="10" fontFamily="monospace" textAnchor="middle" fontWeight="bold">
-                      C
-                    </text>
-
-                    <rect x="625" y="378" width="32" height="18" rx="4" fill="#0B232E" stroke="#14B8A6" strokeWidth="1" />
-                    <text x="641" y="391" fill="#5EEAD4" fontSize="10" fontFamily="monospace" textAnchor="middle" fontWeight="bold">
-                      C
-                    </text>
-
-                    <rect x="285" y="378" width="56" height="18" rx="4" fill="#0B232E" stroke="#F59E0B" strokeWidth="1" />
-                    <text x="313" y="391" fill="#FCD34D" fontSize="9" fontFamily="monospace" textAnchor="middle" fontWeight="bold">
-                      D (ROV 2x0)
-                    </text>
-
-                    <rect x="690" y="378" width="56" height="18" rx="4" fill="#0B232E" stroke="#F59E0B" strokeWidth="1" />
-                    <text x="718" y="391" fill="#FCD34D" fontSize="9" fontFamily="monospace" textAnchor="middle" fontWeight="bold">
-                      D (SAM 2x0)
-                    </text>
-                  </g>
-                )}
-
-                {/* OFFENSIVE FORMATION (Dynamic Scout Offensive Formation) */}
-                <g id="offense-scout-look" opacity="0.88">
-                  {activeOffenseConfig.players.map((o) => (
-                    <g key={o.id} className="cursor-pointer group">
-                      <circle
-                        cx={o.x}
-                        cy={o.y}
-                        r="14.5"
-                        fill="#101B23"
-                        stroke={o.isEligible ? '#38BDF8' : '#64748B'}
-                        strokeWidth={o.isEligible ? '1.8' : '1.4'}
-                      />
-                      <text
-                        x={o.x}
-                        y={o.y + 4}
-                        fill={o.isEligible ? '#7DD3FC' : '#CBD5E1'}
-                        fontSize="9"
-                        fontFamily="monospace"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                      >
-                        {o.label}
-                      </text>
-                    </g>
-                  ))}
+            {/* TRIPS OVERLOAD SHIFT TACTICAL VISUALIZATION */}
+            {alignmentMode === 'offense_adjust' && offenseFormation === 'trips_3x1' && (
+              <g id="trips-overload-shift-layer" opacity="0.95">
+                <g>
+                  <rect
+                    x="100"
+                    y="12"
+                    width="800"
+                    height="32"
+                    rx="6"
+                    fill="#061A23"
+                    fillOpacity="0.95"
+                    stroke="#14B8A6"
+                    strokeWidth="1.5"
+                  />
                   <text
                     x="500"
-                    y="555"
-                    fill="#38BDF8"
+                    y="32"
+                    fill="#5EEAD4"
+                    fontSize="10"
+                    fontFamily="monospace"
+                    fontWeight="bold"
+                    textAnchor="middle"
+                  >
+                    ⚡ PRIMER OVERLOAD RULE: Count & Shift (+1 toward strength) · FS up to 6 yds · SS deep bracket · Split Coverage
+                  </text>
+                </g>
+
+                {/* Will shift vector to Mike */}
+                <path
+                  d="M 455 295 Q 495 282 540 300"
+                  fill="none"
+                  stroke="#2DD4BF"
+                  strokeWidth="2.2"
+                  strokeDasharray="4 2"
+                  markerEnd="url(#slantArrow)"
+                />
+                <text x="495" y="278" fill="#A7F3D0" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                  Will ➔ Mike (+1)
+                </text>
+
+                {/* Mike shift vector to Sam */}
+                <path
+                  d="M 550 295 Q 590 282 630 300"
+                  fill="none"
+                  stroke="#2DD4BF"
+                  strokeWidth="2.2"
+                  strokeDasharray="4 2"
+                  markerEnd="url(#slantArrow)"
+                />
+                <text x="590" y="278" fill="#A7F3D0" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                  Mike ➔ Sam (+1)
+                </text>
+
+                {/* Sam shift vector outward to split difference */}
+                <path
+                  d="M 660 310 Q 705 315 750 330"
+                  fill="none"
+                  stroke="#2DD4BF"
+                  strokeWidth="2.2"
+                  strokeDasharray="4 2"
+                  markerEnd="url(#slantArrow)"
+                />
+                <text x="705" y="305" fill="#A7F3D0" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                  Sam Splits Difference
+                </text>
+
+                {/* FS move UP to 6 yds (Backside Contain) */}
+                <path
+                  d="M 430 170 Q 390 215 350 265"
+                  fill="none"
+                  stroke="#38BDF8"
+                  strokeWidth="2.2"
+                  strokeDasharray="4 2"
+                  markerEnd="url(#slantArrow)"
+                />
+                <text x="390" y="210" fill="#BAE6FD" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                  FS Up ➔ 6 Yds (Contain)
+                </text>
+
+                {/* SS adjust deep to 13 yds */}
+                <path
+                  d="M 590 210 Q 665 180 740 155"
+                  fill="none"
+                  stroke="#818CF8"
+                  strokeWidth="2.2"
+                  strokeDasharray="4 2"
+                  markerEnd="url(#slantArrow)"
+                />
+                <text x="665" y="170" fill="#C7D2FE" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                  SS Deep ➔ 13 Yds (Bracket)
+                </text>
+
+                {/* Weakside Island Man Box on Solo X */}
+                <g>
+                  <rect
+                    x="75"
+                    y="370"
+                    width="130"
+                    height="20"
+                    rx="4"
+                    fill="#0B1C28"
+                    stroke="#F59E0B"
+                    strokeWidth="1.2"
+                  />
+                  <text x="140" y="384" fill="#FDE68A" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                    ISLAND MAN (Solo X)
+                  </text>
+                </g>
+
+                {/* Strongside Zone Overload Box on Trips */}
+                <g>
+                  <rect
+                    x="660"
+                    y="370"
+                    width="240"
+                    height="20"
+                    rx="4"
+                    fill="#0B1C28"
+                    stroke="#38BDF8"
+                    strokeWidth="1.2"
+                  />
+                  <text x="780" y="384" fill="#7DD3FC" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                    OVERLOAD ZONE COVERAGE (3 WRs)
+                  </text>
+                </g>
+              </g>
+            )}
+
+            {/* Coverage Zones */}
+            {showCoverageZones &&
+              activeCoverage.coverageZones.map((zone, idx) => (
+                <g key={idx} opacity="0.32">
+                  <ellipse
+                    cx={zone.x}
+                    cy={zone.y}
+                    rx={zone.radiusX}
+                    ry={zone.radiusY}
+                    fill={activeCoverage.color}
+                    stroke={activeCoverage.color}
+                    strokeWidth="2"
+                    strokeDasharray="6 4"
+                  />
+                  <text
+                    x={zone.x}
+                    y={zone.y + 4}
+                    fill="#FFFFFF"
+                    fontSize="11"
+                    fontFamily="monospace"
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    opacity="0.95"
+                  >
+                    {zone.label}
+                  </text>
+                </g>
+              ))}
+
+            {/* D-Line Slant Arrows (When a front call is selected: Slant, Pinch, Out) */}
+            {showPressureArrows &&
+              activeFront &&
+              activeFront.slants.map((slant, idx) => {
+                const p = DEFENSE_PLAYERS.find((d) => d.id === slant.playerId);
+                if (!p) return null;
+                const coords = getPlayerCoords(p);
+                return (
+                  <g key={`slant-${idx}`}>
+                    <line
+                      x1={coords.x}
+                      y1={coords.y}
+                      x2={slant.arrowEnd.x}
+                      y2={slant.arrowEnd.y}
+                      stroke="#F59E0B"
+                      strokeWidth="2.8"
+                      strokeDasharray="4 2"
+                      markerEnd="url(#slantArrow)"
+                    />
+                    <text
+                      x={(coords.x + slant.arrowEnd.x) / 2}
+                      y={(coords.y + slant.arrowEnd.y) / 2 - 4}
+                      fill="#FDE68A"
+                      fontSize="9"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      {slant.label}
+                    </text>
+                  </g>
+                );
+              })}
+
+            {/* Linebacker Blitz Arrow (Mike, Will, Sam, Rover) */}
+            {showPressureArrows && blitzCall && (
+              (() => {
+                const p = DEFENSE_PLAYERS.find((d) => d.id === blitzCall);
+                if (!p || !p.individualPressure) return null;
+                const coords = getPlayerCoords(p);
+                const pressure = p.individualPressure;
+                return (
+                  <g key={`blitz-${blitzCall}`}>
+                    <line
+                      x1={coords.x}
+                      y1={coords.y}
+                      x2={pressure.arrowEnd.x}
+                      y2={pressure.arrowEnd.y}
+                      stroke="#C084FC"
+                      strokeWidth="3.2"
+                      markerEnd="url(#pressureArrow)"
+                    />
+                    <text
+                      x={(coords.x + pressure.arrowEnd.x) / 2}
+                      y={(coords.y + pressure.arrowEnd.y) / 2 - 6}
+                      fill="#F3E8FF"
+                      fontSize="9"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      {pressure.callName} Blitz
+                    </text>
+                  </g>
+                );
+              })()
+            )}
+
+            {/* DEFENSIVE PLAYERS (11) */}
+            {DEFENSE_PLAYERS.map((player) => {
+              const coords = getPlayerCoords(player);
+              const isSelected = selectedPlayerId === player.id;
+              const isSamOrRover = player.id === 'SAM' || player.id === 'ROV';
+              const isMikeOrWill = player.id === 'MIKE' || player.id === 'WILL';
+              const isBlitzing = blitzCall === player.id;
+
+              return (
+                <g
+                  key={player.id}
+                  onClick={() => setSelectedPlayerId(player.id)}
+                  className="cursor-pointer group"
+                  style={{
+                    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transformOrigin: `${coords.x}px ${coords.y}px`,
+                  }}
+                >
+                  {/* Active Blitz Reticle */}
+                  {isBlitzing && (
+                    <g>
+                      <circle
+                        cx={coords.x}
+                        cy={coords.y}
+                        r="23"
+                        fill="#C084FC"
+                        fillOpacity="0.16"
+                        stroke="#C084FC"
+                        strokeWidth="2"
+                        strokeDasharray="4 2"
+                      />
+                      <line x1={coords.x - 27} y1={coords.y} x2={coords.x - 21} y2={coords.y} stroke="#C084FC" strokeWidth="2" strokeLinecap="round" />
+                      <line x1={coords.x + 21} y1={coords.y} x2={coords.x + 27} y2={coords.y} stroke="#C084FC" strokeWidth="2" strokeLinecap="round" />
+                      <line x1={coords.x} y1={coords.y - 27} x2={coords.x} y2={coords.y - 21} stroke="#C084FC" strokeWidth="2" strokeLinecap="round" />
+                      <line x1={coords.x} y1={coords.y + 21} x2={coords.x} y2={coords.y + 27} stroke="#C084FC" strokeWidth="2" strokeLinecap="round" />
+                    </g>
+                  )}
+
+                  {/* Selection Ring */}
+                  {isSelected && (
+                    <circle
+                      cx={coords.x}
+                      cy={coords.y}
+                      r="22"
+                      fill="none"
+                      stroke="#38BDF8"
+                      strokeWidth="3"
+                    />
+                  )}
+
+                  {/* Player Node Circle */}
+                  <circle
+                    cx={coords.x}
+                    cy={coords.y}
+                    r="16"
+                    fill={
+                      isBlitzing
+                        ? '#581C87'
+                        : isSamOrRover
+                        ? formation === 'shield' || formation === 'vanguard'
+                          ? '#0F766E'
+                          : '#134E4A'
+                        : isMikeOrWill
+                        ? '#1E3A8A'
+                        : '#042F2E'
+                    }
+                    stroke={
+                      isBlitzing
+                        ? '#C084FC'
+                        : isSamOrRover
+                        ? '#2DD4BF'
+                        : isMikeOrWill
+                        ? '#60A5FA'
+                        : '#14B8A6'
+                    }
+                    strokeWidth={isSelected ? '2.5' : '1.8'}
+                  />
+
+                  {/* Player Position Label (Position Only - Centered) */}
+                  <text
+                    x={coords.x}
+                    y={coords.y + 4}
+                    fill="#FFFFFF"
                     fontSize="11"
                     fontFamily="monospace"
                     fontWeight="bold"
                     textAnchor="middle"
                   >
-                    Offense: {activeOffenseConfig.name} · {activeOffenseConfig.formationStyle} ({activeOffenseConfig.personnel})
+                    {player.id}
                   </text>
-                </g>
 
-                {/* TRIPS OVERLOAD SHIFT TACTICAL VISUALIZATION */}
-                {alignmentMode === 'offense_adjust' && offenseFormation === 'trips_3x1' && (
-                  <g id="trips-overload-shift-layer" opacity="0.95">
-                    {/* Top Callout Banner */}
-                    <g>
-                      <rect
-                        x="100"
-                        y="12"
-                        width="800"
-                        height="32"
-                        rx="6"
-                        fill="#061A23"
-                        fillOpacity="0.95"
-                        stroke="#14B8A6"
-                        strokeWidth="1.5"
-                      />
-                      <text
-                        x="500"
-                        y="32"
-                        fill="#5EEAD4"
-                        fontSize="10"
-                        fontFamily="monospace"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                      >
-                        ⚡ PRIMER OVERLOAD RULE: Count & Shift (+1 toward strength) · FS up to 6 yds · SS deep bracket · Split Coverage
-                      </text>
-                    </g>
-
-                    {/* Will shift vector to Mike */}
-                    <path
-                      d="M 455 295 Q 495 282 540 300"
-                      fill="none"
-                      stroke="#2DD4BF"
-                      strokeWidth="2.2"
-                      strokeDasharray="4 2"
-                      markerEnd="url(#slantArrow)"
+                  {/* Sequential Tech / Depth Tag indicator */}
+                  <g>
+                    <rect
+                      x={coords.x - 30}
+                      y={coords.y + 19}
+                      width="60"
+                      height="12"
+                      rx="3"
+                      fill="#0A1C24"
+                      stroke={alignmentMode === 'offense_adjust' ? '#14B8A6' : '#1E3A8A'}
+                      strokeWidth="0.8"
                     />
-                    <text x="495" y="278" fill="#A7F3D0" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                      Will ➔ Mike (+1)
-                    </text>
-
-                    {/* Mike shift vector to Sam */}
-                    <path
-                      d="M 550 295 Q 590 282 630 300"
-                      fill="none"
-                      stroke="#2DD4BF"
-                      strokeWidth="2.2"
-                      strokeDasharray="4 2"
-                      markerEnd="url(#slantArrow)"
-                    />
-                    <text x="590" y="278" fill="#A7F3D0" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                      Mike ➔ Sam (+1)
-                    </text>
-
-                    {/* Sam shift vector outward to split difference */}
-                    <path
-                      d="M 660 310 Q 705 315 750 330"
-                      fill="none"
-                      stroke="#2DD4BF"
-                      strokeWidth="2.2"
-                      strokeDasharray="4 2"
-                      markerEnd="url(#slantArrow)"
-                    />
-                    <text x="705" y="305" fill="#A7F3D0" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                      Sam Splits Difference
-                    </text>
-
-                    {/* FS move UP to 6 yds (Backside Contain) */}
-                    <path
-                      d="M 430 170 Q 390 215 350 265"
-                      fill="none"
-                      stroke="#38BDF8"
-                      strokeWidth="2.2"
-                      strokeDasharray="4 2"
-                      markerEnd="url(#slantArrow)"
-                    />
-                    <text x="390" y="210" fill="#BAE6FD" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                      FS Up ➔ 6 Yds (Contain)
-                    </text>
-
-                    {/* SS adjust deep to 13 yds */}
-                    <path
-                      d="M 590 210 Q 665 180 740 155"
-                      fill="none"
-                      stroke="#818CF8"
-                      strokeWidth="2.2"
-                      strokeDasharray="4 2"
-                      markerEnd="url(#slantArrow)"
-                    />
-                    <text x="665" y="170" fill="#C7D2FE" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                      SS Deep ➔ 13 Yds (Bracket)
-                    </text>
-
-                    {/* Weakside Island Man Box on Solo X */}
-                    <g>
-                      <rect
-                        x="75"
-                        y="370"
-                        width="130"
-                        height="20"
-                        rx="4"
-                        fill="#0B1C28"
-                        stroke="#F59E0B"
-                        strokeWidth="1.2"
-                      />
-                      <text x="140" y="384" fill="#FDE68A" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                        ISLAND MAN (Solo X)
-                      </text>
-                    </g>
-
-                    {/* Strongside Zone Overload Box on Trips */}
-                    <g>
-                      <rect
-                        x="660"
-                        y="370"
-                        width="240"
-                        height="20"
-                        rx="4"
-                        fill="#0B1C28"
-                        stroke="#38BDF8"
-                        strokeWidth="1.2"
-                      />
-                      <text x="780" y="384" fill="#7DD3FC" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                        OVERLOAD ZONE COVERAGE (3 WRs)
-                      </text>
-                    </g>
-                  </g>
-                )}
-
-                {/* COVERAGE ZONES OVERLAYS */}
-                {showCoverageZones &&
-                  activeCoverage.coverageZones.map((zone, idx) => (
-                    <g key={idx} opacity="0.32">
-                      <ellipse
-                        cx={zone.x}
-                        cy={zone.y}
-                        rx={zone.radiusX}
-                        ry={zone.radiusY}
-                        fill={activeCoverage.color}
-                        stroke={activeCoverage.color}
-                        strokeWidth="2"
-                        strokeDasharray="6 4"
-                      />
-                      <text
-                        x={zone.x}
-                        y={zone.y + 4}
-                        fill="#FFFFFF"
-                        fontSize="11"
-                        fontFamily="monospace"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                        opacity="0.95"
-                      >
-                        {zone.label}
-                      </text>
-                    </g>
-                  ))}
-
-                {/* D-LINE SLANT ARROWS */}
-                {showPressureArrows &&
-                  activeSlant.slants.map((slant, idx) => {
-                    const p = DEFENSE_PLAYERS.find((d) => d.id === slant.playerId);
-                    if (!p) return null;
-                    const coords = getPlayerCoords(p);
-                    return (
-                      <g key={`slant-${idx}`}>
-                        <line
-                          x1={coords.x}
-                          y1={coords.y}
-                          x2={slant.arrowEnd.x}
-                          y2={slant.arrowEnd.y}
-                          stroke="#F59E0B"
-                          strokeWidth="2.5"
-                          strokeDasharray="4 2"
-                          markerEnd="url(#slantArrow)"
-                        />
-                        <text
-                          x={(coords.x + slant.arrowEnd.x) / 2}
-                          y={(coords.y + slant.arrowEnd.y) / 2 - 4}
-                          fill="#FDE68A"
-                          fontSize="9"
-                          fontFamily="monospace"
-                          fontWeight="bold"
-                          textAnchor="middle"
-                        >
-                          {slant.label}
-                        </text>
-                      </g>
-                    );
-                  })}
-
-                {/* INDIVIDUAL PRESSURE CALL ARROWS */}
-                {showPressureArrows &&
-                  activeIndividualPressures.map((playerId) => {
-                    const p = DEFENSE_PLAYERS.find((d) => d.id === playerId);
-                    if (!p) return null;
-                    const coords = getPlayerCoords(p);
-                    const pressure = p.individualPressure;
-                    if (!pressure) return null;
-                    return (
-                      <g key={`pressure-${playerId}`}>
-                        <line
-                          x1={coords.x}
-                          y1={coords.y}
-                          x2={pressure.arrowEnd.x}
-                          y2={pressure.arrowEnd.y}
-                          stroke="#C084FC"
-                          strokeWidth="3.2"
-                          markerEnd="url(#pressureArrow)"
-                        />
-                        <text
-                          x={(coords.x + pressure.arrowEnd.x) / 2}
-                          y={(coords.y + pressure.arrowEnd.y) / 2 - 6}
-                          fill="#F3E8FF"
-                          fontSize="9"
-                          fontFamily="monospace"
-                          fontWeight="bold"
-                          textAnchor="middle"
-                        >
-                          {pressure.callName}
-                        </text>
-                      </g>
-                    );
-                  })}
-
-                {/* DEFENSIVE PLAYERS (11) */}
-                {DEFENSE_PLAYERS.map((player) => {
-                  const coords = getPlayerCoords(player);
-                  const isSelected = selectedPlayerId === player.id;
-                  const isSamOrRover = player.id === 'SAM' || player.id === 'ROV';
-                  const isMikeOrWill = player.id === 'MIKE' || player.id === 'WILL';
-                  const hasActivePressure = activeIndividualPressures.includes(player.id);
-
-                  return (
-                    <g
-                      key={player.id}
-                      onClick={() => setSelectedPlayerId(player.id)}
-                      className="cursor-pointer group"
-                      style={{
-                        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                        transformOrigin: `${coords.x}px ${coords.y}px`,
-                      }}
+                    <text
+                      x={coords.x}
+                      y={coords.y + 28}
+                      fill={alignmentMode === 'offense_adjust' ? '#5EEAD4' : '#93C5FD'}
+                      fontSize="7.5"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                      textAnchor="middle"
                     >
-                      {/* Active individual pressure ring - stationary tactical reticle */}
-                      {hasActivePressure && (
-                        <g>
-                          <circle
-                            cx={coords.x}
-                            cy={coords.y}
-                            r="23"
-                            fill="#C084FC"
-                            fillOpacity="0.12"
-                            stroke="#C084FC"
-                            strokeWidth="2"
-                            strokeDasharray="4 2"
-                          />
-                          {/* Tactical crosshair notches */}
-                          <line
-                            x1={coords.x - 27}
-                            y1={coords.y}
-                            x2={coords.x - 21}
-                            y2={coords.y}
-                            stroke="#C084FC"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                          <line
-                            x1={coords.x + 21}
-                            y1={coords.y}
-                            x2={coords.x + 27}
-                            y2={coords.y}
-                            stroke="#C084FC"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                          <line
-                            x1={coords.x}
-                            y1={coords.y - 27}
-                            x2={coords.x}
-                            y2={coords.y - 21}
-                            stroke="#C084FC"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                          <line
-                            x1={coords.x}
-                            y1={coords.y + 21}
-                            x2={coords.x}
-                            y2={coords.y + 27}
-                            stroke="#C084FC"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                        </g>
-                      )}
+                      {coords.sequentialTech
+                        ? coords.sequentialTech.split('(')[0].trim()
+                        : isSamOrRover && (formation === 'shield' || formation === 'vanguard')
+                        ? '2x0 LOS'
+                        : player.sequentialTechCode || `${coords.depthYards} yd`}
+                    </text>
+                  </g>
 
-                      {/* Selected halo */}
-                      {isSelected && (
-                        <circle
-                          cx={coords.x}
-                          cy={coords.y}
-                          r="22"
-                          fill="none"
-                          stroke="#38BDF8"
-                          strokeWidth="3"
-                        />
-                      )}
-
-                      {/* Player Circle Node */}
-                      <circle
-                        cx={coords.x}
-                        cy={coords.y}
-                        r="16"
-                        fill={
-                          isSamOrRover
-                            ? formation === 'shield' || formation === 'vanguard'
-                              ? '#0F766E'
-                              : '#134E4A'
-                            : isMikeOrWill
-                            ? '#1E3A8A'
-                            : '#042F2E'
-                        }
-                        stroke={
-                          hasActivePressure
-                            ? '#C084FC'
-                            : isSamOrRover
-                            ? '#2DD4BF'
-                            : isMikeOrWill
-                            ? '#60A5FA'
-                            : '#14B8A6'
-                        }
-                        strokeWidth={isSelected ? '2.5' : '1.8'}
+                  {/* Selected Player Tooltip */}
+                  {isSelected && (
+                    <g>
+                      <rect
+                        x={coords.x - 55}
+                        y={coords.y - 34}
+                        width="110"
+                        height="18"
+                        rx="4"
+                        fill="#0A1C24"
+                        stroke="#38BDF8"
+                        strokeWidth="1"
                       />
-
-                      {/* Player Label (Position ID Only - No Numbers) */}
                       <text
                         x={coords.x}
-                        y={coords.y + 4}
-                        fill="#FFFFFF"
-                        fontSize="11"
+                        y={coords.y - 21}
+                        fill="#E0F2FE"
+                        fontSize="9"
                         fontFamily="monospace"
                         fontWeight="bold"
                         textAnchor="middle"
                       >
-                        {player.id}
+                        {player.name} ({player.id})
                       </text>
-
-                      {/* Sequential Tech / Depth Tag indicator */}
-                      <g>
-                        <rect
-                          x={coords.x - 30}
-                          y={coords.y + 19}
-                          width="60"
-                          height="12"
-                          rx="3"
-                          fill="#0A1C24"
-                          stroke={alignmentMode === 'offense_adjust' ? '#14B8A6' : '#1E3A8A'}
-                          strokeWidth="0.8"
-                        />
-                        <text
-                          x={coords.x}
-                          y={coords.y + 28}
-                          fill={alignmentMode === 'offense_adjust' ? '#5EEAD4' : '#93C5FD'}
-                          fontSize="7.5"
-                          fontFamily="monospace"
-                          fontWeight="bold"
-                          textAnchor="middle"
-                        >
-                          {coords.sequentialTech
-                            ? coords.sequentialTech.split('(')[0].trim()
-                            : isSamOrRover && (formation === 'shield' || formation === 'vanguard')
-                            ? '2x0 LOS'
-                            : player.sequentialTechCode || `${coords.depthYards} yd`}
-                        </text>
-                      </g>
-
-                      {/* Selected Player Name Tag */}
-                      {isSelected && (
-                        <g>
-                          <rect
-                            x={coords.x - 55}
-                            y={coords.y - 34}
-                            width="110"
-                            height="18"
-                            rx="4"
-                            fill="#0A1C24"
-                            stroke="#38BDF8"
-                            strokeWidth="1"
-                          />
-                          <text
-                            x={coords.x}
-                            y={coords.y - 21}
-                            fill="#E0F2FE"
-                            fontSize="9"
-                            fontFamily="monospace"
-                            fontWeight="bold"
-                            textAnchor="middle"
-                          >
-                            {player.name} ({player.id})
-                          </text>
-                        </g>
-                      )}
                     </g>
-                  );
-                })}
-              </svg>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+
+      {/* LOWER SECTION: Player Inspector & Sequential Tech Blueprint */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Selected Player Inspector (Left) */}
+        <div className="lg:col-span-7 rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#162A33] pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center font-mono font-extrabold text-teal-300">
+                {selectedPlayer.id}
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-base font-display">
+                  {selectedPlayer.name} ({selectedPlayer.id})
+                </h3>
+                <p className="text-xs text-slate-400 font-mono">{selectedPlayer.role}</p>
+              </div>
+            </div>
+
+            {selectedPlayer.canBlitz && (
+              <button
+                onClick={() => setBlitzCall(blitzCall === selectedPlayer.id ? null : (selectedPlayer.id as any))}
+                className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  blitzCall === selectedPlayer.id
+                    ? 'bg-purple-500 text-slate-950 shadow-md shadow-purple-900/50'
+                    : 'bg-[#0B1A22] border border-purple-500/30 text-purple-300 hover:bg-purple-950/40'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                {blitzCall === selectedPlayer.id ? 'Blitz Active' : `Call ${selectedPlayer.id} Blitz`}
+              </button>
+            )}
+          </div>
+
+          {/* Sequential Tech & Assignment Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] space-y-1">
+              <div className="text-[10px] font-mono text-slate-400 uppercase">Sequential Tech</div>
+              <div className="text-xs font-bold text-teal-300 font-mono">
+                {selectedPlayer.sequentialTechCode}
+              </div>
+              <div className="text-[11px] text-slate-300">
+                {selectedPlayer.sequentialTechBase}
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] space-y-1">
+              <div className="text-[10px] font-mono text-slate-400 uppercase">Technique & Depth</div>
+              <div className="text-xs font-bold text-amber-300 font-mono">
+                {getPlayerCoords(selectedPlayer).technique}
+              </div>
+              <div className="text-[11px] text-slate-300">
+                Depth: {getPlayerCoords(selectedPlayer).depthYards} yds off ball
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] space-y-1">
+              <div className="text-[10px] font-mono text-slate-400 uppercase">Assigned Gap / Role</div>
+              <div className="text-xs font-bold text-teal-300 font-mono">
+                {getPlayerCoords(selectedPlayer).gap}
+              </div>
+              <div className="text-[11px] text-slate-400">
+                Coverage: {activeCoverage.responsibilities[selectedPlayer.id] || 'Pass rush / Spy'}
+              </div>
             </div>
           </div>
 
-          {/* Selected Player Assignment & Alignment Inspector */}
-          <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#162A33] pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center font-mono font-extrabold text-teal-300">
-                  {selectedPlayer.id}
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-base font-display">
-                    {selectedPlayer.name} ({selectedPlayer.id})
-                  </h3>
-                  <p className="text-xs text-slate-400 font-mono">{selectedPlayer.role}</p>
-                </div>
+          {/* 4 Formations Breakdown for this Player */}
+          <div className="p-3.5 rounded-xl bg-[#09151E] border border-teal-500/20 text-xs space-y-2">
+            <span className="font-bold text-teal-300 font-mono uppercase tracking-wider block">
+              ★ 4-Formation Assignment Rules for {selectedPlayer.name}:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
+              <div className="p-2 rounded bg-black/40 border border-[#162A33]">
+                <strong className="text-teal-400">Base (3-4):</strong> {selectedPlayer.baseAssignment}
               </div>
+              <div className="p-2 rounded bg-black/40 border border-[#162A33]">
+                <strong className="text-teal-400">Shield (5-2):</strong> {selectedPlayer.shieldAssignment}
+              </div>
+              <div className="p-2 rounded bg-black/40 border border-[#162A33]">
+                <strong className="text-yellow-400">Vanguard (Goal Line):</strong> {selectedPlayer.vanguardAssignment}
+              </div>
+              <div className="p-2 rounded bg-black/40 border border-[#162A33]">
+                <strong className="text-blue-400">Shell (Deep Pass):</strong> {selectedPlayer.shellAssignment}
+              </div>
+            </div>
+          </div>
+        </div>
 
-              {selectedPlayer.canBlitz && selectedPlayer.individualPressure ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleToggleIndividualPressure(selectedPlayer.id)}
-                    className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      activeIndividualPressures.includes(selectedPlayer.id)
-                        ? 'bg-purple-500 text-slate-950 shadow-md shadow-purple-900/50'
-                        : 'bg-[#0B1A22] border border-purple-500/30 text-purple-300 hover:bg-purple-950/40'
-                    }`}
-                  >
-                    <Zap className="w-3.5 h-3.5" />
-                    {activeIndividualPressures.includes(selectedPlayer.id)
-                      ? 'Blitz Called (Active)'
-                      : `Call ${selectedPlayer.individualPressure.callName} Blitz`}
-                  </button>
-                </div>
-              ) : (
-                <div className="text-[11px] font-mono text-slate-400 px-2.5 py-1 rounded bg-[#091318] border border-[#162A33]">
-                  Coverage / Gap Responsibility
-                </div>
-              )}
+        {/* Active Call Coaching Doctrine & Primer Summary (Right) */}
+        <div className="lg:col-span-5 rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-[#162A33] pb-3">
+            <span className="font-bold text-white text-sm font-display flex items-center gap-2">
+              <Info className="w-4 h-4 text-teal-400" />
+              Active Call Doctrine & Rules
+            </span>
+            <span className="text-[11px] font-mono text-teal-300 bg-teal-950/60 px-2 py-0.5 rounded border border-teal-800/40">
+              {liveCallFormatted}
+            </span>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            {/* Formation Doctrine */}
+            <div className="p-3 rounded-xl bg-[#09151D] border border-teal-500/20 space-y-1">
+              <div className="font-bold text-teal-300 flex items-center justify-between">
+                <span>Formation: {activeFormationInfo.name}</span>
+                <span className="text-amber-300 font-mono text-[11px]">{activeFormationInfo.handSignal}</span>
+              </div>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                {activeFormationInfo.doctrine}
+              </p>
             </div>
 
-            {/* Base 3-4 Sequential Tech Formula Box */}
-            <div className="p-3 rounded-xl bg-teal-950/30 border border-teal-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="space-y-0.5">
-                <span className="text-[10px] font-mono text-teal-400 uppercase tracking-wider font-bold">
-                  Base 3-4 Sequential Tech Formula:
+            {/* Front Rule */}
+            <div className="p-3 rounded-xl bg-[#09151D] border border-amber-500/20 space-y-1">
+              <div className="font-bold text-amber-300 flex items-center justify-between">
+                <span>Front: {activeFront ? activeFront.name : 'Base Gap Integrity (Default)'}</span>
+                <span className="text-slate-400 font-mono text-[11px]">
+                  {activeFront ? activeFront.signal : 'No Call Needed'}
                 </span>
-                <div className="text-xs font-mono font-bold text-slate-100">
-                  {selectedPlayer.sequentialTechBase}
-                </div>
               </div>
-              <span className="px-2.5 py-1 rounded bg-[#0A1C24] text-amber-300 font-mono text-xs font-bold border border-amber-500/40 shrink-0">
-                {selectedPlayer.sequentialTechCode || 'Backer/DB'}
-              </span>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                {activeFront
+                  ? activeFront.linemenRule
+                  : 'Primer Gap Rule: If you don’t hear a slant call, either pick the gap in front of you or default pick the strong direction gap.'}
+              </p>
             </div>
 
-            {/* Current Formation Alignment Specs */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] space-y-1">
-                <div className="text-[10px] font-mono text-slate-400 uppercase">
-                  {alignmentMode === 'offense_adjust' ? 'Target Offense Set' : 'Active Defense Front'}
-                </div>
-                <div className="text-xs font-bold text-teal-300 font-mono">
-                  {alignmentMode === 'offense_adjust' ? activeOffenseConfig.name : activeFormationInfo.name}
-                </div>
-                <div className="text-[11px] text-slate-300">
-                  {alignmentMode === 'offense_adjust' && activeOffenseConfig.adjustments[selectedPlayer.id]
-                    ? activeOffenseConfig.adjustments[selectedPlayer.id].assignmentNote
-                    : selectedPlayer.formations[formation].alignmentDesc}
-                </div>
+            {/* Coverage Scheme */}
+            <div className="p-3 rounded-xl bg-[#09151D] border border-sky-500/20 space-y-1">
+              <div className="font-bold text-sky-300 flex items-center justify-between">
+                <span>Coverage: {activeCoverage.name}</span>
+                <span className="text-amber-300 font-mono text-[11px]">{activeCoverage.handSignal}</span>
               </div>
-
-              <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] space-y-1">
-                <div className="text-[10px] font-mono text-slate-400 uppercase">
-                  Technique & Depth
-                </div>
-                <div className="text-xs font-bold text-amber-300 font-mono">
-                  {alignmentMode === 'offense_adjust' && activeOffenseConfig.adjustments[selectedPlayer.id]
-                    ? activeOffenseConfig.adjustments[selectedPlayer.id].sequentialTech
-                    : selectedPlayer.formations[formation].technique}
-                </div>
-                <div className="text-[11px] text-slate-300">
-                  Depth:{' '}
-                  {alignmentMode === 'offense_adjust' && activeOffenseConfig.adjustments[selectedPlayer.id]
-                    ? `${activeOffenseConfig.adjustments[selectedPlayer.id].depthYards} yds`
-                    : `${selectedPlayer.formations[formation].depthYards} yards off ball`}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] space-y-1">
-                <div className="text-[10px] font-mono text-slate-400 uppercase">
-                  Assigned Gap / Track
-                </div>
-                <div className="text-xs font-bold text-teal-300 font-mono">
-                  {alignmentMode === 'offense_adjust' && activeOffenseConfig.adjustments[selectedPlayer.id]
-                    ? activeOffenseConfig.adjustments[selectedPlayer.id].gap
-                    : selectedPlayer.formations[formation].gap}
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  Coverage: {activeCoverage.responsibilities[selectedPlayer.id] || 'Pass rush / Spy'}
-                </div>
-              </div>
-            </div>
-
-            {/* 4 Formations Breakdown for this Player */}
-            <div className="p-3.5 rounded-xl bg-[#09151E] border border-teal-500/20 text-xs space-y-2">
-              <span className="font-bold text-teal-300 font-mono uppercase tracking-wider block">
-                ★ 4-Formation Assignment Rules for {selectedPlayer.name}:
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
-                <div className="p-2 rounded bg-black/40 border border-[#162A33]">
-                  <strong className="text-teal-400">Base (3-4):</strong>{' '}
-                  {selectedPlayer.baseAssignment}
-                </div>
-                <div className="p-2 rounded bg-black/40 border border-[#162A33]">
-                  <strong className="text-teal-400">Shield (5-2):</strong>{' '}
-                  {selectedPlayer.shieldAssignment}
-                </div>
-                <div className="p-2 rounded bg-black/40 border border-[#162A33]">
-                  <strong className="text-yellow-400">Vanguard (Goal Line):</strong>{' '}
-                  {selectedPlayer.vanguardAssignment}
-                </div>
-                <div className="p-2 rounded bg-black/40 border border-[#162A33]">
-                  <strong className="text-blue-400">Shell (Deep Pass):</strong>{' '}
-                  {selectedPlayer.shellAssignment}
-                </div>
-              </div>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                {activeCoverage.philosophy}
+              </p>
             </div>
           </div>
         </div>
@@ -1574,95 +1305,78 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
           </div>
         </div>
 
-        {/* Chapter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
-          {DEFENSIVE_PRIMER_CHAPTERS.map((ch) => (
-            <button
-              key={ch.id}
-              onClick={() => setActivePrimerChapter(ch.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                activePrimerChapter === ch.id
-                  ? 'bg-teal-400 text-slate-950 font-bold shadow-md shadow-teal-500/20'
-                  : 'bg-[#091318] border border-[#162A33] text-slate-400 hover:text-slate-200 hover:border-slate-700'
-              }`}
-            >
-              {ch.title.split(':')[0]}
-            </button>
-          ))}
+        {/* Chapter Navigation Tabs */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {DEFENSIVE_PRIMER_CHAPTERS.map((chap) => {
+            const isSelected = activePrimerChapter === chap.id;
+            return (
+              <button
+                key={chap.id}
+                onClick={() => setActivePrimerChapter(chap.id)}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  isSelected
+                    ? 'border-teal-400 bg-teal-950/60 text-white shadow-lg'
+                    : 'border-[#162A33] bg-[#09151D] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                }`}
+              >
+                <div className="text-[10px] font-mono text-teal-400 uppercase font-bold">
+                  {chap.category}
+                </div>
+                <div className="text-xs font-bold truncate mt-1 text-slate-200">{chap.title}</div>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Active Chapter Card */}
+        {/* Active Chapter Details */}
         {(() => {
-          const ch =
+          const chap =
             DEFENSIVE_PRIMER_CHAPTERS.find((c) => c.id === activePrimerChapter) ||
             DEFENSIVE_PRIMER_CHAPTERS[0];
           return (
-            <div className="p-6 rounded-xl bg-gradient-to-br from-[#08151D] to-[#0A1A24] border border-[#18323F] space-y-5">
-              <div className="space-y-1">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-teal-400">
-                  {ch.category.toUpperCase()} DOCTRINE
-                </span>
-                <h3 className="text-xl font-bold text-white font-display">{ch.title}</h3>
-                <p className="text-sm text-slate-300 leading-relaxed">{ch.summary}</p>
-              </div>
-
-              {/* Key Teaching Points */}
-              <div className="space-y-2.5">
-                <h4 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">
-                  Key Teaching Points & Rules:
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {ch.keyPoints.map((pt, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 rounded-lg bg-[#050C10] border border-[#162A33] text-xs text-slate-300 flex items-start gap-2.5"
-                    >
-                      <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                      <span className="leading-relaxed">{pt}</span>
-                    </div>
-                  ))}
+            <div className="p-5 rounded-2xl bg-[#09151D] border border-[#162A33] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#18323F] pb-3">
+                <div>
+                  <h3 className="text-lg font-bold text-white font-display">{chap.title}</h3>
+                  <p className="text-xs text-slate-400 font-mono mt-0.5">{chap.summary}</p>
                 </div>
+                <span className="px-2.5 py-1 rounded bg-teal-950 border border-teal-700/50 text-teal-300 text-xs font-mono font-bold self-start sm:self-auto">
+                  {chap.category.toUpperCase()}
+                </span>
               </div>
 
-              {/* Coaching Quote */}
-              {ch.coachingQuote && (
-                <div className="p-4 rounded-xl bg-teal-950/20 border-l-4 border-teal-400 text-teal-200 text-xs sm:text-sm italic font-display">
-                  {ch.coachingQuote}
+              {chap.coachingQuote && (
+                <div className="p-3 rounded-xl bg-teal-950/30 border border-teal-500/30 text-xs italic text-teal-200 font-serif">
+                  {chap.coachingQuote}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <span className="text-xs font-mono font-bold text-slate-300 uppercase block">
+                  Key Doctrine Points:
+                </span>
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-300">
+                  {chap.keyPoints.map((pt, idx) => (
+                    <li
+                      key={idx}
+                      className="p-2.5 rounded-lg bg-black/40 border border-[#162A33] flex items-start gap-2"
+                    >
+                      <span className="text-teal-400 font-mono font-bold text-xs">#{idx + 1}</span>
+                      <span className="leading-relaxed">{pt}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {chap.diagramNotes && (
+                <div className="p-3 rounded-xl bg-[#050C10] border border-[#162A33] text-[11px] text-slate-400 font-mono">
+                  <strong className="text-slate-300">Coaching Diagram Notes: </strong>
+                  {chap.diagramNotes}
                 </div>
               )}
             </div>
           );
         })()}
-
-        {/* Coach Custom Notes Pad */}
-        <div className="p-5 rounded-xl bg-[#08131A] border border-[#162A33] space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold text-teal-400 uppercase tracking-wider">
-              Coordinator Game-Day Adjustments & Sideline Rules
-            </span>
-            <div className="flex items-center gap-2">
-              {isSavedNotes && (
-                <span className="text-xs text-emerald-400 font-mono flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Saved
-                </span>
-              )}
-              <button
-                onClick={handleSaveNotes}
-                className="px-3 py-1 rounded-md bg-teal-400 text-slate-950 font-bold text-xs hover:bg-teal-300 transition-colors cursor-pointer"
-              >
-                Save Notes
-              </button>
-            </div>
-          </div>
-          <textarea
-            value={coachNotes}
-            onChange={(e) => setCoachNotes(e.target.value)}
-            rows={4}
-            className="w-full bg-[#050C10] border border-[#18323F] rounded-lg p-3 text-xs text-slate-200 font-mono focus:border-teal-400 focus:outline-none"
-            placeholder="Type defensive adjustments, check rules, or opponent specific tells..."
-          />
-        </div>
       </div>
     </div>
   );

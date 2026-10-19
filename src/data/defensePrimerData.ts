@@ -1,7 +1,8 @@
 export type DefenseFormation = 'base' | 'shield' | 'vanguard' | 'shell';
 export type DefenseFrontType = DefenseFormation; // backwards-compatible alias
 export type CoverageScheme = 'blue' | 'green' | 'black';
-export type LineSlant = 'base_gap' | 'slant' | 'pinch' | 'angle_out' | 'bull_rush';
+export type SelectableFront = 'slant' | 'pinch' | 'out';
+export type LineSlant = 'base_gap' | 'slant' | 'pinch' | 'angle_out' | 'out' | 'bull_rush';
 export type StrengthCall = 'rip' | 'liz';
 export type OffensiveFormationId = 'pro_i' | 'spread_2x2' | 'trips_3x1' | 'heavy_2te' | 'pistol_veer' | 'empty_5w';
 
@@ -1206,6 +1207,19 @@ export const LINE_SLANTS: Record<LineSlant, LineSlantDetail> = {
       { playerId: 'RDE', arrowEnd: { x: 620, y: 430 }, technique: 'Angle to 6/7-Tech', targetGap: 'Strong C-Gap', label: 'Angle Out' },
     ],
   },
+  out: {
+    id: 'out',
+    name: 'Out (Perimeter Spill)',
+    callCode: 'OUT',
+    signal: '👐 Both hands flaring outward from chest',
+    description: 'Defensive ends slant into outside C-gaps while Nose slants into the strong A-gap.',
+    linemenRule: 'Chokes off outside zone and perimeter sweep before the back can reach the corner.',
+    slants: [
+      { playerId: 'LDE', arrowEnd: { x: 380, y: 430 }, technique: 'Angle to 6/7-Tech', targetGap: 'Weak C-Gap', label: 'Angle Out' },
+      { playerId: 'NT', arrowEnd: { x: 520, y: 430 }, technique: 'Slant 1-Tech', targetGap: 'Strong A-Gap', label: 'A-Gap Wedge' },
+      { playerId: 'RDE', arrowEnd: { x: 620, y: 430 }, technique: 'Angle to 6/7-Tech', targetGap: 'Strong C-Gap', label: 'Angle Out' },
+    ],
+  },
   bull_rush: {
     id: 'bull_rush',
     name: 'Pass Push / Bull Rush (Shell Sack Mentality)',
@@ -1220,6 +1234,38 @@ export const LINE_SLANTS: Record<LineSlant, LineSlantDetail> = {
     ],
   },
 };
+
+// Selectable Fronts for Live Defensive Calls: Slant, Pinch, Out
+// "there should not be bull rush or base. If no front is specified, that is base"
+export const SELECTABLE_FRONTS: {
+  id: SelectableFront;
+  name: string;
+  callCode: string;
+  signal: string;
+  description: string;
+}[] = [
+  {
+    id: 'slant',
+    name: 'Slant',
+    callCode: 'SLANT',
+    signal: '👈 Slicing weak',
+    description: 'All down linemen angle one gap toward the weak side',
+  },
+  {
+    id: 'pinch',
+    name: 'Pinch',
+    callCode: 'PINCH',
+    signal: '👐 Pressing inward',
+    description: 'Both ends crash inside to A/B gaps; Nose bull rushes center',
+  },
+  {
+    id: 'out',
+    name: 'Out',
+    callCode: 'OUT',
+    signal: '👐 Flaring outward',
+    description: 'Defensive ends slant into outside C-gaps; Nose slants strong A',
+  },
+];
 
 // Coverage Schemes from the Defensive Primer (Blue, Green, Black only)
 export const COVERAGE_SCHEMES: Record<CoverageScheme, CoverageDetail> = {
