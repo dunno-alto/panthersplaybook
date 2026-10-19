@@ -19,7 +19,7 @@ export interface DefPlayerPosition {
   id: string; // 'NT' | 'LDE' | 'RDE' | 'ROV' | 'SAM' | 'MIKE' | 'WILL' | 'LCB' | 'RCB' | 'FS' | 'SS'
   name: string;
   role: string;
-  number: string;
+  number?: string;
   isOutsideBacker?: boolean;
   isMiddleBacker?: boolean;
   isDefensiveLine?: boolean;
@@ -78,6 +78,7 @@ export interface CoverageDetail {
 export interface LineSlantDetail {
   id: LineSlant;
   name: string;
+  callCode: string;
   signal: string;
   description: string;
   linemenRule: string;
@@ -263,7 +264,7 @@ export const COMMON_OFFENSE_FORMATIONS: Record<OffensiveFormationId, OffenseForm
     formationStyle: 'Shotgun',
     defaultStrength: 'rip',
     description: '3 receivers aligned to the right side (Y inner slot, H middle slot, Z outside) creating a 3-receiver passing surface, with solo X receiver to the left.',
-    adjustmentSummary: 'Defense checks "RIP!" strength to Trips: Sam walks out into overhang between #2 and #3 receivers. Strong Safety rolls down to 8 yards to bracket #3. Free Safety rotates deep centerfield toward Trips. Rover holds weak edge.',
+    adjustmentSummary: 'OVERLOAD PRIMER RULE: (1) Count & Shift: Linebackers shift toward strength to match numbers (Will shifts to Mike, Mike shifts toward Sam, Sam splits the difference). (2) Adjust Safeties: Free Safety moves UP to 6-yard depth for backside containment; Strong Safety adjusts deep to cap vertical routes. (3) Split Coverage: Zone on overloaded strong side, Island Man-to-Man on weakside solo X.',
     players: [
       { id: 'OC', label: 'C', name: 'Center', x: 500, y: 412, role: 'Offensive Center' },
       { id: 'OLG', label: 'LG', name: 'Left Guard', x: 445, y: 412, role: 'Offensive Guard' },
@@ -278,17 +279,17 @@ export const COMMON_OFFENSE_FORMATIONS: Record<OffensiveFormationId, OffenseForm
       { id: 'ORB', label: 'RB', name: 'Running Back', x: 440, y: 460, role: 'Offset RB' },
     ],
     adjustments: {
-      NT: { x: 500, y: 374, sequentialTech: '0 Tech', gap: 'Strong A Gap', depthYards: 0, assignmentNote: '0 Tech strong shade' },
-      LDE: { x: 405, y: 374, sequentialTech: '4 Tech', gap: 'Weak B Gap', depthYards: 0, assignmentNote: '4 Tech squeeze LT' },
-      RDE: { x: 615, y: 374, sequentialTech: '6 Tech', gap: 'Strong C Gap', depthYards: 0, assignmentNote: '6 Tech outside RT' },
-      ROV: { x: 340, y: 350, sequentialTech: '2x2 Weak Contain', gap: 'Weak Edge Contain', depthYards: 2, assignmentNote: 'Hold weak edge vs solo side counter/reverse' },
-      SAM: { x: 730, y: 335, sequentialTech: 'Overhang Apex #2/#3', gap: 'Trips Seam/Flat', depthYards: 3, assignmentNote: 'Apex between #2 & #3, take away quick bubble and out' },
-      MIKE: { x: 550, y: 300, sequentialTech: '34 Tech Scrape', gap: 'Strong B Gap', depthYards: 4, assignmentNote: '34 Tech flow toward Trips screen' },
-      WILL: { x: 445, y: 300, sequentialTech: '14 Tech Box', gap: 'Weak A/B Gap', depthYards: 4, assignmentNote: '14 Tech patrol weak run crease' },
-      LCB: { x: 140, y: 330, sequentialTech: 'Solo Lock (6 yds)', gap: 'Deep Outside 1/3', depthYards: 6, assignmentNote: 'Lock down solo receiver' },
-      RCB: { x: 870, y: 330, sequentialTech: 'Press-Bail (6 yds)', gap: 'Deep Outside 1/3', depthYards: 6, assignmentNote: 'Cover #1 Z receiver' },
-      FS: { x: 480, y: 160, sequentialTech: 'Trips Deep Shade (13 yds)', gap: 'Deep Post / Seam', depthYards: 13, assignmentNote: 'Centerfield shaded to Trips strength' },
-      SS: { x: 670, y: 240, sequentialTech: 'Robber / Bracket (8 yds)', gap: 'Trips Seam Bracket', depthYards: 8, assignmentNote: 'Roll down inside #3 receiver, bracket wheel/seam' },
+      NT: { x: 500, y: 374, sequentialTech: '0 Tech', gap: 'Strong A Gap', depthYards: 0, assignmentNote: '0 Tech with Strong A gap' },
+      LDE: { x: 415, y: 374, sequentialTech: '4 Tech', gap: 'Weak B Gap', depthYards: 0, assignmentNote: '4 Tech B Gap (inside shade OT)' },
+      RDE: { x: 615, y: 374, sequentialTech: '6 Tech', gap: 'Strong C Gap', depthYards: 0, assignmentNote: '6 Tech (outside shade OT) Strong C Gap' },
+      ROV: { x: 370, y: 320, sequentialTech: '2x2 Weak Box Contain', gap: 'Weak B/C Gap Contain', depthYards: 2, assignmentNote: 'Maintain weakside containment and hold weak gap' },
+      WILL: { x: 540, y: 300, sequentialTech: 'Shift to Mike (34 Tech)', gap: 'Strong A/B Gap', depthYards: 4, assignmentNote: 'Count & Shift: Will moves to next LB spot (Mike), matching overloaded numbers' },
+      MIKE: { x: 630, y: 300, sequentialTech: 'Shift to Sam (64 Tech)', gap: 'Strong C Gap / Overhang', depthYards: 4, assignmentNote: 'Count & Shift: Mike shifts toward Sam to match numbers over strong tackle' },
+      SAM: { x: 750, y: 330, sequentialTech: 'Split Difference Apex', gap: 'Trips Seam/Flat', depthYards: 3, assignmentNote: 'Count & Shift: Sam splits the difference between shifted LBs and Trips receivers' },
+      LCB: { x: 140, y: 340, sequentialTech: 'Island Man-to-Man (4 yds)', gap: 'Weak Solo Island', depthYards: 4, assignmentNote: 'Split Coverage: Island man-to-man locked on solo X receiver' },
+      RCB: { x: 870, y: 310, sequentialTech: 'Trips Zone Cloud (7 yds)', gap: 'Deep Outside 1/3 Zone', depthYards: 7, assignmentNote: 'Split Coverage: Zone coverage on overloaded strong side' },
+      FS: { x: 350, y: 265, sequentialTech: 'Backside Contain (6 yds depth)', gap: 'Weak Alley / Contain', depthYards: 6, assignmentNote: 'Adjust Safeties: FS moves UP to 6-yard depth to handle backside containment' },
+      SS: { x: 740, y: 155, sequentialTech: 'Deep Vertical Bracket (13 yds)', gap: 'Deep Trips Post/Seam', depthYards: 13, assignmentNote: 'Adjust Safeties: SS adjusts deep to 13-yard depth for potential vertical routes' },
     },
   },
   heavy_2te: {
@@ -1156,6 +1157,7 @@ export const LINE_SLANTS: Record<LineSlant, LineSlantDetail> = {
   base_gap: {
     id: 'base_gap',
     name: 'Base Gap Integrity (Default)',
+    callCode: 'BASE GAP',
     signal: '✊ Fist held up, palm out',
     description: 'Standard gap accountability based on primary technique alignment.',
     linemenRule: 'From primer: If you don’t hear a slant call, either pick the gap in front of you or if you’re heads up you will default pick the strong direction gap.',
@@ -1168,6 +1170,7 @@ export const LINE_SLANTS: Record<LineSlant, LineSlantDetail> = {
   slant: {
     id: 'slant',
     name: 'Slant Call (Weak Side)',
+    callCode: 'SLANT',
     signal: '👈 Hand slicing across chest to weak side',
     description: 'All down linemen angle one gap toward the weak side away from the offensive strength.',
     linemenRule: 'From primer: No slant strong, since strong is default. The slant call slants weak. Attack the weak-side gap.',
@@ -1180,6 +1183,7 @@ export const LINE_SLANTS: Record<LineSlant, LineSlantDetail> = {
   pinch: {
     id: 'pinch',
     name: 'Pinch Front (Interior Squeeze)',
+    callCode: 'PINCH',
     signal: '👐 Both hands pressing together inward',
     description: 'Both defensive ends crash inside toward the A/B gaps; Nose drives the center back.',
     linemenRule: 'Collapses interior zone, dive, and veer inside giving. Spills all ball carriers to Sam and Rover on the edge.',
@@ -1192,6 +1196,7 @@ export const LINE_SLANTS: Record<LineSlant, LineSlantDetail> = {
   angle_out: {
     id: 'angle_out',
     name: 'Angle Out (Perimeter Spill)',
+    callCode: 'ANGLE OUT',
     signal: '👐 Both hands flaring outward from chest',
     description: 'Defensive ends slant into outside C-gaps while Nose slants into the strong A-gap.',
     linemenRule: 'Chokes off outside zone and perimeter sweep before the back can reach the corner.',
@@ -1204,6 +1209,7 @@ export const LINE_SLANTS: Record<LineSlant, LineSlantDetail> = {
   bull_rush: {
     id: 'bull_rush',
     name: 'Pass Push / Bull Rush (Shell Sack Mentality)',
+    callCode: 'BULL RUSH',
     signal: '💥 Clenched fists driving forward',
     description: 'From primer: Linemen, in Shell you should be expecting a pass, which means go get us a sack!',
     linemenRule: 'Maximum forward power and hand violence. Drive offensive linemen straight back into the quarterback’s lap.',

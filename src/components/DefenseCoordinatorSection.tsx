@@ -68,10 +68,162 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
 
   const handleSelectFormation = (f: DefenseFormation) => {
     setFormation(f);
+    setAlignmentMode('base_fronts');
     // If selecting Shell, default to Bull Rush / sack mentality
     if (f === 'shell') {
       setLineSlant('bull_rush');
     }
+  };
+
+  const lineCallSlug = (activeSlant.callCode || activeSlant.name).toUpperCase().trim();
+  const liveCallFormatted = `${activeFormationInfo.codeName}-${lineCallSlug}-${activeCoverage.codeName}`;
+
+  const getPlayerCoords = (player: (typeof DEFENSE_PLAYERS)[0]) => {
+    const formationBase = player.formations[formation];
+    if (alignmentMode === 'base_fronts') {
+      return formationBase;
+    }
+
+    const adj = activeOffenseConfig.adjustments[player.id];
+    if (!adj) return formationBase;
+
+    // Apply selected defensive formation adjustments (Shield, Vanguard, Shell, Base)
+    if (formation === 'shield') {
+      if (player.id === 'SAM' || player.id === 'ROV') {
+        return {
+          x: player.formations.shield.x,
+          y: 374,
+          depthYards: 0,
+          alignmentDesc: 'Walked up 2x0 on LOS in 5-2 Shield',
+          technique: '9-Tech / 2x0 on LOS',
+          gap: 'C/D-Gap Edge / Outside Contain',
+          sequentialTech: '2x0 on LOS',
+        };
+      }
+      if (player.id === 'MIKE' || player.id === 'WILL') {
+        return {
+          x: adj.x,
+          y: 295,
+          depthYards: 4.5,
+          alignmentDesc: 'Stacked 4.5 yds in 5-2 Shield behind 5-man line',
+          technique: adj.sequentialTech,
+          gap: adj.gap,
+          sequentialTech: adj.sequentialTech,
+        };
+      }
+      return {
+        ...adj,
+        alignmentDesc: player.formations.shield.alignmentDesc,
+      };
+    } else if (formation === 'vanguard') {
+      if (player.id === 'SAM' || player.id === 'ROV') {
+        return {
+          x: player.formations.vanguard.x,
+          y: 374,
+          depthYards: 0,
+          alignmentDesc: 'Walked up 2x0 on LOS (Vanguard Goal Line)',
+          technique: '2x0 Goal Line Edge Crash',
+          gap: 'Contain & Edge Destruction',
+          sequentialTech: '2x0 Edge Crash',
+        };
+      }
+      if (player.id === 'MIKE' || player.id === 'WILL') {
+        return {
+          x: adj.x,
+          y: 345,
+          depthYards: 2,
+          alignmentDesc: 'Walked up to 2-yard depth (Open gap rule)',
+          technique: player.id === 'MIKE' ? '32 Tech (2 yds)' : '12 Tech (2 yds)',
+          gap: 'Open Gap Attack',
+          sequentialTech: '2-Yd Depth Attack',
+        };
+      }
+      if (player.id === 'FS' || player.id === 'SS') {
+        return {
+          x: player.id === 'FS' ? 450 : 580,
+          y: 290,
+          depthYards: 5,
+          alignmentDesc: 'Walked up to 5-yard depth (Goal line support)',
+          technique: '5-Yd Depth Support',
+          gap: 'Secondary Alley Fill / Goal Line Cap',
+          sequentialTech: '5-Yd Depth Support',
+        };
+      }
+      if (player.id === 'LCB' || player.id === 'RCB') {
+        return {
+          x: adj.x,
+          y: 360,
+          depthYards: 1.5,
+          alignmentDesc: 'Tight press-man on LOS (1-2 yds)',
+          technique: 'Press-Man',
+          gap: adj.gap,
+          sequentialTech: 'Press-Man (1 yd)',
+        };
+      }
+      return {
+        ...adj,
+        alignmentDesc: player.formations.vanguard.alignmentDesc,
+      };
+    } else if (formation === 'shell') {
+      if (player.id === 'SAM' || player.id === 'ROV') {
+        return {
+          x: player.id === 'SAM' ? 670 : 320,
+          y: 310,
+          depthYards: 4,
+          alignmentDesc: 'Dropped to 4 yards off (Flat buzz)',
+          technique: '4 Yards Off / Flat Buzz',
+          gap: 'Flat / Hook Underneath',
+          sequentialTech: '4 Yards Off',
+        };
+      }
+      if (player.id === 'MIKE' || player.id === 'WILL') {
+        return {
+          x: adj.x,
+          y: 260,
+          depthYards: 6,
+          alignmentDesc: 'Dropped back to 6 yards depth (Middle hole)',
+          technique: player.id === 'MIKE' ? '36 Tech (6 yds)' : '16 Tech (6 yds)',
+          gap: 'Middle Hole / Hook',
+          sequentialTech: '6-Yd Pass Drop',
+        };
+      }
+      if (player.id === 'FS' || player.id === 'SS') {
+        return {
+          x: player.id === 'FS' ? 420 : 620,
+          y: 140,
+          depthYards: 14,
+          alignmentDesc: 'Deep prevent half / post cap (14 yds depth)',
+          technique: 'Deep Prevent (14 yds)',
+          gap: 'Deep Half / Prevent',
+          sequentialTech: 'Deep Prevent (14 yds)',
+        };
+      }
+      if (player.id === 'LCB' || player.id === 'RCB') {
+        return {
+          x: adj.x,
+          y: 290,
+          depthYards: 9,
+          alignmentDesc: 'Deep cushion bail (9 yds)',
+          technique: 'Deep Cushion Bail',
+          gap: 'Deep Outside 1/3',
+          sequentialTech: 'Deep Bail (9 yds)',
+        };
+      }
+      return {
+        ...adj,
+        alignmentDesc: player.formations.shell.alignmentDesc,
+      };
+    }
+
+    return {
+      x: adj.x,
+      y: adj.y,
+      depthYards: adj.depthYards,
+      alignmentDesc: adj.assignmentNote,
+      technique: adj.sequentialTech,
+      gap: adj.gap,
+      sequentialTech: adj.sequentialTech,
+    };
   };
 
   const handleToggleIndividualPressure = (playerId: string) => {
@@ -91,73 +243,64 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* Top Banner / Hero */}
-      <div className="rounded-2xl border border-teal-500/30 bg-gradient-to-r from-[#07131B] via-[#091822] to-[#0B1F2C] p-6 lg:p-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-500/40 text-teal-300 text-xs font-mono font-semibold uppercase tracking-wider">
-              <Shield className="w-3.5 h-3.5 text-teal-400" />
-              Defensive Coordinator Suite · 3-4 Defense System
+      {/* Defensive Command Console Header (matches Offense Tab format) */}
+      <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#162A33]/80">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/15 border border-teal-500/40 text-teal-300 font-bold uppercase tracking-wider text-[11px]">
+                <Shield className="w-3 h-3 text-teal-400" />
+                Defensive Coordinator Console · Base 3-4 System
+              </span>
+              <span aria-hidden="true" className="text-slate-600">·</span>
+              <span className="text-slate-400">Front:</span>
+              <span className="text-teal-300 font-bold">{activeFormationInfo.name} ({activeFormationInfo.codeName})</span>
+              <span aria-hidden="true" className="text-slate-600">·</span>
+              <span className="text-slate-400">Signal:</span>
+              <span className="text-slate-200">{activeFormationInfo.handSignal}</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-display">
-              Base 3-4 <span className="text-teal-400">↔ Shield 5-2</span> · Vanguard & Shell
-            </h1>
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-              Command our complete defensive scheme. Outside backers are strictly{' '}
-              <strong className="text-teal-300">Sam</strong> and{' '}
-              <strong className="text-teal-300">Rover</strong>, middle backers are{' '}
-              <strong className="text-teal-300">Mike</strong> and{' '}
-              <strong className="text-teal-300">Will</strong>. Call individual position pressures,
-              line slants with 1-9 techniques, and master Base, Shield, Vanguard, and Shell.
-            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-slate-400 flex items-center gap-2 mr-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-mono text-[11px]">Tempo: &ldquo;RELOAD!&rdquo;</span>
+            </div>
             <button
               onClick={onOpenPrintModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-teal-400 text-slate-950 hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/20 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold text-xs bg-teal-400 text-slate-950 hover:bg-teal-300 transition-all shadow-sm cursor-pointer"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-3.5 h-3.5" />
               Print Defensive Call Sheet
             </button>
           </div>
         </div>
 
-        {/* Master Active Call Banner */}
-        <div className="mt-6 pt-5 border-t border-[#18323F] flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-mono">
-            <span className="text-slate-400 uppercase tracking-wider font-semibold">Live Call:</span>
-            <span className="px-3 py-1 rounded-md bg-teal-500/20 text-teal-300 font-bold border border-teal-500/40">
-              FORMATION: {activeFormationInfo.name.toUpperCase()} ({activeFormationInfo.handSignal})
+        {/* Live Call Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <span className="text-slate-400 uppercase tracking-wider font-semibold text-[11px]">Live Call:</span>
+            <span className="px-3.5 py-1.5 rounded-lg bg-teal-500/20 text-teal-300 font-extrabold border border-teal-500/50 text-xs sm:text-sm tracking-wide shadow-sm font-mono">
+              {liveCallFormatted}
             </span>
-            <span
-              className="px-3 py-1 rounded-md font-bold border text-white flex items-center gap-1.5"
-              style={{
-                backgroundColor: `${activeCoverage.color}25`,
-                borderColor: `${activeCoverage.color}60`,
-              }}
-            >
-              <span>COVERAGE: {activeCoverage.codeName}</span>
-              <span className="text-[11px] font-normal text-slate-300">({activeCoverage.handSignal})</span>
+            <span className="text-slate-400 text-[11px] hidden sm:inline">
+              ({activeFormationInfo.handSignal.split(' ')[0]} · {activeCoverage.handSignal.split(' ')[0]})
             </span>
-            <span className="px-3 py-1 rounded-md bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
-              SLANT: {activeSlant.name}
-            </span>
-            <span className="px-3 py-1 rounded-md bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40">
-              BLITZ CALLS:{' '}
-              {activeIndividualPressures.length > 0
-                ? activeIndividualPressures.join(' + ')
-                : 'NONE (BASE COVERAGE)'}
-            </span>
-            <span className="px-2.5 py-1 rounded-md bg-slate-800 text-slate-200 font-bold border border-slate-700">
-              STRENGTH: {strengthCall.toUpperCase()} ({strengthCall === 'rip' ? 'Right' : 'Left'})
+            {activeIndividualPressures.length > 0 && (
+              <span className="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40 text-[11px]">
+                BLITZ: {activeIndividualPressures.join(' + ')}
+              </span>
+            )}
+            <span className="px-2 py-1 rounded-md bg-slate-800 text-slate-200 font-bold border border-slate-700 text-[11px]">
+              STR: {strengthCall.toUpperCase()} ({strengthCall === 'rip' ? 'Right' : 'Left'})
             </span>
           </div>
 
-          <div className="text-xs text-slate-400 flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Tempo Check: &ldquo;RELOAD!&rdquo;</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-400">Offense Scouting:</span>
+            <span className="px-2 py-0.5 rounded bg-teal-950 border border-teal-500/40 text-teal-300 font-bold text-[11px]">
+              {activeOffenseConfig.shortName}
+            </span>
           </div>
         </div>
       </div>
@@ -192,6 +335,7 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                     onClick={() => {
                       setOffenseFormation(ofId);
                       setAlignmentMode('offense_adjust');
+                      setFormation('base');
                       if (off.defaultStrength) setStrengthCall(off.defaultStrength);
                     }}
                     className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative ${
@@ -567,6 +711,7 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                     onClick={() => {
                       setOffenseFormation(id);
                       setAlignmentMode('offense_adjust');
+                      setFormation('base');
                     }}
                     className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors cursor-pointer ${
                       offenseFormation === id && alignmentMode === 'offense_adjust'
@@ -866,6 +1011,136 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                   </text>
                 </g>
 
+                {/* TRIPS OVERLOAD SHIFT TACTICAL VISUALIZATION */}
+                {alignmentMode === 'offense_adjust' && offenseFormation === 'trips_3x1' && (
+                  <g id="trips-overload-shift-layer" opacity="0.95">
+                    {/* Top Callout Banner */}
+                    <g>
+                      <rect
+                        x="100"
+                        y="12"
+                        width="800"
+                        height="32"
+                        rx="6"
+                        fill="#061A23"
+                        fillOpacity="0.95"
+                        stroke="#14B8A6"
+                        strokeWidth="1.5"
+                      />
+                      <text
+                        x="500"
+                        y="32"
+                        fill="#5EEAD4"
+                        fontSize="10"
+                        fontFamily="monospace"
+                        fontWeight="bold"
+                        textAnchor="middle"
+                      >
+                        ⚡ PRIMER OVERLOAD RULE: Count & Shift (+1 toward strength) · FS up to 6 yds · SS deep bracket · Split Coverage
+                      </text>
+                    </g>
+
+                    {/* Will shift vector to Mike */}
+                    <path
+                      d="M 455 295 Q 495 282 540 300"
+                      fill="none"
+                      stroke="#2DD4BF"
+                      strokeWidth="2.2"
+                      strokeDasharray="4 2"
+                      markerEnd="url(#slantArrow)"
+                    />
+                    <text x="495" y="278" fill="#A7F3D0" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                      Will ➔ Mike (+1)
+                    </text>
+
+                    {/* Mike shift vector to Sam */}
+                    <path
+                      d="M 550 295 Q 590 282 630 300"
+                      fill="none"
+                      stroke="#2DD4BF"
+                      strokeWidth="2.2"
+                      strokeDasharray="4 2"
+                      markerEnd="url(#slantArrow)"
+                    />
+                    <text x="590" y="278" fill="#A7F3D0" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                      Mike ➔ Sam (+1)
+                    </text>
+
+                    {/* Sam shift vector outward to split difference */}
+                    <path
+                      d="M 660 310 Q 705 315 750 330"
+                      fill="none"
+                      stroke="#2DD4BF"
+                      strokeWidth="2.2"
+                      strokeDasharray="4 2"
+                      markerEnd="url(#slantArrow)"
+                    />
+                    <text x="705" y="305" fill="#A7F3D0" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                      Sam Splits Difference
+                    </text>
+
+                    {/* FS move UP to 6 yds (Backside Contain) */}
+                    <path
+                      d="M 430 170 Q 390 215 350 265"
+                      fill="none"
+                      stroke="#38BDF8"
+                      strokeWidth="2.2"
+                      strokeDasharray="4 2"
+                      markerEnd="url(#slantArrow)"
+                    />
+                    <text x="390" y="210" fill="#BAE6FD" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                      FS Up ➔ 6 Yds (Contain)
+                    </text>
+
+                    {/* SS adjust deep to 13 yds */}
+                    <path
+                      d="M 590 210 Q 665 180 740 155"
+                      fill="none"
+                      stroke="#818CF8"
+                      strokeWidth="2.2"
+                      strokeDasharray="4 2"
+                      markerEnd="url(#slantArrow)"
+                    />
+                    <text x="665" y="170" fill="#C7D2FE" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                      SS Deep ➔ 13 Yds (Bracket)
+                    </text>
+
+                    {/* Weakside Island Man Box on Solo X */}
+                    <g>
+                      <rect
+                        x="75"
+                        y="370"
+                        width="130"
+                        height="20"
+                        rx="4"
+                        fill="#0B1C28"
+                        stroke="#F59E0B"
+                        strokeWidth="1.2"
+                      />
+                      <text x="140" y="384" fill="#FDE68A" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                        ISLAND MAN (Solo X)
+                      </text>
+                    </g>
+
+                    {/* Strongside Zone Overload Box on Trips */}
+                    <g>
+                      <rect
+                        x="660"
+                        y="370"
+                        width="240"
+                        height="20"
+                        rx="4"
+                        fill="#0B1C28"
+                        stroke="#38BDF8"
+                        strokeWidth="1.2"
+                      />
+                      <text x="780" y="384" fill="#7DD3FC" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                        OVERLOAD ZONE COVERAGE (3 WRs)
+                      </text>
+                    </g>
+                  </g>
+                )}
+
                 {/* COVERAGE ZONES OVERLAYS */}
                 {showCoverageZones &&
                   activeCoverage.coverageZones.map((zone, idx) => (
@@ -900,10 +1175,7 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                   activeSlant.slants.map((slant, idx) => {
                     const p = DEFENSE_PLAYERS.find((d) => d.id === slant.playerId);
                     if (!p) return null;
-                    const adj = activeOffenseConfig.adjustments[slant.playerId];
-                    const coords = (alignmentMode === 'offense_adjust' && adj)
-                      ? { x: adj.x, y: adj.y }
-                      : p.formations[formation];
+                    const coords = getPlayerCoords(p);
                     return (
                       <g key={`slant-${idx}`}>
                         <line
@@ -936,10 +1208,7 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                   activeIndividualPressures.map((playerId) => {
                     const p = DEFENSE_PLAYERS.find((d) => d.id === playerId);
                     if (!p) return null;
-                    const adj = activeOffenseConfig.adjustments[playerId];
-                    const coords = (alignmentMode === 'offense_adjust' && adj)
-                      ? { x: adj.x, y: adj.y }
-                      : p.formations[formation];
+                    const coords = getPlayerCoords(p);
                     const pressure = p.individualPressure;
                     if (!pressure) return null;
                     return (
@@ -970,18 +1239,7 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
 
                 {/* DEFENSIVE PLAYERS (11) */}
                 {DEFENSE_PLAYERS.map((player) => {
-                  const adj = activeOffenseConfig.adjustments[player.id];
-                  const coords = (alignmentMode === 'offense_adjust' && adj)
-                    ? {
-                        x: adj.x,
-                        y: adj.y,
-                        depthYards: adj.depthYards,
-                        alignmentDesc: adj.assignmentNote,
-                        technique: adj.sequentialTech,
-                        gap: adj.gap,
-                        sequentialTech: adj.sequentialTech,
-                      }
-                    : player.formations[formation];
+                  const coords = getPlayerCoords(player);
                   const isSelected = selectedPlayerId === player.id;
                   const isSamOrRover = player.id === 'SAM' || player.id === 'ROV';
                   const isMikeOrWill = player.id === 'MIKE' || player.id === 'WILL';
@@ -1088,29 +1346,17 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                         strokeWidth={isSelected ? '2.5' : '1.8'}
                       />
 
-                      {/* Player Label */}
+                      {/* Player Label (Position ID Only - No Numbers) */}
                       <text
                         x={coords.x}
-                        y={coords.y - 1}
+                        y={coords.y + 4}
                         fill="#FFFFFF"
-                        fontSize="10"
+                        fontSize="11"
                         fontFamily="monospace"
                         fontWeight="bold"
                         textAnchor="middle"
                       >
                         {player.id}
-                      </text>
-
-                      {/* Jersey number under label */}
-                      <text
-                        x={coords.x}
-                        y={coords.y + 9}
-                        fill="#5EEAD4"
-                        fontSize="8"
-                        fontFamily="monospace"
-                        textAnchor="middle"
-                      >
-                        {player.number}
                       </text>
 
                       {/* Sequential Tech / Depth Tag indicator */}
@@ -1134,8 +1380,8 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                           fontWeight="bold"
                           textAnchor="middle"
                         >
-                          {alignmentMode === 'offense_adjust' && adj
-                            ? adj.sequentialTech.split('(')[0].trim()
+                          {coords.sequentialTech
+                            ? coords.sequentialTech.split('(')[0].trim()
                             : isSamOrRover && (formation === 'shield' || formation === 'vanguard')
                             ? '2x0 LOS'
                             : player.sequentialTechCode || `${coords.depthYards} yd`}
@@ -1184,7 +1430,7 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                 </div>
                 <div>
                   <h3 className="font-bold text-white text-base font-display">
-                    #{selectedPlayer.number} {selectedPlayer.name}
+                    {selectedPlayer.name} ({selectedPlayer.id})
                   </h3>
                   <p className="text-xs text-slate-400 font-mono">{selectedPlayer.role}</p>
                 </div>

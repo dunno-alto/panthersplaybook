@@ -55,39 +55,37 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* Hero Header */}
-      <div className="rounded-2xl border border-teal-500/30 bg-gradient-to-r from-[#07131B] via-[#091822] to-[#0B1F2C] p-6 lg:p-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-500/40 text-teal-300 text-xs font-mono font-semibold uppercase tracking-wider">
-              <Compass className="w-3.5 h-3.5 text-teal-400" />
-              Special Teams Tactical Coordinator
+      {/* Special Teams Console Header (matches Offense Tab format) */}
+      <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#162A33]/80">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/15 border border-teal-500/40 text-teal-300 font-bold uppercase tracking-wider text-[11px]">
+                <Compass className="w-3 h-3 text-teal-400" />
+                Special Teams Tactical Coordinator
+              </span>
+              <span aria-hidden="true" className="text-slate-600">·</span>
+              <span className="text-slate-400">Unit:</span>
+              <span className="text-teal-300 font-bold">{activeUnit.name}</span>
+              <span aria-hidden="true" className="text-slate-600">·</span>
+              <span className="text-slate-400">Tempo:</span>
+              <span className="text-slate-300">{activeUnit.targetTempo}</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-display">
-              Special Teams <span className="text-teal-400">Playbook & Execution</span>
-            </h1>
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-              Master the hidden third of the game. Featuring the high-efficiency{' '}
-              <strong className="text-teal-300 font-semibold">Wheel Left & Wheel Right Kickoff Return</strong> system,
-              lane integrity for Kickoff Coverage, Punt (Shield & Spread), Punt Return & Block,
-              Field Goal / PAT Protection, and Field Goal Block / Kick-Six.
-            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2">
             <button
               onClick={onOpenPrintModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-teal-400 text-slate-950 hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/20 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold text-xs bg-teal-400 text-slate-950 hover:bg-teal-300 transition-all shadow-sm cursor-pointer"
             >
-              <Printer className="w-4 h-4" />
-              Print Special Teams Sheet
+              <Printer className="w-3.5 h-3.5" />
+              Print ST Sheet
             </button>
           </div>
         </div>
 
         {/* Units Navigation Row */}
-        <div className="mt-6 pt-5 border-t border-[#18323F] flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {(Object.keys(SPECIAL_TEAMS_PLAYBOOK) as SpecialTeamsUnitId[]).map((uid) => {
             const unit = SPECIAL_TEAMS_PLAYBOOK[uid];
             const isSelected = selectedUnitId === uid;
@@ -95,10 +93,10 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
               <button
                 key={uid}
                 onClick={() => handleUnitChange(uid)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-teal-400 text-slate-950 shadow-md shadow-teal-500/20 font-mono'
-                    : 'bg-[#091318] text-slate-400 hover:text-white border border-[#162A33]'
+                    : 'bg-[#091318] text-slate-300 hover:text-white border border-[#162A33] hover:border-slate-600'
                 }`}
               >
                 {unit.shortName}
@@ -202,7 +200,7 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                       {p.label}
                     </span>
                     <div className="min-w-0">
-                      <div className="text-xs font-bold truncate text-slate-200">#{p.number} {p.name.split(' ')[0]}</div>
+                      <div className="text-xs font-bold truncate text-slate-200">{p.name}</div>
                       <div className="text-[10px] text-slate-400 truncate">{p.role.split('(')[0].trim()}</div>
                     </div>
                   </button>
@@ -665,29 +663,17 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                         strokeWidth="2"
                       />
 
-                      {/* Label */}
+                      {/* Label (Position ID Only - Centered) */}
                       <text
                         x={p.x}
-                        y={p.y - 1}
+                        y={p.y + 4}
                         fill="#FFFFFF"
-                        fontSize="10"
+                        fontSize="11"
                         fontFamily="monospace"
                         fontWeight="bold"
                         textAnchor="middle"
                       >
                         {p.label}
-                      </text>
-
-                      {/* Jersey number */}
-                      <text
-                        x={p.x}
-                        y={p.y + 9}
-                        fill={isKey ? '#FDE68A' : '#5EEAD4'}
-                        fontSize="8"
-                        fontFamily="monospace"
-                        textAnchor="middle"
-                      >
-                        {p.number}
                       </text>
 
                       {/* Name tooltip on selected */}
@@ -736,7 +722,7 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                   </div>
                   <div>
                     <h3 className="font-bold text-white text-sm">
-                      #{selectedPlayer.number} {selectedPlayer.name}
+                      {selectedPlayer.name} ({selectedPlayer.label})
                     </h3>
                     <p className="text-[11px] text-teal-400 font-mono">{selectedPlayer.role}</p>
                   </div>

@@ -113,7 +113,7 @@ export function DefenseWristbandModal({ isOpen, onClose }: DefenseWristbandModal
               ].map((c) => (
                 <div key={c.num} className="p-2.5 rounded-lg border border-[#18323F] bg-[#09151D] space-y-1">
                   <div className="flex items-center justify-between text-teal-300 font-bold">
-                    <span>#{c.num}</span>
+                    <span>Call {c.num}</span>
                     <span className="text-white font-sans truncate ml-1">{c.call}</span>
                   </div>
                   <div className="text-[10px] text-slate-400 font-sans leading-tight">{c.desc}</div>

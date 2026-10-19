@@ -95,7 +95,7 @@ export function SpecialTeamsPrintModal({ isOpen, onClose }: SpecialTeamsPrintMod
                 <div className="grid grid-cols-2 gap-1 text-[11px]">
                   {unit.players.slice(0, 6).map((p) => (
                     <div key={p.id} className="truncate text-slate-300">
-                      <strong className="text-teal-400 font-mono">{p.label}:</strong> #{p.number} {p.name.split(' ')[0]}
+                      <strong className="text-teal-400 font-mono">{p.label}:</strong> {p.name.split(' ')[0]}
                     </div>
                   ))}
                 </div>
