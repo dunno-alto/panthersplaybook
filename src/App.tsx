@@ -83,7 +83,7 @@ export default function App() {
   const [isDefenseWristbandOpen, setIsDefenseWristbandOpen] = useState<boolean>(false);
   const [isSpecialTeamsPrintOpen, setIsSpecialTeamsPrintOpen] = useState<boolean>(false);
 
-  const activePlay = getActivePlayDefinition(concept, targetSide, xMode, zSide, zType);
+  const activePlay = getActivePlayDefinition(concept, targetSide, xMode, 'right', 'tight', zSide, zType);
   const activeFront = DEFENSIVE_FRONTS[frontId];
   const baseOffense = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
   const simResult = activePlay.getOffensivePaths(

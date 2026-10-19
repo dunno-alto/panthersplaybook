@@ -8,6 +8,9 @@ export type OffensiveConcept = 'inside_veer' | 'outside_veer' | 'counter' | 'pow
 export type TargetSide = 'right' | 'left';
 export type ZAlignmentSide = 'right' | 'left';
 export type ZAlignmentType = 'wide' | 'wing';
+export type YAlignmentSide = 'right' | 'left';
+export type YAlignmentType = 'tight' | 'flex';
+export type FloodAction = 'none' | 'fake_right' | 'fake_left';
 
 export interface Point {
   x: number; // Field coordinates: 0 to 1000 (500 is ball X)
@@ -68,14 +71,17 @@ export interface PlayDefinition {
     eleventhMode: EleventhPlayerMode,
     xMode?: XPlayerMode,
     zSide?: ZAlignmentSide,
-    targetSide?: TargetSide
+    targetSide?: TargetSide,
+    ySide?: YAlignmentSide,
+    yType?: YAlignmentType,
+    floodFake?: FloodAction
   ) => {
     paths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }>;
     ballCarrierSequence: {
       diveGive: boolean;
       qbKeep: boolean;
       pitchTriggered: boolean;
-      finalCarrier: 'LH' | 'RH' | 'QB' | 'YTE';
+      finalCarrier: 'LH' | 'RH' | 'QB' | 'YTE' | 'XTE';
       outcomeLabel: string;
       expectedYards: string;
       coachingExplanation: string;
@@ -124,24 +130,50 @@ export interface PracticeDrill {
   };
 }
 
-// Compute official Play Call name: <Formation> <Z-Alignment> <Number> <Concept>
+// Compute official Dynamic Play Call name:
+// Based on:
+// - X Alignment: wide or tight (denoted by "Double Tight" or "Wide")
+// - Y Alignment: Right or Left side (sets the strength), plus optional Flex
+// - Z Alignment: Right or Left, if wing it would be Wing Right/Left
+// - Flood Action: where we're running or faking the flood to (e.g. Fake 36 Flood, Fake 35 Flood, or 36/35 Flood)
+// - Number: depends on target side (Right = 42/46/32/24/36, Left = 41/45/31/23/35)
+// - Concept: Inside Veer, Outside Veer, Counter, Power, Flood
 export function formatOffensivePlayCall(
   concept: OffensiveConcept,
-  targetSide: TargetSide,
-  xMode: XPlayerMode,
-  zSide: ZAlignmentSide,
-  zType: ZAlignmentType
+  targetSide: TargetSide = 'right',
+  xMode: XPlayerMode = 'tight_x',
+  ySide: YAlignmentSide = 'right',
+  yType: YAlignmentType = 'tight',
+  zSide: ZAlignmentSide = 'right',
+  zType: ZAlignmentType = 'wide',
+  floodFake: FloodAction = 'none'
 ): {
   fullName: string;
   formation: string;
+  xDesc: string;
+  yDesc: string;
   zDesc: string;
+  floodFakeDesc: string;
   numberCode: string;
   conceptName: string;
   fullPlayCall: string;
 } {
-  const formation = xMode === 'tight_x' ? 'Double Tight' : 'Wide';
-  const zDesc = zType === 'wing' ? `Wing ${zSide === 'right' ? 'Right' : 'Left'}` : (zSide === 'right' ? 'Right' : 'Left');
+  // 1. Formation base from X and Y
+  // Rule: Y will never be out wide. Y is always the attached Tight End on the Line of Scrimmage (LOS).
+  const formationBase = xMode === 'tight_x' ? 'Double Tight' : 'Wide';
+  const yDesc = ySide === 'right' ? 'Right' : 'Left';
+  const formation = `${formationBase} ${yDesc}`.trim();
 
+  // 2. Z Alignment: Right or Left. If Wing, Z aligns 1 yd off the LOS in the backfield.
+  let zDesc = '';
+  if (zType === 'wing') {
+    zDesc = zSide === 'right' ? 'Wing Right' : 'Wing Left';
+  } else {
+    // Wide Z: if opposite from Y side, note explicitly (e.g. Z-Left), or if explicit
+    zDesc = zSide === ySide ? '' : (zSide === 'right' ? 'Z-Right' : 'Z-Left');
+  }
+
+  // 3. Number depends on target side
   let numberCode = '';
   let conceptName = '';
   if (concept === 'inside_veer') {
@@ -162,11 +194,34 @@ export function formatOffensivePlayCall(
     conceptName = 'Flood';
   }
 
-  const fullPlayCall = `${formation} ${zDesc} ${numberCode} ${conceptName}`;
+  // 4. Flood Action / Fake: where we're faking the flood to on run plays
+  let floodFakeDesc = '';
+  if (concept !== 'flood') {
+    if (floodFake === 'fake_right') {
+      floodFakeDesc = 'Fake 36 Flood';
+    } else if (floodFake === 'fake_left') {
+      floodFakeDesc = 'Fake 35 Flood';
+    }
+  }
+
+  // Combine into standard play call
+  const parts = [
+    formation,
+    zDesc,
+    floodFakeDesc,
+    numberCode,
+    conceptName,
+  ].filter(Boolean);
+
+  const fullPlayCall = parts.join(' ');
+
   return {
     fullName: fullPlayCall,
     formation,
-    zDesc,
+    xDesc: formationBase,
+    yDesc,
+    zDesc: zType === 'wing' ? `Wing ${zSide === 'right' ? 'Right (Off LOS)' : 'Left (Off LOS)'}` : (zSide === 'right' ? 'Right (Flanker)' : 'Left (Flanker)'),
+    floodFakeDesc,
     numberCode,
     conceptName,
     fullPlayCall,
@@ -177,31 +232,109 @@ export function formatOffensivePlayCall(
 // Line of scrimmage is Y = 390. Ball is at X = 500, Y = 390.
 // 3-Foot OL splits in Veer: 48px (~3 feet scaled for visual clarity)
 export function getBaseOffensiveAlignment(
-  eleventhMode: EleventhPlayerMode,
+  eleventhMode: EleventhPlayerMode = 'wide_z',
   xMode: XPlayerMode = 'tight_x',
-  zSide: ZAlignmentSide = 'right'
-): Record<string, { x: number; y: number; label: string; name: string; group: 'OL' | 'TE' | 'BACK' | 'WR' }> {
-  let zPoint: { x: number; y: number; label: string; name: string; group: 'WR' };
-
-  if (zSide === 'left') {
-    zPoint =
-      eleventhMode === 'wing_z'
-        ? { x: 324, y: 418, label: 'Z', name: 'Wing Z (Left)', group: 'WR' as const }
-        : { x: 175, y: 416, label: 'Z', name: 'Wide Z (Left)', group: 'WR' as const };
+  zSide: ZAlignmentSide = 'right',
+  ySide: YAlignmentSide = 'right',
+  _yType: YAlignmentType = 'tight'
+): Record<string, { x: number; y: number; label: string; name: string; group: 'OL' | 'TE' | 'BACK' | 'WR'; onLOS?: boolean }> {
+  // Y Tight End: Y WILL NEVER BE OUT WIDE.
+  // Y is always attached to the Line of Scrimmage (LOS at y = 394),
+  // adjacent to the Tackle at the standard 3-foot split (48px).
+  let yPoint: { x: number; y: number; label: string; name: string; group: 'TE'; onLOS: boolean };
+  if (ySide === 'right') {
+    yPoint = {
+      x: 644, // Attached directly to Right Tackle (at 596) with 3-foot split
+      y: 394, // Attached ON the Line of Scrimmage (LOS)
+      label: 'Y',
+      name: 'Y (Tight End — Attached to LOS)',
+      group: 'TE',
+      onLOS: true,
+    };
   } else {
-    zPoint =
-      eleventhMode === 'wing_z'
-        ? { x: 676, y: 418, label: 'Z', name: 'Wing Z (Right)', group: 'WR' as const }
-        : { x: 825, y: 416, label: 'Z', name: 'Wide Z (Right)', group: 'WR' as const };
+    yPoint = {
+      x: 356, // Attached directly to Left Tackle (at 404) with 3-foot split
+      y: 394, // Attached ON the Line of Scrimmage (LOS)
+      label: 'Y',
+      name: 'Y (Tight End — Attached to LOS)',
+      group: 'TE',
+      onLOS: true,
+    };
   }
 
-  let xPoint: { x: number; y: number; label: string; name: string; group: 'WR' | 'TE' };
-  if (xMode === 'wide_x') {
-    // If Z is wide left, offset X slightly so they do not overlap
-    const xCoord = zSide === 'left' && eleventhMode === 'wide_z' ? 125 : 175;
-    xPoint = { x: xCoord, y: 394, label: 'X', name: 'Wide X (Split End)', group: 'WR' as const };
+  // X positioning (opposite Y if tight, or split wide)
+  // Tight X is attached to the LOS (y = 394). Wide X is on the LOS as a Split End (y = 394).
+  let xPoint: { x: number; y: number; label: string; name: string; group: 'WR' | 'TE'; onLOS: boolean };
+  if (ySide === 'right') {
+    if (xMode === 'tight_x') {
+      xPoint = { x: 356, y: 394, label: 'X', name: 'Tight X (Tight End — Attached to LOS)', group: 'TE', onLOS: true };
+    } else {
+      const xCoord = zSide === 'left' && eleventhMode === 'wide_z' ? 125 : 175;
+      xPoint = { x: xCoord, y: 394, label: 'X', name: 'Wide X (Split End — On LOS)', group: 'WR', onLOS: true };
+    }
   } else {
-    xPoint = { x: 356, y: 394, label: 'X', name: 'Tight X (Tight End)', group: 'TE' as const };
+    // Y is on Left
+    if (xMode === 'tight_x') {
+      xPoint = { x: 644, y: 394, label: 'X', name: 'Tight X (Tight End — Attached to LOS)', group: 'TE', onLOS: true };
+    } else {
+      const xCoord = zSide === 'right' && eleventhMode === 'wide_z' ? 875 : 825;
+      xPoint = { x: xCoord, y: 394, label: 'X', name: 'Wide X (Split End — On LOS)', group: 'WR', onLOS: true };
+    }
+  }
+
+  // Z Flanker / Wing positioning:
+  // If Z is in a wing, he is OFF the Line of Scrimmage (in the backfield at y = 418, 1 yd deep x 1 yd outside)
+  // while Y is STILL attached to the Line of Scrimmage (at y = 394).
+  let zPoint: { x: number; y: number; label: string; name: string; group: 'WR'; onLOS: boolean };
+  if (zSide === 'right') {
+    if (eleventhMode === 'wing_z') {
+      // Wing Z on right: 1 yd outside attached YTE and 1 yd OFF the Line of Scrimmage in backfield
+      const wingX = ySide === 'right' ? 688 : 640;
+      zPoint = {
+        x: wingX,
+        y: 418, // OFF the Line of Scrimmage (in the backfield as a wingback)
+        label: 'Z',
+        name: 'Wing Z (Right — Off LOS, Wingback)',
+        group: 'WR',
+        onLOS: false,
+      };
+    } else {
+      // Wide Z on right: split out wide as a flanker, off the LOS
+      const wideX = ySide === 'left' && xMode === 'wide_x' ? 815 : 825;
+      zPoint = {
+        x: wideX,
+        y: 416, // Off LOS as a flanker
+        label: 'Z',
+        name: 'Wide Z (Flanker Right — Off LOS)',
+        group: 'WR',
+        onLOS: false,
+      };
+    }
+  } else {
+    // Z is Left
+    if (eleventhMode === 'wing_z') {
+      // Wing Z on left: 1 yd outside attached YTE (if Y is left) or outside LT, 1 yd OFF the Line of Scrimmage
+      const wingX = ySide === 'left' ? 312 : 360;
+      zPoint = {
+        x: wingX,
+        y: 418, // OFF the Line of Scrimmage (in the backfield as a wingback)
+        label: 'Z',
+        name: 'Wing Z (Left — Off LOS, Wingback)',
+        group: 'WR',
+        onLOS: false,
+      };
+    } else {
+      // Wide Z on left: split out wide as a flanker, off the LOS
+      const wideX = ySide === 'right' && xMode === 'wide_x' ? 185 : 175;
+      zPoint = {
+        x: wideX,
+        y: 416, // Off LOS as a flanker
+        label: 'Z',
+        name: 'Wide Z (Flanker Left — Off LOS)',
+        group: 'WR',
+        onLOS: false,
+      };
+    }
   }
 
   return {
@@ -211,7 +344,7 @@ export function getBaseOffensiveAlignment(
     C: { x: 500, y: 390, label: 'C', name: 'Center', group: 'OL' },
     RG: { x: 548, y: 392, label: 'RG', name: 'Right Guard', group: 'OL' },
     RT: { x: 596, y: 392, label: 'RT', name: 'Right Tackle', group: 'OL' },
-    YTE: { x: 644, y: 394, label: 'Y', name: 'Y (Tight End)', group: 'TE' },
+    YTE: yPoint,
     QB: { x: 500, y: 432, label: '1', name: '1 (Quarterback)', group: 'BACK' },
     LH: { x: 446, y: 496, label: '3', name: '3 (Left Halfback)', group: 'BACK' },
     RH: { x: 554, y: 496, label: '2', name: '2 (Right Halfback)', group: 'BACK' },
@@ -424,10 +557,10 @@ export const INSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
   YTE: {
     id: 'YTE',
     label: 'Y',
-    fullName: 'Y (Tight End)',
+    fullName: 'Y (Tight End — Attached to LOS)',
     group: 'TE',
-    split: '3 ft from Right Tackle',
-    stance: '3-point tight end stance, outside foot staggered back.',
+    split: '3 ft from Right Tackle (Attached on Line of Scrimmage — Y is never out wide)',
+    stance: '3-point tight end stance, attached on the Line of Scrimmage with outside foot staggered back.',
     aimingPoint: 'Arc Release outside past edge to Safety',
     footwork: 'Arc release to perimeter; seal secondary force.',
     assignmentsByFront: {
@@ -438,7 +571,7 @@ export const INSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
       '6-2': 'Arc release to Near Safety on perimeter.',
       '5-2': 'Arc release to Monster back.',
     },
-    coachingCue: 'Arc outside — seal the alley for the option pitch.',
+    coachingCue: 'Firmly attached to LOS — arc outside to seal the alley for the option pitch.',
     commonErrorsFix: 'Never block the Pitch Key (#2) by mistake — release cleanly to the secondary.',
   },
   LG: {
@@ -564,12 +697,12 @@ export const INSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
   W: {
     id: 'W',
     label: 'Z',
-    fullName: 'Z Receiver (Wide Z / Wing Z)',
+    fullName: 'Z Receiver (Wide Z / Wing Z — Off LOS)',
     group: 'WR',
-    split: 'Wide Z: 8–10 yds split wide | Wing Z: 1 yd outside x 1 yd behind YTE',
-    stance: '2-point athletic stance, inside foot forward, eyes on secondary coverage.',
+    split: 'Wide Z: 8–10 yds split wide (Off LOS) | Wing Z: 1 yd outside x 1 yd deep behind attached YTE (Off LOS)',
+    stance: '2-point athletic stance in backfield (Off the LOS). Y remains attached to the LOS.',
     aimingPoint: 'Stalk Playside Cornerback',
-    footwork: 'Release to stalk/seal Playside Cornerback; never block read keys.',
+    footwork: 'Release from off the LOS to stalk/seal Playside Cornerback; never block read keys.',
     assignmentsByFront: {
       '5-3': 'Stalk playside cornerback; never block unblocked read keys.',
       '4-4': 'Crack Strong Safety or stalk cornerback.',
@@ -578,7 +711,7 @@ export const INSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
       '6-2': 'Stalk playside cornerback.',
       '5-2': 'Stalk playside cornerback.',
     },
-    coachingCue: 'Own the sideline perimeter — stalk the Cornerback.',
+    coachingCue: 'Off the Line of Scrimmage — stalk the Cornerback while Y remains attached on the LOS.',
     commonErrorsFix: 'Blocking the Pitch Key (#2) by mistake breaks the option read.',
   },
 };
@@ -1290,8 +1423,19 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
       },
     ],
     positionRules: INSIDE_VEER_POSITION_RULES,
-    getOffensivePaths: (_front, diveBehavior, pitchBehavior, eleventhMode, xMode = 'tight_x', zSide = 'right', targetSide = 'right') => {
-      const base = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
+    getOffensivePaths: (
+      _front,
+      diveBehavior,
+      pitchBehavior,
+      eleventhMode,
+      xMode = 'tight_x',
+      zSide = 'right',
+      targetSide = 'right',
+      ySide = 'right',
+      yType = 'tight',
+      floodFake = 'none'
+    ) => {
+      const base = getBaseOffensiveAlignment(eleventhMode, xMode, zSide, ySide, yType);
       const diveGive = diveBehavior !== 'crash';
       const qbKeep = !diveGive && pitchBehavior === 'feather_pitch';
       const pitchTriggered = !diveGive && pitchBehavior === 'commit_qb';
@@ -1934,12 +2078,100 @@ export const PRACTICE_DRILLS: PracticeDrill[] = [
   },
 ];
 
+function adaptPositionRulesForTargetSide(
+  rules: Record<string, PlayerPositionRule>,
+  concept: OffensiveConcept,
+  targetSide: TargetSide
+): Record<string, PlayerPositionRule> {
+  if (targetSide === 'right') return rules;
+
+  const adapted: Record<string, PlayerPositionRule> = {};
+  for (const [pid, rule] of Object.entries(rules)) {
+    let newAiming = rule.aimingPoint;
+    let newFootwork = rule.footwork;
+    let newCue = rule.coachingCue;
+
+    if (concept === 'inside_veer') {
+      if (pid === 'RH') {
+        newAiming = 'Playside B-Gap (LG Outside Hip)';
+        newFootwork = '7:30 crossover to LG hip; soft pocket shelf; hammer downhill.';
+        newCue = '2-Back: Explode downhill at LG outside hip on 41 Inside Veer.';
+      } else if (pid === 'LH') {
+        newAiming = 'Left Sideline 5x2 Pitch Track';
+        newFootwork = 'Drop-step left, sprint to 5x2 pitch relationship with QB outside left edge.';
+        newCue = '3-Back: Maintain 5 yards width x 2 yards depth on left pitch alley.';
+      } else if (pid === 'LT') {
+        newAiming = 'Inside Veer Release past #1 Dive Key to Will/Mike LB';
+        newCue = 'Rip past #1 without contact directly to the second level.';
+      } else if (pid === 'LG') {
+        newAiming = 'Inside number of playside DT or 0-Tech Nose hip';
+      } else if (pid === 'RT') {
+        newAiming = 'Backside Cutoff';
+      }
+    } else if (concept === 'outside_veer') {
+      if (pid === 'RH') {
+        newAiming = 'Playside C-Gap (LT Outside Hip)';
+        newCue = '2-Back: Hit the LT outside hip full speed on 45 Outside Veer.';
+      } else if (pid === 'LH') {
+        newAiming = 'Left Sideline Pitch Track';
+        newCue = '3-Back: Wider pitch track outside the left numbers.';
+      } else if (pid === 'LT') {
+        newAiming = 'Heavy Down Block on Defensive Tackle';
+      }
+    } else if (concept === 'power') {
+      if (pid === 'RH') {
+        newAiming = 'Playside Left C-Gap behind Pulling RG & Lead LH';
+        newCue = '2-Back: Direct handoff, press off-tackle tunnel on 23 Power.';
+      } else if (pid === 'LH') {
+        newAiming = 'Lead through Left C-Gap — Isolate Playside LB';
+        newCue = '3-Back: Lead blocker on 23 Power — isolate and drive the linebacker.';
+      } else if (pid === 'RG') {
+        newAiming = 'Skip-Pull Flat Left across Center — Kick Out Left Edge';
+        newCue = 'Backside RG: Skip-pull flat left, kick out edge defender with inside shoulder.';
+      }
+    } else if (concept === 'counter') {
+      if (pid === 'RH') {
+        newAiming = 'Token Flash Fake into Left B-Gap';
+        newCue = 'Violent token flash fake left to freeze defense.';
+      } else if (pid === 'LH') {
+        newAiming = 'Right Perimeter Pitch Track behind Pulling LG';
+        newCue = 'Sprint to right perimeter; maintain 5x2 pitch leverage with QB.';
+      } else if (pid === 'LG') {
+        newAiming = 'Pull Flat Right across Center — Kick Out Right Edge';
+      }
+    } else if (concept === 'flood') {
+      if (pid === 'XTE') {
+        newAiming = '7-Yard Whip Out (Left Sideline)';
+        newCue = 'Drive 7 yards, sell inside 2 steps, snap whip out to left sideline.';
+      } else if (pid === 'RH') {
+        newAiming = 'Block Outside Shoulder of Weak DE ➔ Release Arrow to Left Flat';
+      } else if (pid === 'LH') {
+        newAiming = 'Attack Outside Shoulder of Right DE (2 Count) ➔ Release Right Flat';
+      } else if (pid === 'LG') {
+        newAiming = 'Pull to Right DE (Pass Protection Kickout)';
+      }
+    }
+
+    adapted[pid] = {
+      ...rule,
+      aimingPoint: newAiming,
+      footwork: newFootwork,
+      coachingCue: newCue,
+    };
+  }
+
+  return adapted;
+}
+
 export function getActivePlayDefinition(
   concept: OffensiveConcept,
-  targetSide: TargetSide,
-  xMode: XPlayerMode,
-  zSide: ZAlignmentSide,
-  zType: ZAlignmentType
+  targetSide: TargetSide = 'right',
+  xMode: XPlayerMode = 'tight_x',
+  ySide: YAlignmentSide = 'right',
+  yType: YAlignmentType = 'tight',
+  zSide: ZAlignmentSide = 'right',
+  zType: ZAlignmentType = 'wide',
+  floodFake: FloodAction = 'none'
 ): PlayDefinition {
   const baseMap: Record<OffensiveConcept, PlayDefinition> = {
     inside_veer: VEER_PLAYBOOK[0],
@@ -1950,7 +2182,18 @@ export function getActivePlayDefinition(
   };
 
   const basePlay = baseMap[concept] || VEER_PLAYBOOK[0];
-  const callInfo = formatOffensivePlayCall(concept, targetSide, xMode, zSide, zType);
+  const callInfo = formatOffensivePlayCall(
+    concept,
+    targetSide,
+    xMode,
+    ySide,
+    yType,
+    zSide,
+    zType,
+    floodFake
+  );
+
+  const dynamicRules = adaptPositionRulesForTargetSide(basePlay.positionRules, concept, targetSide);
 
   return {
     ...basePlay,
@@ -1958,8 +2201,20 @@ export function getActivePlayDefinition(
     targetSide,
     code: `${callInfo.numberCode} ${callInfo.conceptName.toUpperCase()}`,
     name: callInfo.fullPlayCall,
-    subtitle: `${callInfo.fullPlayCall} vs Defense · Target: ${callInfo.numberCode}-Hole (${targetSide === 'right' ? 'Right' : 'Left'})`,
+    subtitle: `${callInfo.fullPlayCall} vs Defense · Target: ${callInfo.numberCode}-Hole (${targetSide === 'right' ? 'Right' : 'Left'})${floodFake !== 'none' ? ` · ${callInfo.floodFakeDesc}` : ''}`,
+    positionRules: dynamicRules,
     getOffensivePaths: (front, diveBehavior, pitchBehavior, eleventhMode) =>
-      basePlay.getOffensivePaths(front, diveBehavior, pitchBehavior, eleventhMode, xMode, zSide, targetSide),
+      basePlay.getOffensivePaths(
+        front,
+        diveBehavior,
+        pitchBehavior,
+        eleventhMode,
+        xMode,
+        zSide,
+        targetSide,
+        ySide,
+        yType,
+        floodFake
+      ),
   };
 }

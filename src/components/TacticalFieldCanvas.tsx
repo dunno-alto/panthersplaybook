@@ -860,6 +860,36 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
               >
                 {meta.label}
               </text>
+
+              {/* LOS Alignment Badge for Y and Z when Gaps/Splits tool is enabled */}
+              {showGapLabels && (pid === 'YTE' || pid === 'W') && (
+                <g transform="translate(0, 24)">
+                  <rect
+                    x="-36"
+                    y="-7"
+                    width="72"
+                    height="14"
+                    rx="3"
+                    fill="#060D11"
+                    fillOpacity="0.95"
+                    stroke={pid === 'YTE' ? '#10B981' : '#38BDF8'}
+                    strokeWidth="0.9"
+                  />
+                  <text
+                    x="0"
+                    y="3"
+                    textAnchor="middle"
+                    fill={pid === 'YTE' ? '#6EE7B7' : '#BAE6FD'}
+                    fontSize="7.5"
+                    fontWeight="700"
+                    className="font-mono-tabular pointer-events-none"
+                  >
+                    {pid === 'YTE'
+                      ? 'Attached (LOS)'
+                      : (eleventhMode === 'wing_z' ? 'Wing (Off LOS)' : 'Wide (Off LOS)')}
+                  </text>
+                </g>
+              )}
             </g>
           );
         })}

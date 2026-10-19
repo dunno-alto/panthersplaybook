@@ -140,9 +140,21 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
     activeConcept,
     targetSide,
     xMode,
+    'right',
+    'tight',
     zSide,
     zType
   );
+
+  const isOptionPlay =
+    activeConcept === 'inside_veer' ||
+    activeConcept === 'outside_veer' ||
+    activeConcept === 'counter' ||
+    selectedPlay.playType === 'Triple Option' ||
+    selectedPlay.playType === 'Misdirection Option' ||
+    selectedPlay.playType === 'Inside Read';
+
+  const isPower = activeConcept === 'power' || selectedPlay.playType === 'Power';
 
   // Compute live read outcome
   const simResult = selectedPlay.getOffensivePaths(
@@ -273,6 +285,9 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                 <span className="px-1.5 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 text-sky-300 font-bold">
                   {playCallInfo.zDesc}
                 </span>
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold" title="Y will never be out wide; always attached to LOS">
+                  Y Attached (LOS)
+                </span>
                 <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
                   #{playCallInfo.numberCode}
                 </span>
@@ -399,25 +414,35 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSelectZType('wide')}
+                    title="Wide Z: Split out wide as flanker (Off LOS). Y attached to LOS."
                     className={`py-0.5 px-1.5 rounded font-medium transition-all cursor-pointer text-center truncate text-[10px] ${
                       zType === 'wide'
                         ? 'bg-teal-400 text-slate-950 font-bold shadow-sm'
                         : 'text-slate-300 hover:text-white'
                     }`}
                   >
-                    Split/Wide
+                    Wide Z
                   </button>
                   <button
                     type="button"
                     onClick={() => handleSelectZType('wing')}
+                    title="Wing Z: Aligns 1 yd off LOS in backfield. Y stays attached to LOS."
                     className={`py-0.5 px-1.5 rounded font-medium transition-all cursor-pointer text-center truncate text-[10px] ${
                       zType === 'wing'
                         ? 'bg-teal-400 text-slate-950 font-bold shadow-sm'
                         : 'text-slate-300 hover:text-white'
                     }`}
                   >
-                    Wing
+                    Wing Z (Off LOS)
                   </button>
+                </div>
+                <div className="text-[9.5px] font-mono text-slate-400 flex items-center justify-between pt-1 px-0.5 border-t border-[#14262F]">
+                  <span className="text-teal-300 font-semibold">
+                    {zType === 'wing' ? 'Z: Wing (Off LOS)' : 'Z: Flanker (Off LOS)'}
+                  </span>
+                  <span className="text-emerald-400 font-bold">
+                    Y: Attached (LOS)
+                  </span>
                 </div>
               </div>
             </div>
