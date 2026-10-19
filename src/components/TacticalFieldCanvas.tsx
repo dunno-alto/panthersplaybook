@@ -820,12 +820,25 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                 <circle r="22" fill="none" stroke="#2DD4BF" strokeWidth="2.5" />
               )}
 
-              {isPowerPass && pid === 'YTE' && (
+              {/* Highlight Flood Targets: Read 1 is RB Arrow, Read 2 is Y on Whip */}
+              {isPowerPass && (
                 <>
-                  <circle r="24" fill="#A855F7" fillOpacity="0.22" stroke="#A855F7" strokeWidth="1.8" strokeDasharray="4 2" />
-                  <text x="0" y="-26" textAnchor="middle" fill="#E9D5FF" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
-                    PRIMARY TARGET (Y POP)
-                  </text>
+                  {((targetSide === 'left' && pid === 'RH') || (targetSide !== 'left' && pid === 'LH')) && (
+                    <>
+                      <circle r="24" fill="#14B8A6" fillOpacity="0.22" stroke="#14B8A6" strokeWidth="1.8" strokeDasharray="4 2" />
+                      <text x="0" y="-26" textAnchor="middle" fill="#5EEAD4" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
+                        READ 1: RB ARROW
+                      </text>
+                    </>
+                  )}
+                  {((targetSide === 'left' && pid === 'XTE') || (targetSide !== 'left' && pid === 'YTE')) && (
+                    <>
+                      <circle r="24" fill="#A855F7" fillOpacity="0.22" stroke="#A855F7" strokeWidth="1.8" strokeDasharray="4 2" />
+                      <text x="0" y="-26" textAnchor="middle" fill="#E9D5FF" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
+                        READ 2: Y WHIP OUT
+                      </text>
+                    </>
+                  )}
                 </>
               )}
 
@@ -922,13 +935,16 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
           ) : isPowerPass ? (
             <>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-[#A855F7] inline-block" /> Y Pop Seam (8–10 Yds)
+                <span className="w-3 h-0.5 bg-[#14B8A6] inline-block" /> 1) RB Arrow (Flat)
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-0.5 bg-[#A855F7] inline-block" /> 2) Y 7-Yd Whip Out
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-0.5 bg-[#38BDF8] inline-block" /> 3) Z Post Corner
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="w-3 h-0.5 bg-[#F59E0B] inline-block" /> Power Run Fake
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-[#14B8A6] inline-block" /> RH Flat Checkdown
               </span>
             </>
           ) : (

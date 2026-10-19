@@ -310,35 +310,42 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
               </div>
 
               <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
-                <button
-                  type="button"
-                  onClick={() => onChangeTargetSide && onChangeTargetSide('right')}
-                  className={`py-1.5 px-2 rounded-md font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 text-center text-xs ${
-                    targetSide === 'right'
-                      ? 'bg-teal-400 text-slate-950 shadow-md ring-1 ring-teal-400/50'
-                      : 'bg-[#091318] text-slate-400 hover:text-white border border-[#162A33]'
-                  }`}
-                >
-                  <span>RIGHT</span>
-                  <span className={`text-[10px] px-1 rounded ${targetSide === 'right' ? 'bg-slate-950/20 text-slate-900' : 'text-slate-500'}`}>
-                    Even ({playCallInfo.numberCode})
-                  </span>
-                </button>
+                {(() => {
+                  const activeConceptConfig = concepts.find((c) => c.id === activeConcept) || concepts[0];
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onChangeTargetSide && onChangeTargetSide('right')}
+                        className={`py-1.5 px-2 rounded-md font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 text-center text-xs ${
+                          targetSide === 'right'
+                            ? 'bg-teal-400 text-slate-950 shadow-md ring-1 ring-teal-400/50'
+                            : 'bg-[#091318] text-slate-400 hover:text-white border border-[#162A33]'
+                        }`}
+                      >
+                        <span>RIGHT</span>
+                        <span className={`text-[10px] px-1 rounded ${targetSide === 'right' ? 'bg-slate-950/20 text-slate-900 font-extrabold' : 'text-slate-400'}`}>
+                          Even ({activeConceptConfig.rightNumber})
+                        </span>
+                      </button>
 
-                <button
-                  type="button"
-                  onClick={() => onChangeTargetSide && onChangeTargetSide('left')}
-                  className={`py-1.5 px-2 rounded-md font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 text-center text-xs ${
-                    targetSide === 'left'
-                      ? 'bg-teal-400 text-slate-950 shadow-md ring-1 ring-teal-400/50'
-                      : 'bg-[#091318] text-slate-400 hover:text-white border border-[#162A33]'
-                  }`}
-                >
-                  <span>LEFT</span>
-                  <span className={`text-[10px] px-1 rounded ${targetSide === 'left' ? 'bg-slate-950/20 text-slate-900' : 'text-slate-500'}`}>
-                    Odd ({playCallInfo.numberCode})
-                  </span>
-                </button>
+                      <button
+                        type="button"
+                        onClick={() => onChangeTargetSide && onChangeTargetSide('left')}
+                        className={`py-1.5 px-2 rounded-md font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 text-center text-xs ${
+                          targetSide === 'left'
+                            ? 'bg-teal-400 text-slate-950 shadow-md ring-1 ring-teal-400/50'
+                            : 'bg-[#091318] text-slate-400 hover:text-white border border-[#162A33]'
+                        }`}
+                      >
+                        <span>LEFT</span>
+                        <span className={`text-[10px] px-1 rounded ${targetSide === 'left' ? 'bg-slate-950/20 text-slate-900 font-extrabold' : 'text-slate-400'}`}>
+                          Odd ({activeConceptConfig.leftNumber})
+                        </span>
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
@@ -823,11 +830,11 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                   </span>
                   <p className="text-xs font-bold text-white">
                     {diveBehavior === 'squeeze'
-                      ? 'Primary: Y Seam Pop (Wide Open in Void)'
-                      : 'Checkdown: 2 Swing out of Backfield'}
+                      ? '1) RB Arrow in Flat ➔ 2) Y on 7-Yd Whip Out'
+                      : '1) RB Arrow in Flat ➔ 2) Y Whip Out ➔ 3) Z Post Corner'}
                   </p>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
-                    1 fakes 24 Power to 3 at 4 yards, sets feet at 3-step depth, and delivers to Y clearing 8-10 yards behind linebackers.
+                    1 fakes run into line, sets feet at 3-step depth, and reads progression: 1st read is RB on the Arrow route releasing into flat; 2nd read is Y snapping the 7-yard whip out to the sideline.
                   </p>
                 </div>
               </div>
@@ -835,8 +842,8 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
           </div>
 
           <div className="pt-2 border-t border-[#162A33] text-[11px] text-slate-400 font-mono flex items-center justify-between">
-            <span>Read Point: {isOptionPlay ? '#1 Dive / #2 Pitch' : isPower ? 'LG Pull Track' : 'Y Pop Seam'}</span>
-            <span className="text-teal-400">Conflict Key</span>
+            <span>Read Point: {isOptionPlay ? '#1 Dive / #2 Pitch' : isPower ? 'LG Pull Track' : '1) RB Arrow ➔ 2) Y Whip'}</span>
+            <span className="text-teal-400">Progression</span>
           </div>
         </div>
       </div>

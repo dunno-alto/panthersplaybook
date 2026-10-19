@@ -158,30 +158,24 @@ export function formatOffensivePlayCall(
   conceptName: string;
   fullPlayCall: string;
 } {
-  // 1. Formation base from X and Y
-  // Rule: Y will never be out wide. Y is always the attached Tight End on the Line of Scrimmage (LOS).
-  const formationBase = xMode === 'tight_x' ? 'Double Tight' : 'Wide';
-  const yDesc = ySide === 'right' ? 'Right' : 'Left';
-  const formation = `${formationBase} ${yDesc}`.trim();
+  // 1. Backside TE: Wide or Tight
+  // Playside TE: no call, always end man on the LOS
+  const backsideTEDesc = xMode === 'tight_x' ? 'Tight' : 'Wide';
 
-  // 2. Z Alignment: Right or Left. If Wing, Z aligns 1 yd off the LOS in the backfield.
-  let zDesc = '';
-  if (zType === 'wing') {
-    zDesc = zSide === 'right' ? 'Wing Right' : 'Wing Left';
-  } else {
-    // Wide Z: if opposite from Y side, note explicitly (e.g. Z-Left), or if explicit
-    zDesc = zSide === ySide ? '' : (zSide === 'right' ? 'Z-Right' : 'Z-Left');
-  }
+  // 2. Z Alignment: Right or Left defaults wide 1 yard off LOS, if wing it's Wing Right/Left
+  const zDesc = zType === 'wing'
+    ? (zSide === 'right' ? 'Wing Right' : 'Wing Left')
+    : (zSide === 'right' ? 'Right' : 'Left');
 
-  // 3. Number depends on target side
+  // 3. Number & Concept: either 41/42 Veer or 45/46 Veer (no need to say inside or outside)
   let numberCode = '';
   let conceptName = '';
   if (concept === 'inside_veer') {
     numberCode = targetSide === 'right' ? '42' : '41';
-    conceptName = 'Inside Veer';
+    conceptName = 'Veer';
   } else if (concept === 'outside_veer') {
     numberCode = targetSide === 'right' ? '46' : '45';
-    conceptName = 'Outside Veer';
+    conceptName = 'Veer';
   } else if (concept === 'counter') {
     numberCode = targetSide === 'right' ? '32' : '31';
     conceptName = 'Counter';
@@ -204,9 +198,10 @@ export function formatOffensivePlayCall(
     }
   }
 
-  // Combine into standard play call
+  // Combine into official spoken play call:
+  // e.g. "Wide Wing Right 42 Veer"
   const parts = [
-    formation,
+    backsideTEDesc,
     zDesc,
     floodFakeDesc,
     numberCode,
@@ -217,10 +212,10 @@ export function formatOffensivePlayCall(
 
   return {
     fullName: fullPlayCall,
-    formation,
-    xDesc: formationBase,
-    yDesc,
-    zDesc: zType === 'wing' ? `Wing ${zSide === 'right' ? 'Right (Off LOS)' : 'Left (Off LOS)'}` : (zSide === 'right' ? 'Right (Flanker)' : 'Left (Flanker)'),
+    formation: backsideTEDesc,
+    xDesc: backsideTEDesc,
+    yDesc: 'Attached to LOS (Playside TE — No Call)',
+    zDesc,
     floodFakeDesc,
     numberCode,
     conceptName,
@@ -1358,18 +1353,18 @@ export const FLOOD_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'BACK',
     split: 'Under Center',
     stance: 'Knees bent, scanning secondary coverage pre-snap.',
-    aimingPoint: '1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns',
+    aimingPoint: 'Progression: 1) RB Arrow ➔ 2) Y Whip Out ➔ 3) Z Post Corner',
     footwork: 'Play-action fake to 3-back, 3-step gather drop behind RT inside pass pro.',
     assignmentsByFront: {
-      '5-3': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
-      '4-4': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
-      '4-3': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
-      '3-4': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
-      '6-2': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
-      '5-2': 'Play-action fake to 3, 3-step drop. Progression: 1) Y Whip Out ➔ 2) Z Post Corner ➔ Checkdowns (3 Arrow / 2 Flat).',
+      '5-3': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
+      '4-4': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
+      '4-3': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
+      '3-4': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
+      '6-2': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
+      '5-2': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
     },
-    coachingCue: 'Fake Power, plant back foot, deliver rhythm strike to Y whip out or Z post corner.',
-    commonErrorsFix: 'Rushing the throw before Y breaks out causes incompletions. Throw with anticipation as Y plants.',
+    coachingCue: 'Fake run, plant back foot, read 1) RB Arrow in flat, then 2) Y on 7-yd whip out, then 3) Z.',
+    commonErrorsFix: 'Rushing the throw before reading RB or Y breaks out causes incompletions. Work inside-out through the progression.',
   },
 };
 
@@ -1833,24 +1828,24 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
     subtitle: 'Play-Action Flood — Z Post Corner · Y 7-Yd Whip Out · 3 Back Block SDE & Release Arrow · 2 Back Block Backside DE (2 Count) & Release Flat · RG Pull to Backside DE · RT Inside Shift · X Post',
     seriesTag: 'Core 05',
     playType: 'Play-Action Pass',
-    targetGap: 'Flood Concept (Y 7-Yd Whip Out / Z Post Corner / 3 & 2 Flat Releases)',
-    primaryReadLabel: 'Progression: 1) Y 7-Yd Whip Out ➔ 2) Z Post Corner',
-    secondaryReadLabel: 'Checkdown: 3 Arrow (Right Flat) / 2 Flat (Left Flat) | Backside: X Post',
+    targetGap: 'Flood Concept (1: RB Arrow Flat / 2: Y 7-Yd Whip Out / 3: Z Post Corner)',
+    primaryReadLabel: 'Progression: 1) RB Arrow ➔ 2) Y 7-Yd Whip Out',
+    secondaryReadLabel: '3rd Read: Z Post Corner | Checkdown: 2 Flat / Backside: X Post',
     summary:
-      'Double Tight Right 36 Flood. Play-action flood concept off the power look. Z runs a post corner to stretch the deep coverage. Y drives 7 yards and whips back out to the sideline. 3 back (LH) blocks the outside shoulder of the SDE then releases to the flat on an arrow route. 2 back (RH) attacks the outside shoulder of the backside DE for a 2 count then releases to the flat. RT shifts inside for interior pass protection, and RG pulls across to pick up the backside DE. X drives directly at the outside shoulder of the left side CB before going post.',
+      'Double Tight Right 36 Flood. Play-action flood concept off the power look. QB progression reads: 1) RB on Arrow route into the flat to challenge edge leverage immediately, 2) Y on 7-yd Whip Out snapping back out to the sideline, and 3) Z on Post Corner stretching deep coverage. 2 back protects backside then checks into flat. Backside guard pulls across to stone backside DE.',
     whenToCall:
       'When the defense bites hard on 24 Power run action or stacks the box against Veer, leaving perimeter zones vulnerable to flood overload.',
     qbDecisionMatrix: {
-      crashPull: 'Play-action fake to 3 back, 3-step gather drop behind RT inside pass pro.',
-      squeezeGive: '1st Read: Y on the 7-yard whip out beating flat defenders inside-out.',
-      pitchPhase: '2nd Read: Z on post-corner; Checkdowns: 3 arrow to right flat or 2 to left flat; Backside Alert: X cutting post.',
+      crashPull: 'Play-action fake, 3-step gather drop behind RT inside pass pro.',
+      squeezeGive: '1st Read: RB on the Arrow route releasing into flat to create immediate horizontal conflict on edge defender.',
+      pitchPhase: '2nd Read: Y on the 7-yard Whip Out pivoting away from collapsing linebackers; 3rd Read: Z on Post Corner.',
     },
     coachingPhases: [
       {
         phase: 1,
         timeRange: [0, 0.25],
         title: 'Phase 1: Power Fake & Pass Pro Setup',
-        detail: 'O-line sets: RG pulls to backside DE, RT shifts inside for pass pro, 2 back attacks outside shoulder of backside DE for a 2 count, and 3 back attacks outside shoulder of SDE.',
+        detail: 'O-line sets: RG pulls to backside DE, RT shifts inside for pass pro, 2 back attacks outside shoulder of backside DE for a 2 count, and 3 back attacks outside shoulder of SDE before releasing arrow.',
       },
       {
         phase: 2,
@@ -1861,14 +1856,14 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
       {
         phase: 3,
         timeRange: [0.55, 0.8],
-        title: 'Phase 3: Route Breaks & Flood Overload',
-        detail: 'Y whips out to the sideline, Z snaps 45° to corner pylon, and X cuts post across the middle. QB reads 1) Y Whip Out ➔ 2) Z Post Corner.',
+        title: 'Phase 3: Route Breaks & Progression Timing',
+        detail: 'QB progression: 1) RB on Arrow route into flat ➔ 2) Y on 7-yd Whip Out ➔ 3) Z on Post Corner.',
       },
       {
         phase: 4,
         timeRange: [0.8, 1.0],
         title: 'Phase 4: High-Percentage Strike & RAC',
-        detail: 'QB delivers in rhythm to Y on whip out, hits Z over the top, or dumps off to 3 or 2 releasing to the flats.',
+        detail: 'QB delivers in rhythm to RB on the Arrow or Y snapping whip out to sideline, with Z over the top.',
       },
     ],
     positionRules: FLOOD_POSITION_RULES,
@@ -2059,19 +2054,20 @@ export const PRACTICE_DRILLS: PracticeDrill[] = [
     durationMin: 10,
     playersInvolved: 'QBs, Tight Ends (YTE), Wideouts (Z/X), Halfbacks (LH/RH)',
     equipment: '3 Footballs, 4 Sideline Cones, 2 Pass Rush Dummies',
-    objective: 'Train the Double Tight Right 36 Flood pass protection and rhythm passing: 1) Y 7-yd whip out, 2) Z post-corner, 3) 3-back chip & arrow release.',
+    objective: 'Train the Double Tight Right 36 Flood pass protection and rhythm passing: 1) RB arrow release to flat, 2) Y 7-yd whip out, 3) Z post-corner.',
     setupSteps: [
       'Align QB, LH, RH, YTE, Z, and X in Double Tight Right 36 Flood formation.',
       'Dummy on SDE for 3-back to strike before releasing arrow to flat; backside dummy for RG pull pickup.',
-      'On snap: Play-action fake, RG pulls to backside DE, 2-back attacks outside shoulder of backside DE for 2 count then releases to flat, RT shifts inside, Y drives 7 yards and whips out.',
+      'On snap: Play-action fake, RG pulls to backside DE, 2-back attacks outside shoulder of backside DE for 2 count then releases to flat, RT shifts inside, 3-back releases on arrow to flat, Y drives 7 yards and whips out.',
     ],
     coachingPoints: [
-      'Y must drive hard 7 yards, sell inside 2 steps, then snap whip out to the sideline.',
+      '3-back chip SDE outside shoulder then burst into flat on Arrow route.',
+      'Y drive hard 7 yards, sell inside 2 steps, then snap whip out to the sideline.',
       'Z sell the post move with eyes and shoulders before cutting 45° to the corner pylon.',
-      'QB rhythm: fake to 3 back, 3-step gather drop, throw on time to Y whip out or Z post corner.',
+      'QB progression rhythm: fake run, 3-step drop, read 1) RB Arrow in flat ➔ 2) Y snapping whip out to sideline ➔ 3) Z.',
     ],
     levelProgression: {
-      beginner: 'Routes-on-air focusing on Y whip out break at exactly 7 yards and Z corner pylon angle.',
+      beginner: 'Routes-on-air focusing on RB arrow timing into flat and Y whip out break at exactly 7 yards.',
       intermediate: 'Add linebackers and cornerbacks to read run vs pass and test QB flood progression.',
       advanced: 'Live 7-on-7 against Cover 2 and Cover 3 secondary looks.',
     },
