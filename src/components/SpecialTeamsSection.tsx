@@ -448,7 +448,7 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                         </text>
 
                         {/* Off-Returner R2 assignment indicator */}
-                        <rect x="250" y="244" width="160" height="16" rx="3" fill="#1C102C" stroke="#C084FC" strokeWidth="0.8" />
+                        <rect x="245" y="244" width="170" height="16" rx="3" fill="#1C102C" stroke="#C084FC" strokeWidth="0.8" />
                         <text
                           x="330"
                           y="255"
@@ -458,7 +458,7 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                           fontWeight="bold"
                           textAnchor="middle"
                         >
-                          R2: HUNTS WEDGE BUSTER
+                          R2: SEALS PURSUIT DISRUPTER
                         </text>
 
                         {/* Upfield Returner Curve Arc (Bottom to Top) */}
@@ -546,7 +546,7 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                         </text>
 
                         {/* Off-Returner R2 assignment indicator */}
-                        <rect x="585" y="244" width="160" height="16" rx="3" fill="#1C102C" stroke="#C084FC" strokeWidth="0.8" />
+                        <rect x="580" y="244" width="170" height="16" rx="3" fill="#1C102C" stroke="#C084FC" strokeWidth="0.8" />
                         <text
                           x="665"
                           y="255"
@@ -556,7 +556,7 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                           fontWeight="bold"
                           textAnchor="middle"
                         >
-                          R2: HUNTS WEDGE BUSTER
+                          R2: SEALS PURSUIT DISRUPTER
                         </text>
 
                         {/* Upfield Returner Curve Arc (Bottom to Top) */}

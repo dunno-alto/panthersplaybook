@@ -230,7 +230,7 @@ export default function App() {
       <header className="flex flex-col md:flex-row items-center justify-between gap-4 px-4 sm:px-6 py-3 border-b border-[#162A33] bg-[#060D11]/95 sticky top-0 z-40 no-print backdrop-blur-md">
         {/* Zone 1: Wordmark */}
         <div className="flex items-center justify-between w-full md:w-auto">
-          <a
+            <a
             href="#"
             onClick={(e) => {
               e.preventDefault();
@@ -238,10 +238,7 @@ export default function App() {
             }}
             className="text-xl font-bold tracking-tight text-white whitespace-nowrap shrink-0 font-display flex items-center gap-2"
           >
-            <span className="text-teal-400">Playbook Studio</span>
-            <span className="text-xs font-mono text-slate-400 hidden sm:inline">
-              · Split Back Veer & 3-4 / 5-2 System
-            </span>
+            <span className="text-teal-400">12U Panthers Playbook</span>
           </a>
 
           {/* Mobile Tab Switcher */}
@@ -268,7 +265,7 @@ export default function App() {
                 activeTab === 'special_teams' ? 'bg-teal-400 text-slate-950' : 'text-slate-400'
               }`}
             >
-              ST
+              Special
             </button>
           </div>
         </div>
@@ -284,7 +281,7 @@ export default function App() {
             }`}
           >
             <span className="text-sm">🏈</span>
-            <span>Offense (Split Back Veer)</span>
+            <span>Offense</span>
           </button>
 
           <button
@@ -296,7 +293,7 @@ export default function App() {
             }`}
           >
             <Shield className="w-3.5 h-3.5" />
-            <span>Defense (3-4 ↔ 5-2 Primer)</span>
+            <span>Defense</span>
           </button>
 
           <button
@@ -308,7 +305,7 @@ export default function App() {
             }`}
           >
             <Compass className="w-3.5 h-3.5" />
-            <span>Special Teams Coordinator</span>
+            <span>Special</span>
           </button>
         </nav>
 
