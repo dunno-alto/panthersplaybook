@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Shield,
   Zap,
@@ -32,6 +32,9 @@ import {
   COMMON_OFFENSE_FORMATIONS,
   SEQUENTIAL_TECH_RULES,
   FormationCoord,
+  detectStrengthCall,
+  BallHashPosition,
+  StrengthDetectionResult,
 } from '../data/defensePrimerData';
 
 interface DefenseCoordinatorProps {
@@ -45,8 +48,10 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
   const [coverageScheme, setCoverageScheme] = useState<CoverageScheme>('green');
   const [blitzCall, setBlitzCall] = useState<'MIKE' | 'WILL' | 'SAM' | 'ROV' | null>(null);
 
-  // Field & Scout Setup
-  const [strengthCall, setStrengthCall] = useState<StrengthCall>('rip');
+  // Field & Scout Setup with Auto-Detect Strength Call
+  const [autoDetectStrength, setAutoDetectStrength] = useState<boolean>(true);
+  const [ballHash, setBallHash] = useState<BallHashPosition>('middle');
+  const [manualStrength, setManualStrength] = useState<StrengthCall>('liz');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('SAM');
   const [showCoverageZones, setShowCoverageZones] = useState<boolean>(true);
   const [showPressureArrows, setShowPressureArrows] = useState<boolean>(true);
@@ -55,6 +60,17 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
   const [offenseFormation, setOffenseFormation] = useState<OffensiveFormationId>('pro_i');
   const [alignmentMode, setAlignmentMode] = useState<'base_fronts' | 'offense_adjust'>('base_fronts');
   const [activePrimerChapter, setActivePrimerChapter] = useState<string>('philosophy');
+
+  // Auto-detect strength based on the 4 rules from defensive perspective:
+  // 1: TE side
+  // 2: WR heavy side
+  // 3: Wide side of field if balanced formation
+  // 4: If balanced in the middle - Strong Left
+  const detectedStrength: StrengthDetectionResult = useMemo(() => {
+    return detectStrengthCall(offenseFormation, ballHash);
+  }, [offenseFormation, ballHash]);
+
+  const strengthCall: StrengthCall = autoDetectStrength ? detectedStrength.call : manualStrength;
 
   // Active configurations
   const activeFormationInfo = FORMATION_INFO[formation];
@@ -90,9 +106,6 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
     setOffenseFormation(ofId);
     setAlignmentMode('offense_adjust');
     setFormation('base');
-    if (COMMON_OFFENSE_FORMATIONS[ofId].defaultStrength) {
-      setStrengthCall(COMMON_OFFENSE_FORMATIONS[ofId].defaultStrength);
-    }
   };
 
   const handleResetCall = () => {
@@ -265,6 +278,194 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
       sequentialTech: adj.sequentialTech,
     };
   };
+
+  const getAssignedGap = (player: (typeof DEFENSE_PLAYERS)[0], coords: FormationCoord): string => {
+    // Check if player is on an active slant from frontCall
+    if (activeFront) {
+      if (frontCall === 'slant') {
+        const isStrongLeft = strengthCall === 'liz';
+        if (player.id === 'NT') return 'Weak A';
+        if (player.id === 'LDE') return isStrongLeft ? 'Weak C' : 'Strong A/B';
+        if (player.id === 'RDE') return isStrongLeft ? 'Strong A/B' : 'Weak C';
+      }
+      const slant = activeFront.slants.find((s) => s.playerId === player.id);
+      if (slant?.targetGap) {
+        return slant.targetGap.replace(' Gap', '').replace('-Gap', '');
+      }
+    }
+    // Check if blitzing
+    if (blitzCall === player.id) {
+      if (player.id === 'MIKE') return 'A-Gap Blitz';
+      if (player.id === 'WILL') return 'B-Gap Blitz';
+      if (player.id === 'SAM') return 'Edge Blitz';
+      if (player.id === 'ROV') return 'Edge Blitz';
+    }
+    // Base def line & linebacker front gaps reflecting strengthCall (LIZ = Def Left / Screen Right, RIP = Def Right / Screen Left)
+    const isStrongLeft = strengthCall === 'liz';
+    if (player.id === 'NT') return 'Strong A';
+    if (player.id === 'LDE') return isStrongLeft ? 'Weak B' : 'Strong C';
+    if (player.id === 'RDE') return isStrongLeft ? 'Strong C' : 'Weak B';
+    if (player.id === 'SAM') return isStrongLeft ? 'Strong D' : 'Weak D';
+    if (player.id === 'ROV') return isStrongLeft ? 'Weak D' : 'Strong D';
+    if (player.id === 'MIKE') return isStrongLeft ? 'Strong B' : 'Weak A';
+    if (player.id === 'WILL') return isStrongLeft ? 'Weak A' : 'Strong B';
+    if (player.id === 'LCB' || player.id === 'RCB') return 'Deep 1/3';
+    if (player.id === 'FS') return 'Deep Post';
+    if (player.id === 'SS') return 'Sky Force';
+    if (coords.gap) {
+      return coords.gap.split('(')[0].replace(' Gap', '').trim();
+    }
+    return '';
+  };
+
+  // D-Line Arrows: Base front gap assignments (when frontCall is null), Slant, Pinch, Wide
+  const activeLinemenArrows = useMemo(() => {
+    const isStrongLeft = strengthCall === 'liz'; // Def Left = Screen Right (x > 500)
+
+    if (frontCall === 'slant') {
+      if (isStrongLeft) {
+        // Strong side is right -> Slant weak is slanting LEFT (toward x < 500)
+        return [
+          { playerId: 'NT', arrowEnd: { x: 465, y: 430 }, technique: 'Slant 1-Tech (Weak)', targetGap: 'Weak A-Gap', label: 'Slant Weak A' },
+          { playerId: 'LDE', arrowEnd: { x: 385, y: 430 }, technique: 'Slant 7-Tech (Weak)', targetGap: 'Weak C-Gap', label: 'Slant Weak C' },
+          { playerId: 'RDE', arrowEnd: { x: 550, y: 430 }, technique: 'Slant 2i-Tech', targetGap: 'Strong A/B-Gap', label: 'Slant Inside' },
+        ];
+      } else {
+        // Strong side is left -> Slant weak is slanting RIGHT (toward x > 500)
+        return [
+          { playerId: 'NT', arrowEnd: { x: 535, y: 430 }, technique: 'Slant 1-Tech (Weak)', targetGap: 'Weak A-Gap', label: 'Slant Weak A' },
+          { playerId: 'RDE', arrowEnd: { x: 615, y: 430 }, technique: 'Slant 7-Tech (Weak)', targetGap: 'Weak C-Gap', label: 'Slant Weak C' },
+          { playerId: 'LDE', arrowEnd: { x: 450, y: 430 }, technique: 'Slant 2i-Tech', targetGap: 'Strong A/B-Gap', label: 'Slant Inside' },
+        ];
+      }
+    }
+
+    if (frontCall === 'pinch') {
+      return LINE_SLANTS.pinch.slants;
+    }
+
+    if (frontCall === 'out') {
+      return LINE_SLANTS.out.slants;
+    }
+
+    // BASE FRONT GAP INTEGRITY ARROWS (When frontCall is null / Base):
+    if (formation === 'shield') {
+      return [
+        {
+          playerId: 'NT',
+          arrowEnd: { x: isStrongLeft ? 525 : 475, y: 430 },
+          technique: '0-Tech (Strong A)',
+          targetGap: 'Strong A',
+          label: 'Strong A',
+        },
+        {
+          playerId: 'LDE',
+          arrowEnd: { x: isStrongLeft ? 418 : 360, y: 430 },
+          technique: isStrongLeft ? '4-Tech (Weak B)' : '6-Tech (Strong C)',
+          targetGap: isStrongLeft ? 'Weak B' : 'Strong C',
+          label: isStrongLeft ? 'Weak B' : 'Strong C',
+        },
+        {
+          playerId: 'RDE',
+          arrowEnd: { x: isStrongLeft ? 635 : 585, y: 430 },
+          technique: isStrongLeft ? '6-Tech (Strong C)' : '4-Tech (Weak B)',
+          targetGap: isStrongLeft ? 'Strong C' : 'Weak B',
+          label: isStrongLeft ? 'Strong C' : 'Weak B',
+        },
+        {
+          playerId: 'ROV',
+          arrowEnd: { x: isStrongLeft ? 275 : 305, y: 430 },
+          technique: '2x0 Edge',
+          targetGap: isStrongLeft ? 'Weak Contain' : 'Strong Contain',
+          label: isStrongLeft ? 'Weak Edge' : 'Strong Edge',
+        },
+        {
+          playerId: 'SAM',
+          arrowEnd: { x: isStrongLeft ? 725 : 695, y: 430 },
+          technique: '2x0 Edge',
+          targetGap: isStrongLeft ? 'Strong Contain' : 'Weak Contain',
+          label: isStrongLeft ? 'Strong Edge' : 'Weak Edge',
+        },
+      ];
+    }
+
+    if (formation === 'vanguard') {
+      return [
+        {
+          playerId: 'NT',
+          arrowEnd: { x: 500, y: 435 },
+          technique: '0-Tech Submarine',
+          targetGap: 'A-Gap Wedge',
+          label: 'Submarine A',
+        },
+        {
+          playerId: 'LDE',
+          arrowEnd: { x: 420, y: 430 },
+          technique: '4-Tech Tight Squeeze',
+          targetGap: 'B-Gap Seal',
+          label: 'B-Gap Seal',
+        },
+        {
+          playerId: 'RDE',
+          arrowEnd: { x: 580, y: 430 },
+          technique: '6-Tech Tight Squeeze',
+          targetGap: 'C-Gap Seal',
+          label: 'C-Gap Seal',
+        },
+      ];
+    }
+
+    if (formation === 'shell') {
+      return [
+        {
+          playerId: 'NT',
+          arrowEnd: { x: 500, y: 450 },
+          technique: 'Bull Rush',
+          targetGap: 'Sack QB',
+          label: 'Bull Rush',
+        },
+        {
+          playerId: 'LDE',
+          arrowEnd: { x: 405, y: 450 },
+          technique: 'Speed Edge Rush',
+          targetGap: 'Sack QB',
+          label: 'Speed Rush',
+        },
+        {
+          playerId: 'RDE',
+          arrowEnd: { x: 595, y: 450 },
+          technique: 'Speed Edge Rush',
+          targetGap: 'Sack QB',
+          label: 'Speed Rush',
+        },
+      ];
+    }
+
+    // Default Base 3-4 Front:
+    return [
+      {
+        playerId: 'NT',
+        arrowEnd: { x: isStrongLeft ? 525 : 475, y: 430 },
+        technique: '0-Tech (Strong A)',
+        targetGap: 'Strong A',
+        label: 'Strong A',
+      },
+      {
+        playerId: 'LDE',
+        arrowEnd: { x: isStrongLeft ? 418 : 360, y: 430 },
+        technique: isStrongLeft ? '4-Tech' : '6-Tech',
+        targetGap: isStrongLeft ? 'Weak B' : 'Strong C',
+        label: isStrongLeft ? 'Weak B' : 'Strong C',
+      },
+      {
+        playerId: 'RDE',
+        arrowEnd: { x: isStrongLeft ? 635 : 585, y: 430 },
+        technique: isStrongLeft ? '6-Tech' : '4-Tech',
+        targetGap: isStrongLeft ? 'Strong C' : 'Weak B',
+        label: isStrongLeft ? 'Strong C' : 'Weak B',
+      },
+    ];
+  }, [formation, frontCall, strengthCall]);
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -494,32 +695,31 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
           </div>
         </div>
 
-        {/* Scout Offense & Field Calibration Strip */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-2.5 rounded-xl bg-[#09151E] border border-teal-500/20 text-xs">
-          {/* Scout Offense Switcher */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-mono font-bold text-emerald-400 uppercase flex items-center gap-1 mr-1">
-              <Users className="w-3.5 h-3.5" />
-              Scout:
-            </span>
-            {(Object.keys(COMMON_OFFENSE_FORMATIONS) as OffensiveFormationId[]).map((id) => (
-              <button
-                key={id}
-                onClick={() => handleSelectOffense(id)}
-                className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer ${
-                  offenseFormation === id && alignmentMode === 'offense_adjust'
-                    ? 'bg-emerald-400 text-slate-950 font-bold shadow'
-                    : 'bg-[#0A161E] text-slate-400 hover:text-slate-200 border border-[#162E3B]'
-                }`}
-              >
-                {COMMON_OFFENSE_FORMATIONS[id].shortName}
-              </button>
-            ))}
-          </div>
+        {/* Scout Offense & Auto Strength Calibration Strip */}
+        <div className="p-3 rounded-xl bg-[#09151E] border border-teal-500/20 text-xs space-y-2.5">
+          {/* Row 1: Scout Formation & Alignment Mode */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-mono font-bold text-emerald-400 uppercase flex items-center gap-1 mr-1">
+                <Users className="w-3.5 h-3.5" />
+                Scout:
+              </span>
+              {(Object.keys(COMMON_OFFENSE_FORMATIONS) as OffensiveFormationId[]).map((id) => (
+                <button
+                  key={id}
+                  onClick={() => handleSelectOffense(id)}
+                  className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer ${
+                    offenseFormation === id && alignmentMode === 'offense_adjust'
+                      ? 'bg-emerald-400 text-slate-950 font-bold shadow'
+                      : 'bg-[#0A161E] text-slate-400 hover:text-slate-200 border border-[#162E3B]'
+                  }`}
+                >
+                  {COMMON_OFFENSE_FORMATIONS[id].shortName}
+                </button>
+              ))}
+            </div>
 
-          {/* Mode & Strength Toggles */}
-          <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
-            <div className="inline-flex rounded-lg border border-[#162A33] bg-[#070E13] p-0.5">
+            <div className="inline-flex rounded-lg border border-[#162A33] bg-[#070E13] p-0.5 font-mono text-[11px]">
               <button
                 onClick={() => setAlignmentMode('base_fronts')}
                 className={`px-2.5 py-0.5 rounded font-bold cursor-pointer transition-colors ${
@@ -537,26 +737,122 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                 Scout Fit
               </button>
             </div>
+          </div>
 
-            <div className="inline-flex rounded-lg border border-[#162A33] bg-[#070E13] p-0.5">
-              <button
-                onClick={() => setStrengthCall('rip')}
-                className={`px-2 py-0.5 rounded font-bold cursor-pointer transition-colors ${
-                  strengthCall === 'rip' ? 'bg-teal-400 text-slate-950' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                RIP (Rt)
-              </button>
-              <button
-                onClick={() => setStrengthCall('liz')}
-                className={`px-2 py-0.5 rounded font-bold cursor-pointer transition-colors ${
-                  strengthCall === 'liz' ? 'bg-teal-400 text-slate-950' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                LIZ (Lt)
-              </button>
+          {/* Row 2: Defensive Strength Call Auto-Detection (4 Rules Engine) */}
+          <div className="pt-2 border-t border-[#162A33] flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+            {/* Auto-Detection Indicator & Active Call */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setAutoDetectStrength(true)}
+                  className={`px-2.5 py-1 rounded-lg font-mono text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    autoDetectStrength
+                      ? 'bg-teal-400 text-slate-950 shadow ring-1 ring-teal-300'
+                      : 'bg-[#0A161E] text-slate-400 hover:text-teal-300 border border-[#162E3B]'
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  Auto-Detect: {autoDetectStrength ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono text-slate-400">Strength Call:</span>
+                <span className="px-2.5 py-0.5 rounded-md font-mono font-bold text-xs bg-teal-950/90 text-teal-300 border border-teal-500/40">
+                  {strengthCall === 'liz' ? '★ STRONG LEFT (LIZ)' : '★ STRONG RIGHT (RIP)'}
+                </span>
+                <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
+                  {strengthCall === 'liz' ? '(Def Lt / Off Rt)' : '(Def Rt / Off Lt)'}
+                </span>
+              </div>
+
+              {autoDetectStrength && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#061821] text-emerald-300 border border-emerald-500/30">
+                  {detectedStrength.ruleTitle}
+                </span>
+              )}
+            </div>
+
+            {/* Ball Hash (Rules 3 & 4) and Manual Override Controls */}
+            <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
+              {/* Ball Hash Spot selector */}
+              <div className="flex items-center gap-1 bg-[#070E13] border border-[#162A33] px-1.5 py-0.5 rounded-lg">
+                <span className="text-[10px] text-slate-400 uppercase mr-0.5">Hash:</span>
+                <button
+                  onClick={() => setBallHash('left_hash')}
+                  title="Ball on Left Hash (Wide side is Defense Left)"
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
+                    ballHash === 'left_hash' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Lt Hash
+                </button>
+                <button
+                  onClick={() => setBallHash('middle')}
+                  title="Ball in Middle of Field (Rule 4: Default Strong Left)"
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
+                    ballHash === 'middle' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Mid
+                </button>
+                <button
+                  onClick={() => setBallHash('right_hash')}
+                  title="Ball on Right Hash (Wide side is Defense Right)"
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
+                    ballHash === 'right_hash' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Rt Hash
+                </button>
+              </div>
+
+              {/* Manual Override Buttons */}
+              <div className="inline-flex rounded-lg border border-[#162A33] bg-[#070E13] p-0.5">
+                <button
+                  onClick={() => {
+                    setAutoDetectStrength(false);
+                    setManualStrength('liz');
+                  }}
+                  title="Strong Left (From Defense perspective facing south, this is Screen Right)"
+                  className={`px-2 py-0.5 rounded font-bold cursor-pointer transition-colors ${
+                    !autoDetectStrength && strengthCall === 'liz'
+                      ? 'bg-teal-400 text-slate-950'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Strong Lt (LIZ)
+                </button>
+                <button
+                  onClick={() => {
+                    setAutoDetectStrength(false);
+                    setManualStrength('rip');
+                  }}
+                  title="Strong Right (From Defense perspective facing south, this is Screen Left)"
+                  className={`px-2 py-0.5 rounded font-bold cursor-pointer transition-colors ${
+                    !autoDetectStrength && strengthCall === 'rip'
+                      ? 'bg-teal-400 text-slate-950'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Strong Rt (RIP)
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Strength Call Rule Reason Explanation */}
+          {autoDetectStrength && (
+            <div className="text-[10px] font-mono text-slate-400 bg-[#061218] p-1.5 rounded-lg border border-teal-500/15 flex items-center justify-between gap-2">
+              <span className="text-teal-300 truncate">
+                ⚡ <strong className="text-white">{detectedStrength.ruleTitle}</strong>: {detectedStrength.explanation}
+              </span>
+              <span className="text-slate-500 text-[9px] shrink-0 hidden md:inline">
+                Rules: 1:TE · 2:WR Heavy · 3:Wide Side · 4:Mid=Lt
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -684,43 +980,94 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
             <text x="45" y="320" fill="#334E5C" fontSize="10" fontFamily="monospace" transform="rotate(-90 45 320)">LEFT SIDELINE</text>
             <text x="965" y="320" fill="#334E5C" fontSize="10" fontFamily="monospace" transform="rotate(90 965 320)">RIGHT SIDELINE</text>
 
-            {/* Strength indicator (RIP / LIZ) */}
-            <g opacity="0.45">
+            {/* Strength indicator (RIP / LIZ) placed over appropriate strong side */}
+            <g opacity="0.95">
               <rect
-                x={strengthCall === 'rip' ? 820 : 80}
-                y="55"
-                width="100"
-                height="24"
-                rx="4"
-                fill="#0F2833"
+                x={strengthCall === 'liz' ? 740 : 60}
+                y="52"
+                width="200"
+                height="28"
+                rx="6"
+                fill="#061A23"
                 stroke="#14B8A6"
-                strokeWidth="1"
+                strokeWidth="1.5"
               />
               <text
-                x={strengthCall === 'rip' ? 870 : 130}
-                y="71"
+                x={strengthCall === 'liz' ? 840 : 160}
+                y="70"
                 fill="#2DD4BF"
-                fontSize="10"
+                fontSize="11"
                 fontFamily="monospace"
                 fontWeight="bold"
                 textAnchor="middle"
               >
-                ★ STRENGTH: {strengthCall.toUpperCase()}
+                ★ {strengthCall === 'liz' ? 'STRONG LEFT (LIZ)' : 'STRONG RIGHT (RIP)'}
+              </text>
+              <text
+                x={strengthCall === 'liz' ? 840 : 160}
+                y="90"
+                fill="#5EEAD4"
+                fontSize="8"
+                fontFamily="monospace"
+                textAnchor="middle"
+                opacity="0.85"
+              >
+                {autoDetectStrength ? `[Auto] ${detectedStrength.ruleTitle}` : '[Manual Call]'}
               </text>
             </g>
 
             {/* Gap Labels across LOS */}
             {showGaps && (
-              <g opacity="0.6" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                <text x="310" y="405" fill="#94A3B8">D-GAP</text>
-                <text x="360" y="405" fill="#94A3B8">C-GAP</text>
-                <text x="420" y="405" fill="#94A3B8">B-GAP</text>
-                <text x="475" y="405" fill="#94A3B8">A-GAP</text>
-                <text x="500" y="405" fill="#38BDF8">C</text>
-                <text x="525" y="405" fill="#94A3B8">A-GAP</text>
-                <text x="585" y="405" fill="#94A3B8">B-GAP</text>
-                <text x="640" y="405" fill="#94A3B8">C-GAP</text>
-                <text x="690" y="405" fill="#94A3B8">D-GAP</text>
+              <g>
+                {(strengthCall === 'liz'
+                  ? [
+                      { label: 'D-GAP', x: 310, type: 'weak' },
+                      { label: 'C-GAP', x: 360, type: 'weak' },
+                      { label: 'B-GAP', x: 418, type: 'weak' },
+                      { label: 'A-GAP', x: 474, type: 'weak' },
+                      { label: 'C', x: 500, type: 'center' },
+                      { label: 'A-GAP', x: 526, type: 'strong' },
+                      { label: 'B-GAP', x: 585, type: 'strong' },
+                      { label: 'C-GAP', x: 640, type: 'strong' },
+                      { label: 'D-GAP', x: 695, type: 'strong' },
+                    ]
+                  : [
+                      { label: 'D-GAP', x: 310, type: 'strong' },
+                      { label: 'C-GAP', x: 360, type: 'strong' },
+                      { label: 'B-GAP', x: 418, type: 'strong' },
+                      { label: 'A-GAP', x: 474, type: 'strong' },
+                      { label: 'C', x: 500, type: 'center' },
+                      { label: 'A-GAP', x: 526, type: 'weak' },
+                      { label: 'B-GAP', x: 585, type: 'weak' },
+                      { label: 'C-GAP', x: 640, type: 'weak' },
+                      { label: 'D-GAP', x: 695, type: 'weak' },
+                    ]
+                ).map((gap, idx) => (
+                  <g key={`${gap.label}-${idx}`} transform={`translate(${gap.x}, 404)`}>
+                    <rect
+                      x="-17"
+                      y="-8"
+                      width="34"
+                      height="14"
+                      rx="3"
+                      fill={gap.type === 'strong' ? '#061F2A' : '#061217'}
+                      fillOpacity="0.95"
+                      stroke={gap.type === 'center' ? '#38BDF8' : gap.type === 'strong' ? '#14B8A6' : '#1E3A4A'}
+                      strokeWidth={gap.type === 'strong' ? '1.2' : '0.8'}
+                    />
+                    <text
+                      x="0"
+                      y="2"
+                      fill={gap.type === 'center' ? '#38BDF8' : gap.type === 'strong' ? '#2DD4BF' : '#94A3B8'}
+                      fontSize="7.5"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      {gap.label}
+                    </text>
+                  </g>
+                ))}
               </g>
             )}
 
@@ -920,35 +1267,45 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                 </g>
               ))}
 
-            {/* D-Line Slant Arrows (When a front call is selected: Slant, Pinch, Out) */}
+            {/* D-Line & Front Arrows (Base Front Gaps, Slant, Pinch, Wide) */}
             {showPressureArrows &&
-              activeFront &&
-              activeFront.slants.map((slant, idx) => {
-                const p = DEFENSE_PLAYERS.find((d) => d.id === slant.playerId);
+              activeLinemenArrows.map((arrow, idx) => {
+                const p = DEFENSE_PLAYERS.find((d) => d.id === arrow.playerId);
                 if (!p) return null;
                 const coords = getPlayerCoords(p);
                 return (
-                  <g key={`slant-${idx}`}>
+                  <g key={`front-arrow-${idx}`}>
                     <line
                       x1={coords.x}
                       y1={coords.y}
-                      x2={slant.arrowEnd.x}
-                      y2={slant.arrowEnd.y}
+                      x2={arrow.arrowEnd.x}
+                      y2={arrow.arrowEnd.y}
                       stroke="#F59E0B"
                       strokeWidth="2.8"
                       strokeDasharray="4 2"
                       markerEnd="url(#slantArrow)"
                     />
+                    <rect
+                      x={(coords.x + arrow.arrowEnd.x) / 2 - 28}
+                      y={(coords.y + arrow.arrowEnd.y) / 2 - 12}
+                      width="56"
+                      height="13.5"
+                      rx="3"
+                      fill="#04121A"
+                      fillOpacity="0.95"
+                      stroke="#F59E0B"
+                      strokeWidth="0.8"
+                    />
                     <text
-                      x={(coords.x + slant.arrowEnd.x) / 2}
-                      y={(coords.y + slant.arrowEnd.y) / 2 - 4}
+                      x={(coords.x + arrow.arrowEnd.x) / 2}
+                      y={(coords.y + arrow.arrowEnd.y) / 2 - 2.5}
                       fill="#FDE68A"
-                      fontSize="9"
+                      fontSize="8.5"
                       fontFamily="monospace"
                       fontWeight="bold"
                       textAnchor="middle"
                     >
-                      {slant.label}
+                      {arrow.label}
                     </text>
                   </g>
                 );
@@ -1079,6 +1436,50 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                     {player.id}
                   </text>
 
+                  {/* Base Def Line & Front Gap Assignment Badge */}
+                  {(showGaps || player.isDefensiveLine) && (
+                    <g>
+                      <rect
+                        x={coords.x - 30}
+                        y={coords.y - 31}
+                        width="60"
+                        height="13.5"
+                        rx="3.5"
+                        fill="#05131C"
+                        fillOpacity="0.95"
+                        stroke={
+                          player.isDefensiveLine
+                            ? '#F59E0B' // Amber for Defensive Line
+                            : isSamOrRover
+                            ? '#2DD4BF' // Teal for Edge Contain
+                            : isMikeOrWill
+                            ? '#60A5FA' // Blue for Inside Linebackers
+                            : '#0D9488'
+                        }
+                        strokeWidth="1"
+                      />
+                      <text
+                        x={coords.x}
+                        y={coords.y - 21.5}
+                        fill={
+                          player.isDefensiveLine
+                            ? '#FDE68A'
+                            : isSamOrRover
+                            ? '#99F6E4'
+                            : isMikeOrWill
+                            ? '#BFDBFE'
+                            : '#5EEAD4'
+                        }
+                        fontSize="8"
+                        fontFamily="monospace"
+                        fontWeight="bold"
+                        textAnchor="middle"
+                      >
+                        {`GAP: ${getAssignedGap(player, coords).toUpperCase()}`}
+                      </text>
+                    </g>
+                  )}
+
                   {/* Sequential Tech / Depth Tag indicator */}
                   <g>
                     <rect
@@ -1112,25 +1513,25 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                   {isSelected && (
                     <g>
                       <rect
-                        x={coords.x - 55}
-                        y={coords.y - 34}
-                        width="110"
-                        height="18"
+                        x={coords.x - 70}
+                        y={coords.y - 53}
+                        width="140"
+                        height="19"
                         rx="4"
                         fill="#0A1C24"
                         stroke="#38BDF8"
-                        strokeWidth="1"
+                        strokeWidth="1.2"
                       />
                       <text
                         x={coords.x}
-                        y={coords.y - 21}
+                        y={coords.y - 39.5}
                         fill="#E0F2FE"
                         fontSize="9"
                         fontFamily="monospace"
                         fontWeight="bold"
                         textAnchor="middle"
                       >
-                        {player.name} ({player.id})
+                        {player.name} · {getAssignedGap(player, coords)}
                       </text>
                     </g>
                   )}

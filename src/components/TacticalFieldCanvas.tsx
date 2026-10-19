@@ -771,6 +771,34 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
               >
                 {hasRedKey ? '#1' : hasTealKey ? '#2' : def.label}
               </text>
+
+              {/* Front Gap Assignment Badge */}
+              {def.gap && (
+                <g>
+                  <rect
+                    x="-21"
+                    y="18"
+                    width="42"
+                    height="13"
+                    rx="3"
+                    fill="#050C10"
+                    fillOpacity="0.95"
+                    stroke={hasRedKey ? '#EF4444' : hasTealKey ? '#14B8A6' : '#264250'}
+                    strokeWidth="0.8"
+                  />
+                  <text
+                    x="0"
+                    y="27.5"
+                    textAnchor="middle"
+                    fill={hasRedKey ? '#FCA5A5' : hasTealKey ? '#5EEAD4' : '#94A3B8'}
+                    fontSize="8"
+                    fontWeight="700"
+                    className="font-mono-tabular pointer-events-none"
+                  >
+                    {def.gap}
+                  </text>
+                </g>
+              )}
             </g>
           );
         })}

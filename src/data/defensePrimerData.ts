@@ -5,6 +5,16 @@ export type SelectableFront = 'slant' | 'pinch' | 'out';
 export type LineSlant = 'base_gap' | 'slant' | 'pinch' | 'angle_out' | 'out' | 'bull_rush';
 export type StrengthCall = 'rip' | 'liz';
 export type OffensiveFormationId = 'pro_i' | 'spread_2x2' | 'trips_3x1' | 'heavy_2te' | 'pistol_veer' | 'empty_5w';
+export type BallHashPosition = 'middle' | 'left_hash' | 'right_hash';
+
+export interface StrengthDetectionResult {
+  call: StrengthCall; // 'liz' = Strong Left (from defense perspective), 'rip' = Strong Right (from defense perspective)
+  ruleNumber: 1 | 2 | 3 | 4;
+  ruleTitle: string;
+  explanation: string;
+  offensePerspective: string;
+  defensePerspective: string;
+}
 
 export interface FormationCoord {
   x: number;
@@ -191,7 +201,7 @@ export const COMMON_OFFENSE_FORMATIONS: Record<OffensiveFormationId, OffenseForm
     shortName: 'Pro I-Form',
     personnel: '21 Personnel (2 RB · 1 TE · 2 WR)',
     formationStyle: 'Under Center',
-    defaultStrength: 'rip',
+    defaultStrength: 'liz',
     description: 'Traditional pro set with tight end on right (Y), Fullback and Tailback stacked in I-formation behind QB, split end (X) left and flanker (Z) right.',
     adjustmentSummary: 'Base 3-4 alignment: NG in 0-Tech (Strong A), SDE in 6-Tech (Strong C), WDE in 4-Tech (Weak B). Sam and Rover set 2x2 contain outside LOS. Mike is 34-Tech (Strong B), Will is 14-Tech (Weak A).',
     players: [
@@ -227,7 +237,7 @@ export const COMMON_OFFENSE_FORMATIONS: Record<OffensiveFormationId, OffenseForm
     shortName: 'Spread 2x2',
     personnel: '10/11 Personnel (1 RB · 0 TE · 4 WR)',
     formationStyle: 'Shotgun',
-    defaultStrength: 'rip',
+    defaultStrength: 'liz',
     description: 'Shotgun spread with 2 wide receivers left (X and H slot) and 2 wide receivers right (Y slot and Z), single running back offset beside the QB.',
     adjustmentSummary: 'Defense widens apex backers: Sam apexes over Right Slot (3x4 yards off), Rover apexes over Left Slot (3x4 yards off). Mike & Will tighten inside 5-man box (34 and 14 Tech). Safeties play balanced 2-high shell.',
     players: [
@@ -263,7 +273,7 @@ export const COMMON_OFFENSE_FORMATIONS: Record<OffensiveFormationId, OffenseForm
     shortName: 'Trips Right',
     personnel: '11 Personnel (1 RB · 1 TE · 3 WR)',
     formationStyle: 'Shotgun',
-    defaultStrength: 'rip',
+    defaultStrength: 'liz',
     description: '3 receivers aligned to the right side (Y inner slot, H middle slot, Z outside) creating a 3-receiver passing surface, with solo X receiver to the left.',
     adjustmentSummary: 'OVERLOAD PRIMER RULE: (1) Count & Shift: Linebackers shift toward strength to match numbers (Will shifts to Mike, Mike shifts toward Sam, Sam splits the difference). (2) Adjust Safeties: Free Safety moves UP to 6-yard depth for backside containment; Strong Safety adjusts deep to cap vertical routes. (3) Split Coverage: Zone on overloaded strong side, Island Man-to-Man on weakside solo X.',
     players: [
@@ -335,7 +345,7 @@ export const COMMON_OFFENSE_FORMATIONS: Record<OffensiveFormationId, OffenseForm
     shortName: 'Pistol Veer',
     personnel: '20/21 Personnel (2 RB · 1 TE · 2 WR)',
     formationStyle: 'Pistol',
-    defaultStrength: 'rip',
+    defaultStrength: 'liz',
     description: 'Quarterback in Pistol alignment at 4 yards depth with offset Fullback/Dive back and trailing Halfback/Pitch back, TE on right, split ends wide.',
     adjustmentSummary: 'Option Discipline: SDE (6-Tech) crashes to eliminate the inside dive. Sam (2x2) maintains strict outside contain on the pitch man. Mike scrapes downhill to QB keep track. Rover locks down weak reverse.',
     players: [
@@ -371,7 +381,7 @@ export const COMMON_OFFENSE_FORMATIONS: Record<OffensiveFormationId, OffenseForm
     shortName: 'Empty 5-Wide',
     personnel: '00/10 Personnel (0 RB · 0 TE · 5 WR)',
     formationStyle: 'Shotgun',
-    defaultStrength: 'rip',
+    defaultStrength: 'liz',
     description: 'Empty backfield with 5 receivers deployed across the field (3 right, 2 left), QB isolated in shotgun.',
     adjustmentSummary: 'SHELL PREVENT ADJUSTMENT: 3-man rush pins ears back for speed sack. Mike & Will drop to 6 yards depth in hook/hole. Sam & Rover buzz flats at 4 yards off. Safeties cap deep halves at 14 yards.',
     players: [
@@ -402,6 +412,145 @@ export const COMMON_OFFENSE_FORMATIONS: Record<OffensiveFormationId, OffenseForm
     },
   },
 };
+
+/**
+ * AUTO-DETECT STRENGTH CALL
+ * Strength Call Rules (from Defensive Perspective facing the offense):
+ * Defense faces South (toward offense at y=412).
+ * Screen Right (x > 500, Offense's Right) is DEFENSE'S LEFT (LIZ).
+ * Screen Left (x < 500, Offense's Left) is DEFENSE'S RIGHT (RIP).
+ * 
+ * 1: TE side
+ * 2: WR heavy side
+ * 3: Wide side of field if balanced formation
+ * 4: If balanced in the middle - Strong Left
+ */
+export function detectStrengthCall(
+  formationId: OffensiveFormationId,
+  ballHash: BallHashPosition = 'middle'
+): StrengthDetectionResult {
+  const config = COMMON_OFFENSE_FORMATIONS[formationId];
+  const players = config.players;
+
+  // Helper to accurately identify tight ends attached on line
+  const isTE = (p: (typeof players)[0]) =>
+    p.id.includes('TE') ||
+    p.role.toLowerCase().includes('tight end') ||
+    p.role.toLowerCase().includes('in-line') ||
+    (p.label.startsWith('Y') && !p.id.startsWith('OWR') && !p.role.toLowerCase().includes('slot') && !p.role.toLowerCase().includes('wideout'));
+
+  // Rule 1: TE side
+  const leftTEs = players.filter((p) => p.x < 500 && isTE(p));
+  const rightTEs = players.filter((p) => p.x > 500 && isTE(p));
+
+  if (rightTEs.length > leftTEs.length) {
+    // TE on Offense Right -> Defense Left (LIZ)
+    const teLabel = rightTEs.map((t) => t.label).join('/');
+    return {
+      call: 'liz',
+      ruleNumber: 1,
+      ruleTitle: 'Rule 1: TE Side',
+      explanation: `Tight End (${teLabel}) attached to Offense Right ➔ Defense calls Strong Left (LIZ)`,
+      offensePerspective: 'Offense Right (TE Side)',
+      defensePerspective: 'Strong Left (LIZ)',
+    };
+  }
+
+  if (leftTEs.length > rightTEs.length) {
+    // TE on Offense Left -> Defense Right (RIP)
+    const teLabel = leftTEs.map((t) => t.label).join('/');
+    return {
+      call: 'rip',
+      ruleNumber: 1,
+      ruleTitle: 'Rule 1: TE Side',
+      explanation: `Tight End (${teLabel}) attached to Offense Left ➔ Defense calls Strong Right (RIP)`,
+      offensePerspective: 'Offense Left (TE Side)',
+      defensePerspective: 'Strong Right (RIP)',
+    };
+  }
+
+  // Rule 2: WR heavy side (if TEs are balanced or 0)
+  const leftWRs = players.filter(
+    (p) =>
+      p.x < 490 &&
+      p.isEligible &&
+      !leftTEs.some((t) => t.id === p.id) &&
+      (p.role.toLowerCase().includes('wr') ||
+        p.role.toLowerCase().includes('wideout') ||
+        p.role.toLowerCase().includes('receiver') ||
+        p.role.toLowerCase().includes('slot') ||
+        ['X', 'H', 'Z', 'W'].includes(p.label))
+  );
+
+  const rightWRs = players.filter(
+    (p) =>
+      p.x > 510 &&
+      p.isEligible &&
+      !rightTEs.some((t) => t.id === p.id) &&
+      (p.role.toLowerCase().includes('wr') ||
+        p.role.toLowerCase().includes('wideout') ||
+        p.role.toLowerCase().includes('receiver') ||
+        p.role.toLowerCase().includes('slot') ||
+        ['X', 'H', 'Z', 'W'].includes(p.label))
+  );
+
+  if (rightWRs.length > leftWRs.length) {
+    // WR heavy on Offense Right -> Defense Left (LIZ)
+    return {
+      call: 'liz',
+      ruleNumber: 2,
+      ruleTitle: 'Rule 2: WR Heavy Side',
+      explanation: `${rightWRs.length} WRs on Offense Right vs ${leftWRs.length} on Left ➔ Defense calls Strong Left (LIZ)`,
+      offensePerspective: 'Offense Right (WR Heavy)',
+      defensePerspective: 'Strong Left (LIZ)',
+    };
+  }
+
+  if (leftWRs.length > rightWRs.length) {
+    // WR heavy on Offense Left -> Defense Right (RIP)
+    return {
+      call: 'rip',
+      ruleNumber: 2,
+      ruleTitle: 'Rule 2: WR Heavy Side',
+      explanation: `${leftWRs.length} WRs on Offense Left vs ${rightWRs.length} on Right ➔ Defense calls Strong Right (RIP)`,
+      offensePerspective: 'Offense Left (WR Heavy)',
+      defensePerspective: 'Strong Right (RIP)',
+    };
+  }
+
+  // Rule 3: Wide side of field if balanced formation
+  if (ballHash === 'left_hash') {
+    return {
+      call: 'liz',
+      ruleNumber: 3,
+      ruleTitle: 'Rule 3: Wide Side of Field',
+      explanation: 'Balanced formation with ball on Left Hash ➔ Wide side is Defense Left (LIZ)',
+      offensePerspective: 'Wide Side Right',
+      defensePerspective: 'Strong Left (LIZ)',
+    };
+  }
+
+  if (ballHash === 'right_hash') {
+    return {
+      call: 'rip',
+      ruleNumber: 3,
+      ruleTitle: 'Rule 3: Wide Side of Field',
+      explanation: 'Balanced formation with ball on Right Hash ➔ Wide side is Defense Right (RIP)',
+      offensePerspective: 'Wide Side Left',
+      defensePerspective: 'Strong Right (RIP)',
+    };
+  }
+
+  // Rule 4: If balanced in the middle - Strong Left
+  return {
+    call: 'liz',
+    ruleNumber: 4,
+    ruleTitle: 'Rule 4: Balanced in Middle',
+    explanation: 'Balanced formation in middle of field ➔ Defense default is Strong Left (LIZ)',
+    offensePerspective: 'Balanced Center',
+    defensePerspective: 'Strong Left (LIZ)',
+  };
+}
 
 // 4 Formations from Defensive Primer
 export const FORMATION_INFO: Record<DefenseFormation, FormationInfo> = {
@@ -1209,8 +1358,8 @@ export const LINE_SLANTS: Record<LineSlant, LineSlantDetail> = {
   },
   out: {
     id: 'out',
-    name: 'Out (Perimeter Spill)',
-    callCode: 'OUT',
+    name: 'Wide / Out (Perimeter Spill)',
+    callCode: 'WIDE',
     signal: '👐 Both hands flaring outward from chest',
     description: 'Defensive ends slant into outside C-gaps while Nose slants into the strong A-gap.',
     linemenRule: 'Chokes off outside zone and perimeter sweep before the back can reach the corner.',
@@ -1260,8 +1409,8 @@ export const SELECTABLE_FRONTS: {
   },
   {
     id: 'out',
-    name: 'Out',
-    callCode: 'OUT',
+    name: 'Wide (Out)',
+    callCode: 'WIDE',
     signal: '👐 Flaring outward',
     description: 'Defensive ends slant into outside C-gaps; Nose slants strong A',
   },
