@@ -43,7 +43,7 @@ export const DrillsSection: React.FC = () => {
     {
       title: '04. Default 1 Rule: "Give Unless #1 Forces You to Pull"',
       detail:
-        'The B-Gap Dive to 3 is automatic unless #1 crashes inside to tackle 3. If #1 sits square, widens, or Bull Rushes, 1 gives cleanly to 3.',
+        'The Dive to the playside dive back (2 on 21 Veer / 24 Veer; 3 on 31 Veer / 33 Veer) attacks vertically through the B-gap and is automatic unless #1 crashes inside to tackle the dive back. If #1 sits square, widens, or Bull Rushes, 1 gives cleanly to the dive back.',
     },
   ];
 

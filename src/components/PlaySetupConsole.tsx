@@ -172,10 +172,10 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
       onSelectConcept(concept);
     } else {
       const playIdMap: Record<OffensiveConcept, string> = {
-        inside_veer: '42-inside-veer',
-        outside_veer: '46-outside-veer',
-        counter: '31-counter',
-        power: '24-power',
+        inside_veer: '21-inside-veer',
+        outside_veer: '24-outside-veer',
+        counter: '34-counter',
+        power: '34-power',
         flood: '324-power-pass',
       };
       onSelectPlay(playIdMap[concept]);
@@ -206,13 +206,55 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
     name: string;
     rightNumber: string;
     leftNumber: string;
+    callout: string;
     tag: string;
+    description: string;
   }[] = [
-    { id: 'inside_veer', name: 'Inside Veer', rightNumber: '42', leftNumber: '41', tag: 'Triple Option' },
-    { id: 'outside_veer', name: 'Outside Veer', rightNumber: '46', leftNumber: '45', tag: 'Triple Option' },
-    { id: 'counter', name: 'Counter', rightNumber: '32', leftNumber: '31', tag: 'Misdirection' },
-    { id: 'power', name: 'Power', rightNumber: '24', leftNumber: '23', tag: 'Downhill Run' },
-    { id: 'flood', name: 'Flood', rightNumber: '36', leftNumber: '35', tag: 'Play-Action Pass' },
+    {
+      id: 'inside_veer',
+      name: '21 Veer or 31 Veer',
+      rightNumber: '21',
+      leftNumber: '31',
+      callout: '21 Veer or 31 Veer',
+      tag: 'B-Gap Veer',
+      description: 'Playside Dive (Tackle Inside Hip) · Backside Pitch (4x4 Spacing) · 1 Attacks Pitch Key Inside Shoulder',
+    },
+    {
+      id: 'outside_veer',
+      name: '24 Veer or 33 Veer',
+      rightNumber: '24',
+      leftNumber: '33',
+      callout: '24 Veer or 33 Veer',
+      tag: 'B-Gap Option',
+      description: 'Playside Down-Block · B-Gap Dive (2/3) · Reads EMLOS (#1) & Force (#2)',
+    },
+    {
+      id: 'counter',
+      name: '23 Counter or 34 Counter',
+      rightNumber: '34',
+      leftNumber: '23',
+      callout: '23 Counter or 34 Counter',
+      tag: 'Timing Step',
+      description: 'Timing Step to Side · Deep Backfield Handoff (No Pass at LOS) · Pulling Guard',
+    },
+    {
+      id: 'power',
+      name: '34 Power or 23 Power',
+      rightNumber: '34',
+      leftNumber: '23',
+      callout: '34 Power or 23 Power',
+      tag: 'Hesitation Step',
+      description: 'Hesitation Step to Let Guard Clear · Lead ISO Block · Direct Handoff',
+    },
+    {
+      id: 'flood',
+      name: 'Double Tight 36 Flood',
+      rightNumber: '36',
+      leftNumber: '35',
+      callout: '36 Flood or 35 Flood',
+      tag: 'Play-Action Pass',
+      description: 'Play-Action Fake · Progression: 1) RB Flat 2) Y Whip Out 3) Z Corner',
+    },
   ];
 
   return (
@@ -494,7 +536,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                             {concept.name}
                           </p>
                           <p className="text-[11px] text-slate-400 truncate">
-                            {activeNumber} {concept.name} · {concept.tag}
+                            Call: <span className="text-teal-300 font-mono font-bold">{activeNumber} {concept.id === 'counter' ? 'Counter' : concept.id === 'power' ? 'Power' : concept.id === 'flood' ? 'Flood' : 'Veer'}</span> · {concept.description}
                           </p>
                         </div>
                       </div>
@@ -634,7 +676,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-rose-300 flex items-center gap-1.5">
                       <Target className="w-3.5 h-3.5 text-rose-400" />
-                      {selectedPlay.id === '46-outside-veer'
+                      {selectedPlay.id.includes('outside-veer')
                         ? '#1 EMLOS End Reaction'
                         : '#1 Dive Key (DT) Reaction'}
                     </span>
@@ -661,7 +703,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                           : 'text-slate-300 hover:text-white hover:bg-[#0D1820]'
                       }`}
                     >
-                      Crash on Dive
+                      Crash (Full Commit)
                     </button>
                     <button
                       type="button"
@@ -682,7 +724,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-teal-300 flex items-center gap-1.5">
                       <Target className="w-3.5 h-3.5 text-teal-400" />
-                      {selectedPlay.id === '46-outside-veer'
+                      {selectedPlay.id.includes('outside-veer')
                         ? '#2 Pitch Key (Corner) Reaction'
                         : '#2 Pitch Key (EMLOS) Reaction'}
                     </span>
@@ -709,7 +751,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                           : 'text-slate-300 hover:text-white hover:bg-[#0D1820]'
                       }`}
                     >
-                      Feather to Pitch
+                      Commit to 3 (Pitch)
                     </button>
                   </div>
                 </div>

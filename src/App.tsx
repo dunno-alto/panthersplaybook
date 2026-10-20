@@ -50,7 +50,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<AppActiveTab>('offense');
 
   // OFFENSE STATE (Split Back Veer)
-  const [selectedPlayId, setSelectedPlayId] = useState<string>('42-inside-veer');
+  const [selectedPlayId, setSelectedPlayId] = useState<string>('21-inside-veer');
   const [concept, setConcept] = useState<OffensiveConcept>('inside_veer');
   const [targetSide, setTargetSide] = useState<TargetSide>('right');
   const [zSide, setZSide] = useState<ZAlignmentSide>('right');
@@ -171,12 +171,15 @@ export default function App() {
     else if (playId.includes('power')) setConcept('power');
     setIsPlaying(false);
     setProgress(0);
-    if (playId === '24-power') {
-      setSelectedPlayerId('LG');
+    if (playId.includes('power') && !playId.includes('pass') && !playId.includes('flood')) {
+      setSelectedPlayerId(targetSide === 'left' ? 'RG' : 'LG');
+    } else if (playId.includes('counter')) {
+      setSelectedPlayerId(targetSide === 'left' ? 'RH' : 'LH');
     } else if (playId.includes('flood') || playId === '324-power-pass') {
       setSelectedPlayerId('W');
     } else {
-      setSelectedPlayerId('LH');
+      // Inside Veer or Outside Veer: dive back is playside back
+      setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
     }
   };
 
@@ -185,11 +188,14 @@ export default function App() {
     setIsPlaying(false);
     setProgress(0);
     if (newConcept === 'power') {
-      setSelectedPlayerId('LG');
+      setSelectedPlayerId(targetSide === 'left' ? 'RG' : 'LG');
+    } else if (newConcept === 'counter') {
+      setSelectedPlayerId(targetSide === 'left' ? 'RH' : 'LH');
     } else if (newConcept === 'flood') {
       setSelectedPlayerId('W');
     } else {
-      setSelectedPlayerId('LH');
+      // Inside Veer or Outside Veer: dive back is playside back
+      setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
     }
   };
 

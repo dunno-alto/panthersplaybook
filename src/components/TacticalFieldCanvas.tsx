@@ -104,10 +104,11 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   const frontConfig = DEFENSIVE_FRONTS[frontId];
   const simResult = play.getOffensivePaths(frontId, diveBehavior, pitchBehavior, eleventhMode, xMode, zSide, targetSide);
 
-  const isLeftPlay = play.id === '31-counter';
-  const isOutsideVeer = play.id === '46-outside-veer';
-  const isPower = play.id === '24-power';
-  const isPowerPass = play.id === '324-power-pass';
+  const isInsideVeer = play.concept === 'inside_veer' || play.id.includes('inside-veer');
+  const isOutsideVeer = play.concept === 'outside_veer' || play.id.includes('outside-veer');
+  const isCounter = play.concept === 'counter' || play.id.includes('counter');
+  const isPower = (play.concept === 'power' || play.id.includes('power')) && !play.id.includes('pass') && play.concept !== 'flood';
+  const isPowerPass = play.concept === 'flood' || play.id.includes('power-pass') || play.id.includes('flood');
 
   const getSvgCoords = (e: React.MouseEvent<SVGSVGElement>): Point => {
     const svg = svgRef.current;
@@ -189,35 +190,38 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
     if (progress <= 0) return { x: def.x, y: def.y };
 
     const isActDive =
-      play.id === '42-inside-veer'
-        ? !!def.isDiveKey
+      isInsideVeer
+        ? (targetSide === 'left' ? !!def.weakDiveKey : !!def.isDiveKey)
         : isOutsideVeer
-        ? !!def.isPitchKey || def.id === 'SDE'
+        ? (targetSide === 'left' ? (!!def.weakPitchKey || def.id === 'WDE') : (!!def.isPitchKey || def.id === 'SDE'))
         : false;
 
     const isActPitch =
-      play.id === '42-inside-veer'
-        ? !!def.isPitchKey
+      isInsideVeer
+        ? (targetSide === 'left' ? !!def.weakPitchKey : !!def.isPitchKey)
         : isOutsideVeer
-        ? def.id === 'RCB' || def.id === 'SOLB' || def.id === 'SLB' || !!def.isPitchKey
-        : isLeftPlay
-        ? !!def.weakPitchKey || def.id === 'WDE' || def.id === 'WOLB'
+        ? (targetSide === 'left'
+          ? (def.id === 'LCB' || def.id === 'WOLB' || !!def.weakPitchKey)
+          : (def.id === 'RCB' || def.id === 'SOLB' || def.id === 'SLB' || !!def.isPitchKey))
         : false;
 
     if (isActDive) {
       if (diveBehavior === 'crash') {
-        const targetX = isOutsideVeer ? 615 : 542;
-        const targetY = 398;
+        // Full commit directly into the dive back in the backfield at the B-gap mesh
+        const targetX = targetSide === 'left'
+          ? (isOutsideVeer ? 426 : 416)
+          : (isOutsideVeer ? 574 : 584);
+        const targetY = 412; // deep backfield commit to tackle dive back
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
             { x: targetX, y: targetY },
           ],
-          Math.min(1, progress * 1.45)
+          Math.min(1, progress * 2.2)
         );
       } else if (diveBehavior === 'squeeze') {
-        const targetX = def.x + 16;
-        const targetY = 382;
+        const targetX = targetSide === 'left' ? def.x - 16 : def.x + 16;
+        const targetY = 388;
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
@@ -226,8 +230,9 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
           Math.min(1, progress * 1.3)
         );
       } else {
-        const targetX = def.x + 24;
-        const targetY = 415;
+        // Bull Rush / upfield
+        const targetX = targetSide === 'left' ? def.x - 20 : def.x + 20;
+        const targetY = 412;
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
@@ -240,24 +245,30 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
 
     if (isActPitch) {
       if (pitchBehavior === 'commit_qb') {
-        const targetX = isLeftPlay ? 360 : isOutsideVeer ? 675 : 640;
-        const targetY = 395;
+        // Number 2 read commits to the 1-back in the backfield, forcing backfield pitch
+        const targetX = targetSide === 'left'
+          ? (isOutsideVeer ? 350 : 370)
+          : (isOutsideVeer ? 650 : 630);
+        const targetY = 404; // drives into the backfield directly at the 1-back
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
             { x: targetX, y: targetY },
           ],
-          Math.min(1, progress * 1.25)
+          Math.min(1, progress * 1.65)
         );
       } else {
-        const targetX = isLeftPlay ? 260 : isOutsideVeer ? 760 : 735;
-        const targetY = 340;
+        // Number 2 read commits to the 3-back (pitch back), feathering wide to cover pitch
+        const targetX = targetSide === 'left'
+          ? (isOutsideVeer ? 260 : 290)
+          : (isOutsideVeer ? 740 : 710);
+        const targetY = 380; // wide perimeter leverage to cover pitch back
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
             { x: targetX, y: targetY },
           ],
-          Math.min(1, progress * 1.25)
+          Math.min(1, progress * 1.4)
         );
       }
     }
@@ -284,18 +295,35 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
       }
     }
 
-    // Power: Edge defender gets kicked out wide right by pulling LG
-    if (isPower && (def.id === 'SDE' || def.isPitchKey)) {
+    // Power: Edge defender gets kicked out wide by pulling guard
+    const isEdgeDefender = targetSide === 'left'
+      ? (def.id === 'WDE' || !!def.weakPitchKey)
+      : (def.id === 'SDE' || !!def.isPitchKey);
+
+    if (isPower && isEdgeDefender) {
+      const kickX = targetSide === 'left' ? -28 : 28;
       return interpolatePoints(
         [
           { x: def.x, y: def.y },
-          { x: def.x + 28, y: def.y + 12 },
+          { x: def.x + kickX, y: def.y + 12 },
         ],
         Math.min(1, progress * 1.2)
       );
     }
 
-    const driftX = isLeftPlay ? -14 * progress : 14 * progress;
+    // Counter: Edge defender kicked out wide, linebackers pause on timing step
+    if (isCounter && isEdgeDefender) {
+      const kickX = targetSide === 'left' ? -28 : 28;
+      return interpolatePoints(
+        [
+          { x: def.x, y: def.y },
+          { x: def.x + kickX, y: def.y + 14 },
+        ],
+        Math.min(1, progress * 1.2)
+      );
+    }
+
+    const driftX = targetSide === 'left' ? -14 * progress : 14 * progress;
     const driftY = 12 * progress;
     return { x: def.x + driftX, y: def.y + driftY };
   };
@@ -319,36 +347,50 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
       return currentOffensivePositions.YTE;
     }
 
-    // Power: Direct handoff to LH at progress 0.28
+    // Power (34 Power / 23 Power):
+    // Runner takes hesitation step to allow guard to clear; handoff is made when 1 back and runner mesh at 0.38-0.42
     if (isPower) {
-      if (progress < 0.28) {
-        return currentOffensivePositions.QB;
+      const runnerId = targetSide === 'left' ? 'RH' : 'LH';
+      const qbPos = currentOffensivePositions.QB;
+      const runnerPos = currentOffensivePositions[runnerId] || qbPos;
+
+      if (progress < 0.38) {
+        return qbPos;
       }
-      return currentOffensivePositions.LH;
+      if (progress <= 0.42) {
+        // Handoff occurs cleanly when the 1 back and ball runner mesh
+        const handoffT = (progress - 0.38) / 0.04;
+        return {
+          x: qbPos.x + (runnerPos.x - qbPos.x) * handoffT,
+          y: qbPos.y + (runnerPos.y - qbPos.y) * handoffT,
+        };
+      }
+      return runnerPos;
     }
 
-    // Counter: Token fake then QB carries or pitches to RH
-    if (isLeftPlay) {
-      if (progress < 0.28) {
-        return currentOffensivePositions.QB;
+    // Counter (23 Counter / 34 Counter):
+    // Runner takes timing step to side; handoff is made when 1 back and runner mesh deep in backfield at 0.38-0.42
+    if (isCounter) {
+      const runnerId = targetSide === 'left' ? 'RH' : 'LH';
+      const qbPos = currentOffensivePositions.QB;
+      const runnerPos = currentOffensivePositions[runnerId] || qbPos;
+
+      if (progress < 0.38) {
+        return qbPos;
       }
-      if (simResult.ballCarrierSequence.pitchTriggered) {
-        if (progress < 0.54) return currentOffensivePositions.QB;
-        if (progress < 0.72) {
-          const pT = (progress - 0.54) / 0.18;
-          return interpolatePoints([currentOffensivePositions.QB, currentOffensivePositions.RH], pT);
-        }
-        return currentOffensivePositions.RH;
+      if (progress <= 0.42) {
+        // Handoff occurs cleanly when the 1 back and ball runner mesh
+        const handoffT = (progress - 0.38) / 0.04;
+        return {
+          x: qbPos.x + (runnerPos.x - qbPos.x) * handoffT,
+          y: qbPos.y + (runnerPos.y - qbPos.y) * handoffT,
+        };
       }
-      return currentOffensivePositions.QB;
+      return runnerPos;
     }
 
-    // Option plays (Inside Veer & Outside Veer)
-    if (progress < 0.34) {
-      return currentOffensivePositions.QB;
-    }
-
-    const isOptionPlay = play.playType === 'Triple Option';
+    // Option plays (21/31 Veer & 24/33 Veer)
+    const isOptionPlay = isInsideVeer || isOutsideVeer || play.playType === 'Triple Option';
     const diveBackId = isOptionPlay
       ? (targetSide === 'left' ? 'LH' : 'RH')
       : (targetSide === 'left' ? 'RH' : 'LH');
@@ -356,25 +398,56 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
       ? (targetSide === 'left' ? 'RH' : 'LH')
       : (targetSide === 'left' ? 'LH' : 'RH');
 
+    const qbPos = currentOffensivePositions.QB;
+    const divePos = currentOffensivePositions[diveBackId] || qbPos;
+
+    // Before mesh ride begins (progress < 0.20): 1-back (QB) holds ball firmly from snap
+    if (progress < 0.20) {
+      return qbPos;
+    }
+
+    // During the mesh ride in the backfield (progress 0.20 to 0.42):
+    // 1-Back (QB) and Dive Back ride together at the B-gap seam reading #1 Dive Key.
+    if (progress <= 0.42) {
+      if (simResult.ballCarrierSequence.diveGive) {
+        // Give is made during the mesh: smoothly seats into dive back's pocket as they mesh
+        const meshT = (progress - 0.20) / 0.22;
+        return {
+          x: qbPos.x + (divePos.x - qbPos.x) * meshT,
+          y: qbPos.y + (divePos.y - qbPos.y) * meshT,
+        };
+      }
+      // On QB pull (keep or pitch), 1-back keeps ball in chest during the mesh read
+      return qbPos;
+    }
+
+    // After mesh completion (progress > 0.42):
     if (simResult.ballCarrierSequence.diveGive) {
-      return currentOffensivePositions[diveBackId] || currentOffensivePositions.QB;
+      // Dive back attacks vertically through the B-gap with the ball
+      return divePos;
     }
 
+    // If pulling: 1 attacks along the backfield track
     if (simResult.ballCarrierSequence.pitchTriggered) {
-      if (progress < 0.54) {
-        return currentOffensivePositions.QB;
+      // 1-back attacks #2 in the backfield until #2 commits to 1
+      if (progress < 0.56) {
+        return qbPos;
       }
-      if (progress < 0.70) {
-        const pitchFlightT = (progress - 0.54) / 0.16;
-        return interpolatePoints(
-          [currentOffensivePositions.QB, currentOffensivePositions[pitchBackId] || currentOffensivePositions.QB],
-          pitchFlightT
-        );
+      const pitchBackPos = currentOffensivePositions[pitchBackId] || qbPos;
+      if (progress < 0.66) {
+        // Pitch happens IN THE BACKFIELD (backward/lateral from 1 to pitch back)
+        const pitchFlightT = (progress - 0.56) / 0.10;
+        return {
+          x: qbPos.x + (pitchBackPos.x - qbPos.x) * pitchFlightT,
+          y: qbPos.y + (pitchBackPos.y - qbPos.y) * pitchFlightT,
+        };
       }
-      return currentOffensivePositions[pitchBackId] || currentOffensivePositions.QB;
+      // Pitch back has secured the pitch in the backfield and carries it upfield
+      return pitchBackPos;
     }
 
-    return currentOffensivePositions.QB;
+    // 1 keeper: QB cuts upfield inside pitch key
+    return qbPos;
   };
 
   const ballPos = getFootballPosition();
@@ -627,14 +700,12 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
             );
           })}
 
-        {/* Pitch Relationship Dashed Line on Option Plays */}
-        {(play.playType === 'Triple Option' || play.playType === 'Misdirection Option') && (
+        {/* Pitch Relationship Dashed Line on Option Plays (Inside & Outside Veer) */}
+        {(isInsideVeer || isOutsideVeer || play.playType === 'Triple Option') && (
           <g opacity="0.85">
             {(() => {
               const qbPt = currentOffensivePositions.QB;
-              const pitchBackId = play.playType === 'Triple Option'
-                ? (targetSide === 'left' ? 'RH' : 'LH')
-                : (targetSide === 'right' ? 'LH' : 'RH');
+              const pitchBackId = targetSide === 'left' ? 'RH' : 'LH';
               const pbPt = currentOffensivePositions[pitchBackId];
               if (!qbPt || !pbPt) return null;
               return (
@@ -657,7 +728,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                     fontWeight="700"
                     className="font-mono-tabular"
                   >
-                    5x2 Pitch Phase
+                    {isInsideVeer ? '4x4 Backfield Pitch Spacing' : 'Backfield Pitch Track'}
                   </text>
                 </>
               );
@@ -666,10 +737,10 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
         )}
 
         {/* Pulling Guard Label Annotation on Power and Counter */}
-        {(isPower || isLeftPlay) && (
+        {(isPower || isCounter) && (
           <g opacity="0.95">
             {(() => {
-              const pullId = isPower ? 'LG' : 'RG';
+              const pullId = targetSide === 'left' ? 'RG' : 'LG';
               const pPt = currentOffensivePositions[pullId];
               if (!pPt) return null;
               return (
@@ -720,25 +791,25 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
           const pos = getAnimatedDefenderPoint(def);
           const isSelected = selectedPlayerId === def.id;
 
-          const isInsideVeerDive = play.id === '42-inside-veer' && !!def.isDiveKey;
-          const isInsideVeerPitch = play.id === '42-inside-veer' && !!def.isPitchKey;
-          const isOutsideVeerDive = isOutsideVeer && (!!def.isPitchKey || def.id === 'SDE');
-          const isOutsideVeerPitch = isOutsideVeer && (def.id === 'RCB' || def.id === 'SOLB');
-          const isCounterPitch = isLeftPlay && (!!def.weakPitchKey || def.id === 'WDE');
-          const isPowerKickout = isPower && (def.id === 'SDE' || def.isPitchKey);
+          const isInsideVeerDive = isInsideVeer && (targetSide === 'left' ? !!def.weakDiveKey : !!def.isDiveKey);
+          const isInsideVeerPitch = isInsideVeer && (targetSide === 'left' ? !!def.weakPitchKey : !!def.isPitchKey);
+          const isOutsideVeerDive = isOutsideVeer && (targetSide === 'left' ? (!!def.weakPitchKey || def.id === 'WDE') : (!!def.isPitchKey || def.id === 'SDE'));
+          const isOutsideVeerPitch = isOutsideVeer && (targetSide === 'left' ? (def.id === 'LCB' || def.id === 'WOLB' || !!def.weakPitchKey) : (def.id === 'RCB' || def.id === 'SOLB' || def.id === 'SLB' || !!def.isPitchKey));
+          const isCounterKickout = isCounter && (targetSide === 'left' ? (def.id === 'WDE' || !!def.weakPitchKey) : (def.id === 'SDE' || !!def.isPitchKey));
+          const isPowerKickout = isPower && (targetSide === 'left' ? (def.id === 'WDE' || !!def.weakPitchKey) : (def.id === 'SDE' || !!def.isPitchKey));
           const isPowerIso = isPower && (def.id === 'MLB' || def.id === 'SLB' || def.id === 'SILB');
 
-          const hasRedKey = isInsideVeerDive || isOutsideVeerDive || isPowerKickout;
-          const hasTealKey = isInsideVeerPitch || isOutsideVeerPitch || isCounterPitch || isPowerIso;
+          const hasRedKey = isInsideVeerDive || isOutsideVeerDive || isPowerKickout || isCounterKickout;
+          const hasTealKey = isInsideVeerPitch || isOutsideVeerPitch || isPowerIso;
 
           let keyText = '';
           if (isInsideVeerDive) keyText = '#1 DIVE KEY (DT)';
           else if (isOutsideVeerDive) keyText = '#1 DIVE KEY (EMLOS)';
           else if (isInsideVeerPitch) keyText = '#2 PITCH KEY (EMLOS)';
           else if (isOutsideVeerPitch) keyText = '#2 PITCH KEY (CORNER)';
-          else if (isCounterPitch) keyText = '#2 WEAK FORCE';
-          else if (isPowerKickout) keyText = 'LG KICKOUT TARGET';
-          else if (isPowerIso) keyText = 'RH LEAD ISO TARGET';
+          else if (isCounterKickout) keyText = targetSide === 'left' ? 'RG KICKOUT TARGET' : 'LG KICKOUT TARGET';
+          else if (isPowerKickout) keyText = targetSide === 'left' ? 'RG KICKOUT TARGET' : 'LG KICKOUT TARGET';
+          else if (isPowerIso) keyText = targetSide === 'left' ? 'LH LEAD ISO TARGET' : 'RH LEAD ISO TARGET';
 
           return (
             <g
@@ -837,7 +908,8 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
             stroke = isPowerPass && pid === 'YTE' ? '#E9D5FF' : '#5EEAD4';
           }
 
-          if ((isPower && pid === 'LG') || (isLeftPlay && pid === 'RG')) {
+          const isPullingGuard = (isPower || isCounter) && (targetSide === 'left' ? pid === 'RG' : pid === 'LG');
+          if (isPullingGuard) {
             fill = '#115E59';
             stroke = '#A7F3D0';
           }
@@ -959,16 +1031,31 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
       {/* Bottom Legend & Live Coaching Explanation Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 bg-[#060D11] border-t border-[#162A33] text-xs">
         <div className="flex flex-wrap items-center gap-4 text-slate-300">
-          {isPower ? (
+          {isCounter ? (
             <>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-[#F59E0B] inline-block" /> LH Power Path
+                <span className="w-3 h-0.5 bg-[#F59E0B] inline-block" /> {targetSide === 'left' ? 'RH' : 'LH'} Timing Step & Cutback
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-[#FFFFFF] inline-block" /> LG Pull & Kickout
+                <span className="w-3 h-0.5 bg-[#FFFFFF] inline-block" /> {targetSide === 'left' ? 'RG' : 'LG'} Pull & Kickout
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-[#94A3B8] inline-block" /> RH Lead ISO Block
+                <span className="w-3 h-0.5 bg-[#38BDF8] inline-block" /> QB Deep Backfield Mesh
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rotate-45 bg-[#DC2626] inline-block" /> Kickout Target
+              </span>
+            </>
+          ) : isPower ? (
+            <>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-0.5 bg-[#F59E0B] inline-block" /> {targetSide === 'left' ? 'RH' : 'LH'} Hesitation & Power Path
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-0.5 bg-[#FFFFFF] inline-block" /> {targetSide === 'left' ? 'RG' : 'LG'} Pull & Kickout
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-0.5 bg-[#94A3B8] inline-block" /> {targetSide === 'left' ? 'LH' : 'RH'} Lead ISO Block
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rotate-45 bg-[#DC2626] inline-block" /> Kickout Target
@@ -992,7 +1079,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
           ) : (
             <>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-[#F59E0B] inline-block" /> Dive Track
+                <span className="w-3 h-0.5 bg-[#F59E0B] inline-block" /> {isOutsideVeer ? 'B-Gap Dive Track' : 'A-Gap Dive Track'}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="w-3 h-0.5 bg-[#38BDF8] inline-block" /> QB Option Path
