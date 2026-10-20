@@ -14,6 +14,8 @@ import {
   Users,
   Layers,
   RotateCcw,
+  Target,
+  Lock,
 } from 'lucide-react';
 import {
   COVERAGE_SCHEMES,
@@ -32,6 +34,7 @@ import {
   COMMON_OFFENSE_FORMATIONS,
   SEQUENTIAL_TECH_RULES,
   FormationCoord,
+  PlayerCoverageAssignment,
   detectStrengthCall,
   BallHashPosition,
   StrengthDetectionResult,
@@ -54,6 +57,8 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
   const [manualStrength, setManualStrength] = useState<StrengthCall>('liz');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('SAM');
   const [showCoverageZones, setShowCoverageZones] = useState<boolean>(true);
+  const [showZoneDrops, setShowZoneDrops] = useState<boolean>(true);
+  const [coverageRoleFilter, setCoverageRoleFilter] = useState<'ALL' | 'LB' | 'DB'>('ALL');
   const [showPressureArrows, setShowPressureArrows] = useState<boolean>(true);
   const [showGaps, setShowGaps] = useState<boolean>(true);
   const [showTechniqueOverlay, setShowTechniqueOverlay] = useState<boolean>(true);
@@ -467,6 +472,53 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
     ];
   }, [formation, frontCall, strengthCall]);
 
+  // Helper to get offensive receiver/back targets for Black coverage lock lines
+  const getBlackCoverageTarget = (assign: PlayerCoverageAssignment): { x: number; y: number; label: string } => {
+    const pId = assign.playerId;
+    const oppPlayers = activeOffenseConfig.players;
+    if (pId === 'LCB') {
+      const wrLeft =
+        oppPlayers.filter((p) => p.isEligible && p.x < 350).sort((a, b) => a.x - b.x)[0] ||
+        oppPlayers.find((p) => p.id === 'OWR1');
+      if (wrLeft) return { x: wrLeft.x, y: wrLeft.y - 18, label: `#1 WR (${wrLeft.label})` };
+    }
+    if (pId === 'RCB') {
+      const wrRight =
+        oppPlayers.filter((p) => p.isEligible && p.x > 650).sort((a, b) => b.x - a.x)[0] ||
+        oppPlayers.find((p) => p.id === 'OWR2' || p.id === 'OWR4' || p.id === 'OWR5');
+      if (wrRight) return { x: wrRight.x, y: wrRight.y - 18, label: `#1 WR (${wrRight.label})` };
+    }
+    if (pId === 'SS') {
+      const te =
+        oppPlayers.find((p) => p.id.includes('TE') || (p.label.startsWith('Y') && p.isEligible)) ||
+        oppPlayers.find((p) => p.id === 'OWR3' || p.id === 'OTE');
+      if (te) return { x: te.x, y: te.y - 18, label: `TE / #2 (${te.label})` };
+    }
+    if (pId === 'WILL') {
+      const rbStrong =
+        oppPlayers.find((p) => p.id === 'OTB' || p.id === 'ORB') ||
+        oppPlayers.find((p) => p.role.includes('Back'));
+      if (rbStrong) return { x: rbStrong.x + 12, y: rbStrong.y - 16, label: `Strong RB (${rbStrong.label})` };
+    }
+    if (pId === 'ROV') {
+      const rbWeak =
+        oppPlayers.find((p) => p.id === 'OFB') ||
+        oppPlayers.find((p) => p.id === 'OTB');
+      if (rbWeak) return { x: rbWeak.x - 12, y: rbWeak.y - 16, label: `Weak RB (${rbWeak.label})` };
+    }
+    if (pId === 'SAM') {
+      const te = oppPlayers.find((p) => p.id.includes('TE') || (p.label.startsWith('Y') && p.isEligible));
+      if (te) return { x: te.x, y: 385, label: `Jam TE (${te.label}) on LOS` };
+    }
+    if (pId === 'MIKE') {
+      return { x: assign.dropTarget.x, y: assign.dropTarget.y, label: 'Rat in Hole / Spy' };
+    }
+    if (pId === 'FS') {
+      return { x: assign.dropTarget.x, y: assign.dropTarget.y, label: 'Centerfield Roamer' };
+    }
+    return { x: assign.dropTarget.x, y: assign.dropTarget.y, label: assign.landmarkLabel };
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* UNIFIED DEFENSIVE CALL SIMULATOR CONSOLE (Directly Before Playart) */}
@@ -878,11 +930,25 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
             <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
               <input
                 type="checkbox"
+                checked={showZoneDrops}
+                onChange={(e) => setShowZoneDrops(e.target.checked)}
+                className="rounded border-slate-700 text-teal-400 focus:ring-0"
+              />
+              <span className="flex items-center gap-1 font-semibold text-teal-300">
+                <span>Zone Drops & Assignments</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-teal-950/90 text-teal-300 border border-teal-700/60">
+                  LBs & DBs
+                </span>
+              </span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
+              <input
+                type="checkbox"
                 checked={showCoverageZones}
                 onChange={(e) => setShowCoverageZones(e.target.checked)}
                 className="rounded border-slate-700 text-teal-400 focus:ring-0"
               />
-              <span>Coverage Zones</span>
+              <span>Coverage Shells</span>
             </label>
             <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
               <input
@@ -955,6 +1021,43 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
               >
                 <path d="M 0 1 L 10 5 L 0 9 z" fill="#C084FC" />
               </marker>
+              <marker
+                id="covArrowBlue"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#38BDF8" />
+              </marker>
+              <marker
+                id="covArrowGreen"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#34D399" />
+              </marker>
+              <marker
+                id="covArrowBlack"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#F59E0B" />
+              </marker>
+              <filter id="covDropGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="2.5" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
             </defs>
 
             {/* Field Grid */}
@@ -1238,7 +1341,7 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
               </g>
             )}
 
-            {/* Coverage Zones */}
+            {/* Coverage Zones (Shells) */}
             {showCoverageZones &&
               activeCoverage.coverageZones.map((zone, idx) => (
                 <g key={idx} opacity="0.32">
@@ -1266,6 +1369,341 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                   </text>
                 </g>
               ))}
+
+            {/* ZONE DROPS (Green & Blue) and ASSIGNMENTS (Black) for LBs & DBs */}
+            {showZoneDrops && (
+              <g id="coverage-zone-drops-and-assignments" opacity="0.95">
+                {activeCoverage.playerAssignments.map((assign) => {
+                  const p = DEFENSE_PLAYERS.find((d) => d.id === assign.playerId);
+                  if (!p) return null;
+                  const coords = getPlayerCoords(p);
+                  const isSelected = selectedPlayerId === p.id;
+                  const isBlitzing = blitzCall === p.id;
+
+                  // 1. BLACK COVERAGE (Cover 1 Man-Free)
+                  if (coverageScheme === 'black') {
+                    const target = getBlackCoverageTarget(assign);
+                    const markerEnd = 'url(#covArrowBlack)';
+                    const themeColor = '#F59E0B';
+
+                    if (assign.playerId === 'FS') {
+                      // Free Safety: Single-High Free Roamer
+                      return (
+                        <g
+                          key={`cov-${assign.playerId}`}
+                          onClick={() => setSelectedPlayerId(p.id)}
+                          className="cursor-pointer group"
+                        >
+                          {/* Drop track from pre-snap alignment */}
+                          <line
+                            x1={coords.x}
+                            y1={coords.y}
+                            x2={target.x}
+                            y2={target.y}
+                            stroke={themeColor}
+                            strokeWidth={isSelected ? '3.5' : '2.4'}
+                            strokeDasharray="5 3"
+                            markerEnd={markerEnd}
+                          />
+                          {/* Roamer Patrol Sweep Arc across middle third */}
+                          <path
+                            d="M 370 120 Q 500 135 630 120"
+                            fill="none"
+                            stroke={themeColor}
+                            strokeWidth={isSelected ? '2.8' : '2'}
+                            strokeDasharray="4 2"
+                          />
+                          <circle cx="370" cy="120" r="4.5" fill={themeColor} />
+                          <circle cx="630" cy="120" r="4.5" fill={themeColor} />
+                          {/* Landmark Center Node */}
+                          <circle
+                            cx={target.x}
+                            cy={target.y}
+                            r={isSelected ? '9' : '7'}
+                            fill="#0A1820"
+                            stroke={themeColor}
+                            strokeWidth="2.5"
+                          />
+                          <circle cx={target.x} cy={target.y} r="3.5" fill={themeColor} />
+                          {/* Badge */}
+                          <g transform={`translate(${target.x}, ${target.y - 18})`}>
+                            <rect
+                              x="-112"
+                              y="-10"
+                              width="224"
+                              height="20"
+                              rx="4"
+                              fill="#050E14"
+                              fillOpacity="0.95"
+                              stroke={themeColor}
+                              strokeWidth={isSelected ? '1.8' : '1'}
+                            />
+                            <text
+                              x="0"
+                              y="3.5"
+                              fill="#FEF08A"
+                              fontSize="8.5"
+                              fontFamily="monospace"
+                              fontWeight="bold"
+                              textAnchor="middle"
+                            >
+                              ★ FS: Single-High Roamer (12-14 yds)
+                            </text>
+                          </g>
+                        </g>
+                      );
+                    }
+
+                    if (assign.playerId === 'MIKE') {
+                      // Mike: Rat in the Hole / QB Spy
+                      if (isBlitzing) return null;
+                      return (
+                        <g
+                          key={`cov-${assign.playerId}`}
+                          onClick={() => setSelectedPlayerId(p.id)}
+                          className="cursor-pointer group"
+                        >
+                          <line
+                            x1={coords.x}
+                            y1={coords.y}
+                            x2={target.x}
+                            y2={target.y}
+                            stroke={themeColor}
+                            strokeWidth={isSelected ? '3.5' : '2.4'}
+                            strokeDasharray="4 2"
+                            markerEnd={markerEnd}
+                          />
+                          {/* Rat zone patrol ring */}
+                          <ellipse
+                            cx={target.x}
+                            cy={target.y}
+                            rx="42"
+                            ry="22"
+                            fill={themeColor}
+                            fillOpacity="0.12"
+                            stroke={themeColor}
+                            strokeWidth="1.5"
+                            strokeDasharray="3 3"
+                          />
+                          <circle
+                            cx={target.x}
+                            cy={target.y}
+                            r={isSelected ? '8' : '6'}
+                            fill="#0A1820"
+                            stroke={themeColor}
+                            strokeWidth="2"
+                          />
+                          <circle cx={target.x} cy={target.y} r="3" fill={themeColor} />
+                          <g transform={`translate(${target.x}, ${target.y + 26})`}>
+                            <rect
+                              x="-95"
+                              y="-9"
+                              width="190"
+                              height="18"
+                              rx="4"
+                              fill="#050E14"
+                              fillOpacity="0.95"
+                              stroke={themeColor}
+                              strokeWidth={isSelected ? '1.8' : '1'}
+                            />
+                            <text
+                              x="0"
+                              y="3.5"
+                              fill="#FEF08A"
+                              fontSize="8"
+                              fontFamily="monospace"
+                              fontWeight="bold"
+                              textAnchor="middle"
+                            >
+                              🐀 MIKE: Rat in Hole / Spy (5-7 yds)
+                            </text>
+                          </g>
+                        </g>
+                      );
+                    }
+
+                    if (assign.playerId === 'SAM') {
+                      // Sam: Jam Tight End on LOS / Edge Contain
+                      if (isBlitzing) return null;
+                      return (
+                        <g
+                          key={`cov-${assign.playerId}`}
+                          onClick={() => setSelectedPlayerId(p.id)}
+                          className="cursor-pointer group"
+                        >
+                          <line
+                            x1={coords.x}
+                            y1={coords.y}
+                            x2={target.x}
+                            y2={target.y}
+                            stroke={themeColor}
+                            strokeWidth={isSelected ? '3.5' : '2.4'}
+                            markerEnd={markerEnd}
+                          />
+                          <circle cx={target.x} cy={target.y} r="6" fill="#DC2626" stroke="#FFFFFF" strokeWidth="1.5" />
+                          <g transform={`translate(${target.x}, ${target.y - 16})`}>
+                            <rect
+                              x="-80"
+                              y="-9"
+                              width="160"
+                              height="18"
+                              rx="4"
+                              fill="#050E14"
+                              fillOpacity="0.95"
+                              stroke={themeColor}
+                              strokeWidth={isSelected ? '1.8' : '1'}
+                            />
+                            <text
+                              x="0"
+                              y="3.5"
+                              fill="#FEF08A"
+                              fontSize="8"
+                              fontFamily="monospace"
+                              fontWeight="bold"
+                              textAnchor="middle"
+                            >
+                              💥 SAM: Jam TE on LOS / Edge
+                            </text>
+                          </g>
+                        </g>
+                      );
+                    }
+
+                    // Man-to-Man Locks: LCB, RCB, SS, WILL, ROV
+                    if (isBlitzing) return null;
+                    const midX = (coords.x + target.x) / 2;
+                    const midY = (coords.y + target.y) / 2;
+
+                    return (
+                      <g
+                        key={`cov-${assign.playerId}`}
+                        onClick={() => setSelectedPlayerId(p.id)}
+                        className="cursor-pointer group"
+                      >
+                        <line
+                          x1={coords.x}
+                          y1={coords.y}
+                          x2={target.x}
+                          y2={target.y}
+                          stroke={themeColor}
+                          strokeWidth={isSelected ? '3.5' : '2.4'}
+                          strokeDasharray="5 2.5"
+                          markerEnd={markerEnd}
+                        />
+                        {/* Target lock ring */}
+                        <circle
+                          cx={target.x}
+                          cy={target.y}
+                          r="7"
+                          fill="none"
+                          stroke={themeColor}
+                          strokeWidth="2"
+                        />
+                        <circle cx={target.x} cy={target.y} r="3" fill={themeColor} />
+                        {/* Midpoint Lock Badge */}
+                        <g transform={`translate(${midX}, ${midY})`}>
+                          <rect
+                            x="-75"
+                            y="-9"
+                            width="150"
+                            height="18"
+                            rx="4"
+                            fill="#050E14"
+                            fillOpacity="0.95"
+                            stroke={themeColor}
+                            strokeWidth={isSelected ? '1.8' : '1'}
+                          />
+                          <text
+                            x="0"
+                            y="3.5"
+                            fill="#FEF08A"
+                            fontSize="7.5"
+                            fontFamily="monospace"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                          >
+                            🔒 {assign.playerId} ➔ {target.label}
+                          </text>
+                        </g>
+                      </g>
+                    );
+                  }
+
+                  // 2. GREEN (Cover 3 Sky) & BLUE (Cover 2 Zone) DROPS
+                  if (isBlitzing) return null;
+                  const themeColor = coverageScheme === 'blue' ? '#38BDF8' : '#34D399';
+                  const markerEnd = coverageScheme === 'blue' ? 'url(#covArrowBlue)' : 'url(#covArrowGreen)';
+                  const dropTarget = assign.dropTarget;
+                  const controlPoint = assign.controlPoint || {
+                    x: (coords.x + dropTarget.x) / 2,
+                    y: (coords.y + dropTarget.y) / 2,
+                  };
+
+                  const badgeY = dropTarget.y > 220 ? dropTarget.y - 18 : dropTarget.y + 16;
+
+                  return (
+                    <g
+                      key={`cov-${assign.playerId}`}
+                      onClick={() => setSelectedPlayerId(p.id)}
+                      className="cursor-pointer group"
+                    >
+                      {/* Curved drop trajectory path from pre-snap alignment to landmark */}
+                      <path
+                        d={`M ${coords.x} ${coords.y} Q ${controlPoint.x} ${controlPoint.y} ${dropTarget.x} ${dropTarget.y}`}
+                        fill="none"
+                        stroke={themeColor}
+                        strokeWidth={isSelected ? '3.6' : '2.4'}
+                        strokeDasharray="5 3"
+                        markerEnd={markerEnd}
+                        filter={isSelected ? 'url(#covDropGlow)' : undefined}
+                      />
+
+                      {/* Landmark Drop Ring & Center Node */}
+                      <circle
+                        cx={dropTarget.x}
+                        cy={dropTarget.y}
+                        r={isSelected ? '9' : '6.5'}
+                        fill="#061219"
+                        stroke={themeColor}
+                        strokeWidth={isSelected ? '2.5' : '1.8'}
+                      />
+                      <circle
+                        cx={dropTarget.x}
+                        cy={dropTarget.y}
+                        r="3.5"
+                        fill={themeColor}
+                      />
+
+                      {/* Tactical Landmark Label Badge */}
+                      <g transform={`translate(${dropTarget.x}, ${badgeY})`}>
+                        <rect
+                          x="-72"
+                          y="-9"
+                          width="144"
+                          height="18"
+                          rx="4"
+                          fill="#040F16"
+                          fillOpacity="0.95"
+                          stroke={themeColor}
+                          strokeWidth={isSelected ? '1.8' : '1'}
+                        />
+                        <text
+                          x="0"
+                          y="3.5"
+                          fill="#FFFFFF"
+                          fontSize="7.8"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          {assign.playerId}: {assign.landmarkLabel.split('(')[0].trim()} ({assign.depthYards})
+                        </text>
+                      </g>
+                    </g>
+                  );
+                })}
+              </g>
+            )}
 
             {/* D-Line & Front Arrows (Base Front Gaps, Slant, Pinch, Wide) */}
             {showPressureArrows &&
@@ -1539,6 +1977,225 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
               );
             })}
           </svg>
+        </div>
+      </div>
+
+      {/* COVERAGE DROPS & ASSIGNMENTS BREAKDOWN (LBs & DBs) */}
+      <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 lg:p-6 shadow-2xl space-y-4">
+        {/* Header & Quick Coverage Scheme Switcher */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#162A33] pb-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span
+                className="w-2.5 h-2.5 rounded-full animate-pulse"
+                style={{ backgroundColor: activeCoverage.color }}
+              />
+              <span className="text-xs font-mono font-bold uppercase tracking-wider" style={{ color: activeCoverage.color }}>
+                Defensive Secondary & Linebacker Shell
+              </span>
+            </div>
+            <h3 className="text-xl font-bold text-white font-display flex items-center gap-2.5">
+              <Shield className="w-5 h-5 text-teal-400" />
+              Coverage Drops & Assignments Breakdown
+            </h3>
+            <p className="text-xs text-slate-300 font-mono flex flex-wrap items-center gap-2 pt-0.5">
+              <span>Active Call: <strong className="text-white uppercase">{activeCoverage.name}</strong></span>
+              <span>·</span>
+              <span className="text-amber-300 font-bold">Signal: {activeCoverage.handSignal}</span>
+              <span>·</span>
+              <span className="text-slate-400">{activeCoverage.philosophy}</span>
+            </p>
+          </div>
+
+          {/* Quick Coverage Buttons (GREEN, BLUE, BLACK) */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setCoverageScheme('green')}
+              className={`px-3 py-2 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                coverageScheme === 'green'
+                  ? 'border-emerald-400 bg-emerald-950/80 text-emerald-300 ring-1 ring-emerald-400/50 shadow-md shadow-emerald-950/60'
+                  : 'border-[#162A33] bg-[#09151D] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
+            >
+              <span>👇 GREEN</span>
+              <span className="text-[10px] opacity-80">(Cover 3 Sky)</span>
+            </button>
+            <button
+              onClick={() => setCoverageScheme('blue')}
+              className={`px-3 py-2 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                coverageScheme === 'blue'
+                  ? 'border-sky-400 bg-sky-950/80 text-sky-300 ring-1 ring-sky-400/50 shadow-md shadow-sky-950/60'
+                  : 'border-[#162A33] bg-[#09151D] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
+            >
+              <span>👆 BLUE</span>
+              <span className="text-[10px] opacity-80">(Cover 2 Zone)</span>
+            </button>
+            <button
+              onClick={() => setCoverageScheme('black')}
+              className={`px-3 py-2 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                coverageScheme === 'black'
+                  ? 'border-amber-400 bg-amber-950/80 text-amber-300 ring-1 ring-amber-400/50 shadow-md shadow-amber-950/60'
+                  : 'border-[#162A33] bg-[#09151D] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
+            >
+              <span>👕 BLACK</span>
+              <span className="text-[10px] opacity-80">(Cover 1 Man)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Navigation Tabs */}
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#050C10] border border-[#162A33]">
+            <button
+              onClick={() => setCoverageRoleFilter('ALL')}
+              className={`px-3 py-1.5 rounded-lg font-mono font-bold transition-all cursor-pointer ${
+                coverageRoleFilter === 'ALL'
+                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              All Coverage Defenders (8)
+            </button>
+            <button
+              onClick={() => setCoverageRoleFilter('LB')}
+              className={`px-3 py-1.5 rounded-lg font-mono font-bold transition-all cursor-pointer ${
+                coverageRoleFilter === 'LB'
+                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Linebackers (4: SAM, MIKE, WILL, ROV)
+            </button>
+            <button
+              onClick={() => setCoverageRoleFilter('DB')}
+              className={`px-3 py-1.5 rounded-lg font-mono font-bold transition-all cursor-pointer ${
+                coverageRoleFilter === 'DB'
+                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Defensive Backs (4: LCB, RCB, FS, SS)
+            </button>
+          </div>
+
+          <div className="text-slate-400 font-mono text-[11px] hidden sm:block">
+            Click any defender to highlight drop & landmark on the chalkboard
+          </div>
+        </div>
+
+        {/* 8 Defender Assignment Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {activeCoverage.playerAssignments
+            .filter((assign) => coverageRoleFilter === 'ALL' || assign.group === coverageRoleFilter)
+            .map((assign) => {
+              const p = DEFENSE_PLAYERS.find((d) => d.id === assign.playerId);
+              if (!p) return null;
+              const isSelected = selectedPlayerId === p.id;
+              const isBlitzing = blitzCall === p.id;
+
+              return (
+                <div
+                  key={assign.playerId}
+                  onClick={() => setSelectedPlayerId(p.id)}
+                  className={`p-4 rounded-xl border text-xs space-y-3 transition-all cursor-pointer flex flex-col justify-between ${
+                    isSelected
+                      ? 'border-teal-400 bg-[#0C1E29] ring-2 ring-teal-400/40 shadow-xl'
+                      : 'border-[#162A33] bg-[#09151D] hover:border-slate-600 hover:bg-[#0B1A24]'
+                  }`}
+                >
+                  <div className="space-y-2.5">
+                    {/* Card Top: Player ID badge, Group, Full Name */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono font-extrabold text-xs border ${
+                            isSelected
+                              ? 'bg-teal-400 text-slate-950 border-teal-300'
+                              : 'bg-[#050C10] text-teal-300 border-[#183644]'
+                          }`}
+                        >
+                          {assign.playerId}
+                        </span>
+                        <div>
+                          <span className="font-bold text-white text-xs block leading-tight font-display">
+                            {p.name}
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {assign.group === 'DB' ? 'Defensive Back' : 'Linebacker'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span
+                        className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border"
+                        style={{
+                          backgroundColor: `${activeCoverage.color}15`,
+                          borderColor: `${activeCoverage.color}40`,
+                          color: activeCoverage.color,
+                        }}
+                      >
+                        {assign.group}
+                      </span>
+                    </div>
+
+                    {/* Role / Assignment Name */}
+                    <div className="p-2 rounded-lg bg-[#050C10] border border-[#162A33] space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-slate-200">
+                          {assign.roleName}
+                        </span>
+                        {isBlitzing && (
+                          <span className="px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-700 text-[9px] font-mono font-bold">
+                            BLITZ CALL
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] font-mono text-teal-300 flex items-center justify-between">
+                        <span>Landmark: <strong className="text-white">{assign.landmarkLabel}</strong></span>
+                        <span className="text-amber-300 font-bold">{assign.depthYards}</span>
+                      </div>
+                    </div>
+
+                    {/* Technique & Leverage */}
+                    <div className="space-y-1 text-[11px] leading-relaxed">
+                      <div className="text-slate-300">
+                        <strong className="text-slate-400 font-mono text-[10px] uppercase block">Technique:</strong>
+                        {assign.technique}
+                      </div>
+                      <div className="text-slate-300">
+                        <strong className="text-slate-400 font-mono text-[10px] uppercase block">Key Read:</strong>
+                        <span className="text-teal-300 font-mono text-[10px]">{assign.keyRead}</span>
+                      </div>
+                    </div>
+
+                    {/* Coaching Point Quote */}
+                    <div className="p-2 rounded bg-black/40 border border-[#142630] text-[10.5px] text-slate-400 italic">
+                      “{assign.coachingPoint}”
+                    </div>
+                  </div>
+
+                  {/* Highlight on Chalkboard action */}
+                  <div className="pt-2 border-t border-[#162A33]/60 flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {isSelected ? '✓ Showing Drop' : 'Click to Focus'}
+                    </span>
+                    <button
+                      type="button"
+                      className={`px-2 py-1 rounded text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        isSelected
+                          ? 'bg-teal-500 text-slate-950 shadow'
+                          : 'bg-[#0E222D] text-teal-300 border border-teal-500/30 hover:bg-teal-950/60'
+                      }`}
+                    >
+                      <Target className="w-3 h-3" />
+                      Highlight
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
         </div>
       </div>
 

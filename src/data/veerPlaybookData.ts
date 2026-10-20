@@ -11,6 +11,7 @@ export type ZAlignmentType = 'wide' | 'wing';
 export type YAlignmentSide = 'right' | 'left';
 export type YAlignmentType = 'tight' | 'flex';
 export type FloodAction = 'none' | 'fake_right' | 'fake_left';
+export type PowerPassReceiverOption = 'whip' | 'arrow' | 'corner' | 'checkdown' | 'post';
 
 export interface Point {
   x: number; // Field coordinates: 0 to 1000 (500 is ball X)
@@ -74,14 +75,15 @@ export interface PlayDefinition {
     targetSide?: TargetSide,
     ySide?: YAlignmentSide,
     yType?: YAlignmentType,
-    floodFake?: FloodAction
+    floodFake?: FloodAction,
+    powerPassReceiver?: PowerPassReceiverOption
   ) => {
     paths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }>;
     ballCarrierSequence: {
       diveGive: boolean;
       qbKeep: boolean;
       pitchTriggered: boolean;
-      finalCarrier: 'LH' | 'RH' | 'QB' | 'YTE' | 'XTE';
+      finalCarrier: 'LH' | 'RH' | 'QB' | 'YTE' | 'XTE' | 'W' | string;
       outcomeLabel: string;
       expectedYards: string;
       coachingExplanation: string;
@@ -2022,7 +2024,19 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
       },
     ],
     positionRules: FLOOD_POSITION_RULES,
-    getOffensivePaths: (_front, _diveBehavior, _pitchBehavior, eleventhMode, xMode = 'tight_x', zSide = 'right', targetSide = 'right') => {
+    getOffensivePaths: (
+      _front,
+      _diveBehavior,
+      _pitchBehavior,
+      eleventhMode,
+      xMode = 'tight_x',
+      zSide = 'right',
+      targetSide = 'right',
+      _ySide = 'right',
+      _yType = 'tight',
+      _floodFake = 'none',
+      powerPassReceiver: PowerPassReceiverOption = 'whip'
+    ) => {
       const base = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
 
       const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
@@ -2103,17 +2117,58 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
 
       const paths = targetSide === 'left' ? mirrorPaths(rawPaths) : rawPaths;
 
+      let finalCarrier: 'LH' | 'RH' | 'QB' | 'YTE' | 'XTE' | 'W' = 'YTE';
+      let outcomeLabel = '';
+      let expectedYards = '';
+      let coachingExplanation = '';
+
+      if (powerPassReceiver === 'arrow') {
+        finalCarrier = targetSide === 'left' ? 'RH' : 'LH';
+        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO 2-BACK (Playside Arrow Flat)' : '36 FLOOD PASS TO 3-BACK (Playside Arrow Flat)';
+        expectedYards = '+12.0 Yds (Quick Rhythm Completion)';
+        coachingExplanation = targetSide === 'left'
+          ? '2 back chipped the defensive end and snapped into the left flat on the arrow route. Quick throw creates instant edge conflict on the overhang defender for a 12-yard strike.'
+          : '3 back chipped SDE and released arrow into the right flat. Quick throw creates instant edge conflict on the overhang defender for a 12-yard rhythm strike.';
+      } else if (powerPassReceiver === 'corner') {
+        finalCarrier = 'W';
+        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO Z (Deep Post Corner Touchdown)' : '36 FLOOD PASS TO Z (Deep Post Corner Touchdown)';
+        expectedYards = '+35.0 Yds (Deep Hole Shot / Over the Top)';
+        coachingExplanation =
+          'Z stemmed vertically 10 yards, sold an inside post fake to freeze the free safety, then accelerated to the corner pylon. QB stepped into a clean pocket and dropped the ball over the cornerback into the end zone.';
+      } else if (powerPassReceiver === 'checkdown') {
+        finalCarrier = targetSide === 'left' ? 'LH' : 'RH';
+        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO 3-BACK (Backside Flat Checkdown)' : '36 FLOOD PASS TO 2-BACK (Backside Flat Checkdown)';
+        expectedYards = '+9.0 Yds (Safety Valve Checkdown)';
+        coachingExplanation = targetSide === 'left'
+          ? '3 back stone-walled the backside DE for a disciplined 2-count before peeling out into the backside flat as the safety valve for a 9-yard positive gain.'
+          : '2 back stone-walled the backside DE for a disciplined 2-count before peeling out into the backside flat as the safety valve for a 9-yard positive gain.';
+      } else if (powerPassReceiver === 'post') {
+        finalCarrier = targetSide === 'left' ? 'YTE' : 'XTE';
+        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO Y (Backside Deep Post)' : '36 FLOOD PASS TO X (Backside Deep Post)';
+        expectedYards = '+28.0 Yds (Backside Isolated Post Shot)';
+        coachingExplanation = targetSide === 'left'
+          ? 'Y attacked outside leverage of the cornerback to turn his hips, then broke across the deep middle behind linebackers biting on power fake for 28 yards.'
+          : 'X attacked outside leverage of the cornerback to turn his hips, then broke across the deep middle behind linebackers biting on power fake for 28 yards.';
+      } else {
+        // 'whip' (default 2nd read)
+        finalCarrier = targetSide === 'left' ? 'XTE' : 'YTE';
+        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO X (7-Yd Whip Out)' : '36 FLOOD PASS TO Y (7-Yd Whip Out)';
+        expectedYards = '+18.0 Yds (Sideline Whip Intermediate Strike)';
+        coachingExplanation = targetSide === 'left'
+          ? 'X drove 7 yards upfield, broke inside 2 steps, and snapped violently back to the left sideline. QB delivered in rhythm for an 18-yard intermediate strike.'
+          : 'Y drove 7 yards upfield, broke inside 2 steps to freeze the overhang defender, and snapped violently back to the sideline for an 18-yard intermediate strike.';
+      }
+
       return {
         paths,
         ballCarrierSequence: {
           diveGive: false,
           qbKeep: false,
           pitchTriggered: false,
-          finalCarrier: targetSide === 'left' ? 'XTE' : 'YTE',
-          outcomeLabel: targetSide === 'left' ? '35 FLOOD PASS TO X (7-Yd Whip Out)' : '36 FLOOD PASS TO Y (7-Yd Whip Out)',
-          expectedYards: targetSide === 'left' ? '+18.0 Yds (Double Tight Left 35 Flood)' : '+18.0 Yds (Double Tight Right 36 Flood)',
-          coachingExplanation:
-            'Play-action flood concept off the power look. Backside guard pulled to backside DE, RT shifted inside, 3 back chipped SDE before releasing arrow, and 2 back attacked outside shoulder of backside DE for a 2 count before releasing to the flat. Y whipped open to the sideline while Z stretched deep on the post corner and X threatened the CB before cutting post.',
+          finalCarrier,
+          outcomeLabel,
+          expectedYards,
+          coachingExplanation,
         },
       };
     },
@@ -2342,7 +2397,8 @@ export function getActivePlayDefinition(
   yType: YAlignmentType = 'tight',
   zSide: ZAlignmentSide = 'right',
   zType: ZAlignmentType = 'wide',
-  floodFake: FloodAction = 'none'
+  floodFake: FloodAction = 'none',
+  powerPassReceiver: PowerPassReceiverOption = 'whip'
 ): PlayDefinition {
   const baseMap: Record<OffensiveConcept, PlayDefinition> = {
     inside_veer: VEER_PLAYBOOK[0],
@@ -2386,7 +2442,8 @@ export function getActivePlayDefinition(
         targetSide,
         ySide,
         yType,
-        floodFake
+        floodFake,
+        powerPassReceiver
       ),
   };
 }

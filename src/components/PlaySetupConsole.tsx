@@ -25,6 +25,7 @@ import {
   OffensiveConcept,
   PitchKeyBehavior,
   PlayDefinition,
+  PowerPassReceiverOption,
   TargetSide,
   VEER_PLAYBOOK,
   XPlayerMode,
@@ -54,6 +55,9 @@ interface PlaySetupConsoleProps {
   onChangeDiveBehavior: (behavior: DiveKeyBehavior) => void;
   pitchBehavior: PitchKeyBehavior;
   onChangePitchBehavior: (behavior: PitchKeyBehavior) => void;
+  powerPassReceiver?: PowerPassReceiverOption;
+  onChangePowerPassReceiver?: (receiver: PowerPassReceiverOption) => void;
+  onSelectPlayer?: (playerId: string) => void;
   // Simulation playback controls
   isPlaying: boolean;
   onTogglePlay: () => void;
@@ -99,6 +103,9 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
   onChangeDiveBehavior,
   pitchBehavior,
   onChangePitchBehavior,
+  powerPassReceiver = 'whip',
+  onChangePowerPassReceiver,
+  onSelectPlayer,
   isPlaying,
   onTogglePlay,
   progress,
@@ -833,21 +840,120 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                 </div>
               </div>
             ) : (
-              /* Power Pass */
-              <div className="space-y-3 text-xs">
+              /* Power Pass (36/35 Flood) */
+              <div className="space-y-3.5 text-xs">
+                {/* Receiver Option Selector */}
+                <div className="p-3.5 rounded-lg bg-[#060D11] border border-purple-500/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-purple-300 flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-purple-400" />
+                      Select Receiver Option (Progression Target)
+                    </span>
+                    <span className="text-[10px] text-purple-400 font-mono font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-purple-950/60 border border-purple-500/40">
+                      QB Read
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400">
+                    Choose which receiver the quarterback targets in the play-action pass rhythm:
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {[
+                      {
+                        id: 'arrow' as PowerPassReceiverOption,
+                        label: targetSide === 'left' ? '1) 2-Back Arrow (Flat)' : '1) 3-Back Arrow (Flat)',
+                        badge: '1st Read · Quick Rhythm',
+                        targetPid: targetSide === 'left' ? 'RH' : 'LH',
+                        yards: '+12.0 Yds',
+                        highlight: 'text-teal-300',
+                      },
+                      {
+                        id: 'whip' as PowerPassReceiverOption,
+                        label: targetSide === 'left' ? '2) X 7-Yd Whip Out' : '2) Y 7-Yd Whip Out',
+                        badge: '2nd Read · Primary (Sideline)',
+                        targetPid: targetSide === 'left' ? 'XTE' : 'YTE',
+                        yards: '+18.0 Yds',
+                        highlight: 'text-purple-300',
+                      },
+                      {
+                        id: 'corner' as PowerPassReceiverOption,
+                        label: '3) Z Post Corner',
+                        badge: '3rd Read · Deep Strike Shot',
+                        targetPid: 'W',
+                        yards: '+35.0 Yds TD',
+                        highlight: 'text-amber-300',
+                      },
+                      {
+                        id: 'checkdown' as PowerPassReceiverOption,
+                        label: targetSide === 'left' ? 'Check: 3-Back Flat' : 'Check: 2-Back Flat',
+                        badge: 'Safety Valve Checkdown',
+                        targetPid: targetSide === 'left' ? 'LH' : 'RH',
+                        yards: '+9.0 Yds',
+                        highlight: 'text-blue-300',
+                      },
+                      {
+                        id: 'post' as PowerPassReceiverOption,
+                        label: targetSide === 'left' ? 'Backside: Y Post' : 'Backside: X Post',
+                        badge: 'Backside Deep Post',
+                        targetPid: targetSide === 'left' ? 'YTE' : 'XTE',
+                        yards: '+28.0 Yds',
+                        highlight: 'text-rose-300',
+                      },
+                    ].map((rcv) => {
+                      const isSelected = powerPassReceiver === rcv.id;
+                      return (
+                        <button
+                          key={rcv.id}
+                          type="button"
+                          onClick={() => {
+                            onChangePowerPassReceiver?.(rcv.id);
+                            onSelectPlayer?.(rcv.targetPid);
+                          }}
+                          className={`p-2 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                            isSelected
+                              ? 'bg-purple-950/70 border-purple-400 text-white shadow-md shadow-purple-900/30'
+                              : 'bg-[#091318] border-[#162A33] text-slate-300 hover:border-purple-500/50 hover:bg-[#0c1a21]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className={`font-bold text-[11px] ${isSelected ? 'text-white' : 'text-slate-200'}`}>
+                              {rcv.label}
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-emerald-400">
+                              {rcv.yards}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400">
+                            <span className={isSelected ? rcv.highlight : 'text-slate-400'}>
+                              {rcv.badge}
+                            </span>
+                            {isSelected && (
+                              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-purple-500/30 text-purple-200 border border-purple-400/50 font-bold">
+                                ACTIVE TARGET
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Defensive Coverage Reaction */}
                 <div className="p-3 rounded-lg bg-[#060D11] border border-[#162A33] space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-purple-300 flex items-center gap-1.5">
                       <Zap className="w-3.5 h-3.5 text-purple-400" />
                       Coverage Reaction
                     </span>
-                    <span className="text-[10px] text-slate-400 font-mono">Play-Action</span>
+                    <span className="text-[10px] text-slate-400 font-mono">Play-Action Fake</span>
                   </div>
                   <div className="grid grid-cols-2 gap-1 p-1 bg-[#091318] border border-[#162A33] rounded-lg">
                     <button
                       type="button"
                       onClick={() => onChangeDiveBehavior('squeeze')}
-                      className={`py-1 px-1.5 rounded text-[11px] font-medium transition-colors ${
+                      className={`py-1 px-1.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
                         diveBehavior === 'squeeze'
                           ? 'bg-purple-600 text-white font-bold'
                           : 'text-slate-300 hover:text-white'
@@ -858,7 +964,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                     <button
                       type="button"
                       onClick={() => onChangeDiveBehavior('crash')}
-                      className={`py-1 px-1.5 rounded text-[11px] font-medium transition-colors ${
+                      className={`py-1 px-1.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
                         diveBehavior === 'crash'
                           ? 'bg-purple-600 text-white font-bold'
                           : 'text-slate-300 hover:text-white'
@@ -869,17 +975,32 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                   </div>
                 </div>
 
+                {/* Target Execution Details */}
                 <div className="p-3 rounded-lg bg-[#060D11] border border-teal-500/30 space-y-1.5">
-                  <span className="text-[10px] text-teal-400 font-mono uppercase">
-                    Target Progression
+                  <span className="text-[10px] text-teal-400 font-mono uppercase font-bold">
+                    Target Execution & Coaching Point
                   </span>
                   <p className="text-xs font-bold text-white">
-                    {diveBehavior === 'squeeze'
-                      ? '1) RB Arrow in Flat ➔ 2) Y on 7-Yd Whip Out'
-                      : '1) RB Arrow in Flat ➔ 2) Y Whip Out ➔ 3) Z Post Corner'}
+                    {powerPassReceiver === 'arrow'
+                      ? targetSide === 'left' ? '1) 2-Back Arrow Route into Left Flat (+12 Yds)' : '1) 3-Back Arrow Route into Right Flat (+12 Yds)'
+                      : powerPassReceiver === 'corner'
+                      ? '3) Z Post Corner Over Top (+35 Yds Touchdown)'
+                      : powerPassReceiver === 'checkdown'
+                      ? targetSide === 'left' ? 'Checkdown: 3-Back Peeling into Backside Flat (+9 Yds)' : 'Checkdown: 2-Back Peeling into Backside Flat (+9 Yds)'
+                      : powerPassReceiver === 'post'
+                      ? targetSide === 'left' ? 'Backside: Y Snapping Deep Post Across Middle (+28 Yds)' : 'Backside: X Snapping Deep Post Across Middle (+28 Yds)'
+                      : targetSide === 'left' ? '2) X 7-Yard Whip Out to Left Sideline (+18 Yds)' : '2) Y 7-Yard Whip Out to Right Sideline (+18 Yds)'}
                   </p>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
-                    1 fakes run into line, sets feet at 3-step depth, and reads progression: 1st read is RB on the Arrow route releasing into flat; 2nd read is Y snapping the 7-yard whip out to the sideline.
+                    {powerPassReceiver === 'arrow'
+                      ? 'Playside halfback chips the outside shoulder of the defensive end, then explodes on the arrow track to the flat. Immediate horizontal stress forces the perimeter overhang defender into a no-win spot.'
+                      : powerPassReceiver === 'corner'
+                      ? 'Z stems vertically 10 yards, fakes hard on the post move inside with head and shoulders to freeze the free safety, then breaks 45° to the corner pylon into the open honey-hole behind the cornerback.'
+                      : powerPassReceiver === 'checkdown'
+                      ? 'Backside halfback stones the backside defensive end for a 2-count pass protection block, then leaks into the backside flat as a safety valve when linebackers drop deep with receivers.'
+                      : powerPassReceiver === 'post'
+                      ? 'Backside split end attacks the cornerback’s outside leverage to flip his hips, then cuts across the deep middle into vacant space created by linebackers biting up on the run fake.'
+                      : 'Tight end drives 7 yards upfield into the defender’s chest, plants hard for 2 steps inside, and violently snaps the whip out to the sideline away from collapsing linebackers.'}
                   </p>
                 </div>
               </div>
@@ -887,7 +1008,23 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
           </div>
 
           <div className="pt-2 border-t border-[#162A33] text-[11px] text-slate-400 font-mono flex items-center justify-between">
-            <span>Read Point: {isOptionPlay ? '#1 Dive / #2 Pitch' : isPower ? 'LG Pull Track' : '1) RB Arrow ➔ 2) Y Whip'}</span>
+            <span>
+              Read Point: {isOptionPlay
+                ? '#1 Dive / #2 Pitch'
+                : isPower
+                ? (targetSide === 'left' ? 'RG Pull Track' : 'LG Pull Track')
+                : `Target: ${
+                    powerPassReceiver === 'arrow'
+                      ? '1) RB Arrow Flat'
+                      : powerPassReceiver === 'corner'
+                      ? '3) Z Post Corner'
+                      : powerPassReceiver === 'checkdown'
+                      ? 'Checkdown Flat'
+                      : powerPassReceiver === 'post'
+                      ? 'Backside Post'
+                      : '2) Y Whip Out'
+                  }`}
+            </span>
             <span className="text-teal-400">Progression</span>
           </div>
         </div>

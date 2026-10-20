@@ -27,6 +27,7 @@ import {
   OffensiveConcept,
   PitchKeyBehavior,
   Point,
+  PowerPassReceiverOption,
   TargetSide,
   VEER_PLAYBOOK,
   XPlayerMode,
@@ -60,6 +61,7 @@ export default function App() {
   const [pitchBehavior, setPitchBehavior] = useState<PitchKeyBehavior>('commit_qb');
   const [eleventhMode, setEleventhMode] = useState<EleventhPlayerMode>('wide_z');
   const [xMode, setXMode] = useState<XPlayerMode>('tight_x');
+  const [powerPassReceiver, setPowerPassReceiver] = useState<PowerPassReceiverOption>('whip');
 
   // Animation & playback state
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -83,7 +85,17 @@ export default function App() {
   const [isDefenseWristbandOpen, setIsDefenseWristbandOpen] = useState<boolean>(false);
   const [isSpecialTeamsPrintOpen, setIsSpecialTeamsPrintOpen] = useState<boolean>(false);
 
-  const activePlay = getActivePlayDefinition(concept, targetSide, xMode, 'right', 'tight', zSide, zType);
+  const activePlay = getActivePlayDefinition(
+    concept,
+    targetSide,
+    xMode,
+    'right',
+    'tight',
+    zSide,
+    zType,
+    'none',
+    powerPassReceiver
+  );
   const activeFront = DEFENSIVE_FRONTS[frontId];
   const baseOffense = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
   const simResult = activePlay.getOffensivePaths(
@@ -93,7 +105,11 @@ export default function App() {
     eleventhMode,
     xMode,
     zSide,
-    targetSide
+    targetSide,
+    'right',
+    'tight',
+    'none',
+    powerPassReceiver
   );
 
   const isLoopingRef = React.useRef(isLooping);
@@ -177,7 +193,17 @@ export default function App() {
       // Primary RB is RH on 20 Trap (right), LH on 30 Trap (left)
       setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
     } else if (playId.includes('flood') || playId === '324-power-pass') {
-      setSelectedPlayerId('W');
+      if (powerPassReceiver === 'arrow') {
+        setSelectedPlayerId(targetSide === 'left' ? 'RH' : 'LH');
+      } else if (powerPassReceiver === 'corner') {
+        setSelectedPlayerId('W');
+      } else if (powerPassReceiver === 'checkdown') {
+        setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
+      } else if (powerPassReceiver === 'post') {
+        setSelectedPlayerId(targetSide === 'left' ? 'YTE' : 'XTE');
+      } else {
+        setSelectedPlayerId(targetSide === 'left' ? 'XTE' : 'YTE');
+      }
     } else {
       // Inside Veer or Outside Veer: dive back is playside back
       setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
@@ -194,7 +220,17 @@ export default function App() {
       // Primary RB is RH on 20 Trap (right), LH on 30 Trap (left)
       setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
     } else if (newConcept === 'flood') {
-      setSelectedPlayerId('W');
+      if (powerPassReceiver === 'arrow') {
+        setSelectedPlayerId(targetSide === 'left' ? 'RH' : 'LH');
+      } else if (powerPassReceiver === 'corner') {
+        setSelectedPlayerId('W');
+      } else if (powerPassReceiver === 'checkdown') {
+        setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
+      } else if (powerPassReceiver === 'post') {
+        setSelectedPlayerId(targetSide === 'left' ? 'YTE' : 'XTE');
+      } else {
+        setSelectedPlayerId(targetSide === 'left' ? 'XTE' : 'YTE');
+      }
     } else {
       // Inside Veer or Outside Veer: dive back is playside back
       setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
@@ -391,6 +427,13 @@ export default function App() {
               onChangeDiveBehavior={(behavior) => setDiveBehavior(behavior)}
               pitchBehavior={pitchBehavior}
               onChangePitchBehavior={(behavior) => setPitchBehavior(behavior)}
+              powerPassReceiver={powerPassReceiver}
+              onChangePowerPassReceiver={(rcv) => {
+                setPowerPassReceiver(rcv);
+                setIsPlaying(false);
+                setProgress(0);
+              }}
+              onSelectPlayer={setSelectedPlayerId}
               isPlaying={isPlaying}
               onTogglePlay={handleTogglePlay}
               progress={progress}
@@ -533,6 +576,7 @@ export default function App() {
                   }
                   customArrows={customArrows}
                   onAddCustomArrow={(arr) => setCustomArrows((prev) => [...prev, arr])}
+                  powerPassReceiver={powerPassReceiver}
                 />
 
                 {/* Big Center Overlay Play Prompt if Stopped at Pre-Snap */}

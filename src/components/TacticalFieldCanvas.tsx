@@ -7,6 +7,7 @@ import {
   PitchKeyBehavior,
   PlayDefinition,
   Point,
+  PowerPassReceiverOption,
   TargetSide,
   XPlayerMode,
   ZAlignmentSide,
@@ -41,6 +42,7 @@ interface TacticalFieldCanvasProps {
   onAddCustomArrow: (arrow: CustomArrow) => void;
   fieldTheme?: 'night_turf' | 'chalkboard' | 'high_contrast';
   onChangeFieldTheme?: (theme: 'night_turf' | 'chalkboard' | 'high_contrast') => void;
+  powerPassReceiver?: PowerPassReceiverOption;
 }
 
 function interpolatePoints(points: Point[], progress: number): Point {
@@ -87,6 +89,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   onAddCustomArrow,
   fieldTheme = 'night_turf',
   onChangeFieldTheme,
+  powerPassReceiver = 'whip',
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [internalFieldTheme, setInternalFieldTheme] = useState<'night_turf' | 'chalkboard' | 'high_contrast'>(fieldTheme);
@@ -375,16 +378,59 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
       return interpolatePoints([currentOffensivePositions.C, currentOffensivePositions.QB], snapT);
     }
 
-    // Power Pass (Y Pop): Fake to LH, gather, throw in the air to YTE
+    // Power Pass (Play-Action Flood): Fake to back, gather drop, deliver pass to selected receiver
     if (isPowerPass) {
-      if (progress < 0.42) {
-        return currentOffensivePositions.QB;
+      let targetPlayerId = targetSide === 'left' ? 'XTE' : 'YTE';
+      let releaseProgress = 0.42;
+      let catchProgress = 0.76;
+      let loftAmount = 14;
+
+      if (powerPassReceiver === 'arrow') {
+        // Quick 1st read to flat: release at 0.38, arrives 0.64
+        targetPlayerId = targetSide === 'left' ? 'RH' : 'LH';
+        releaseProgress = 0.38;
+        catchProgress = 0.64;
+        loftAmount = 10;
+      } else if (powerPassReceiver === 'corner') {
+        // Deep 3rd read post-corner: release at 0.46, arrives 0.82
+        targetPlayerId = 'W';
+        releaseProgress = 0.46;
+        catchProgress = 0.82;
+        loftAmount = 26;
+      } else if (powerPassReceiver === 'checkdown') {
+        // Backside flat safety valve: release at 0.48, arrives 0.78
+        targetPlayerId = targetSide === 'left' ? 'LH' : 'RH';
+        releaseProgress = 0.48;
+        catchProgress = 0.78;
+        loftAmount = 12;
+      } else if (powerPassReceiver === 'post') {
+        // Backside deep post: release at 0.46, arrives 0.80
+        targetPlayerId = targetSide === 'left' ? 'YTE' : 'XTE';
+        releaseProgress = 0.46;
+        catchProgress = 0.80;
+        loftAmount = 22;
+      } else {
+        // 'whip' (default 2nd read): release at 0.42, arrives 0.76
+        targetPlayerId = targetSide === 'left' ? 'XTE' : 'YTE';
+        releaseProgress = 0.42;
+        catchProgress = 0.76;
+        loftAmount = 14;
       }
-      if (progress < 0.78) {
-        const passT = (progress - 0.42) / 0.36;
-        return interpolatePoints([currentOffensivePositions.QB, currentOffensivePositions.YTE], passT);
+
+      const qbPos = currentOffensivePositions.QB;
+      const receiverPos = currentOffensivePositions[targetPlayerId] || qbPos;
+
+      if (progress < releaseProgress) {
+        return qbPos;
       }
-      return currentOffensivePositions.YTE;
+      if (progress < catchProgress) {
+        const passT = (progress - releaseProgress) / (catchProgress - releaseProgress);
+        const basePt = interpolatePoints([qbPos, receiverPos], passT);
+        // Realistic pass flight loft arc in negative Y
+        const loft = Math.sin(passT * Math.PI) * loftAmount;
+        return { x: basePt.x, y: basePt.y - loft };
+      }
+      return receiverPos;
     }
 
     // Power (34 Power / 23 Power):
@@ -965,9 +1011,13 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
           } else if (pid === 'LH' || pid === 'RH') {
             fill = isFinalCarrier ? '#0D9488' : '#042F2E';
             stroke = isFinalCarrier ? '#99F6E4' : '#2DD4BF';
+            if (isPowerPass && isFinalCarrier) {
+              fill = '#581C87';
+              stroke = '#E9D5FF';
+            }
           } else if (meta.group === 'TE' || meta.group === 'WR') {
-            fill = isPowerPass && pid === 'YTE' ? '#581C87' : '#08252B';
-            stroke = isPowerPass && pid === 'YTE' ? '#E9D5FF' : '#5EEAD4';
+            fill = isPowerPass && isFinalCarrier ? '#581C87' : '#08252B';
+            stroke = isPowerPass && isFinalCarrier ? '#E9D5FF' : '#5EEAD4';
           }
 
           const isPullingGuard = (isPower || isCounter) && (targetSide === 'left' ? pid === 'RG' : pid === 'LG');
@@ -996,22 +1046,130 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                 <circle r="22" fill="none" stroke="#2DD4BF" strokeWidth="2.5" />
               )}
 
-              {/* Highlight Flood Targets: Read 1 is RB Arrow, Read 2 is Y on Whip */}
+              {/* Highlight Power Pass Targets & Selected Receiver Option */}
               {isPowerPass && (
                 <>
+                  {/* Read 1: Playside RB Arrow */}
                   {((targetSide === 'left' && pid === 'RH') || (targetSide !== 'left' && pid === 'LH')) && (
                     <>
-                      <circle r="24" fill="#14B8A6" fillOpacity="0.22" stroke="#14B8A6" strokeWidth="1.8" strokeDasharray="4 2" />
-                      <text x="0" y="-26" textAnchor="middle" fill="#5EEAD4" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
-                        READ 1: RB ARROW
+                      <circle
+                        r={isFinalCarrier ? 26 : 22}
+                        fill="#14B8A6"
+                        fillOpacity={isFinalCarrier ? 0.35 : 0.15}
+                        stroke={isFinalCarrier ? '#5EEAD4' : '#14B8A6'}
+                        strokeWidth={isFinalCarrier ? 2.5 : 1.5}
+                        strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
+                      />
+                      <text
+                        x="0"
+                        y="-26"
+                        textAnchor="middle"
+                        fill={isFinalCarrier ? '#99F6E4' : '#5EEAD4'}
+                        fontSize={isFinalCarrier ? '10' : '9'}
+                        fontWeight="800"
+                        className="font-mono-tabular"
+                      >
+                        {isFinalCarrier ? '★ TARGET: 1) RB ARROW' : '1: RB ARROW'}
                       </text>
                     </>
                   )}
+
+                  {/* Read 2: Playside TE/SE Whip Out */}
                   {((targetSide === 'left' && pid === 'XTE') || (targetSide !== 'left' && pid === 'YTE')) && (
                     <>
-                      <circle r="24" fill="#A855F7" fillOpacity="0.22" stroke="#A855F7" strokeWidth="1.8" strokeDasharray="4 2" />
-                      <text x="0" y="-26" textAnchor="middle" fill="#E9D5FF" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
-                        READ 2: Y WHIP OUT
+                      <circle
+                        r={isFinalCarrier ? 26 : 22}
+                        fill="#A855F7"
+                        fillOpacity={isFinalCarrier ? 0.35 : 0.15}
+                        stroke={isFinalCarrier ? '#E9D5FF' : '#A855F7'}
+                        strokeWidth={isFinalCarrier ? 2.5 : 1.5}
+                        strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
+                      />
+                      <text
+                        x="0"
+                        y="-26"
+                        textAnchor="middle"
+                        fill={isFinalCarrier ? '#F5D0FE' : '#E9D5FF'}
+                        fontSize={isFinalCarrier ? '10' : '9'}
+                        fontWeight="800"
+                        className="font-mono-tabular"
+                      >
+                        {isFinalCarrier ? `★ TARGET: 2) ${targetSide === 'left' ? 'X' : 'Y'} WHIP` : `2: ${targetSide === 'left' ? 'X' : 'Y'} WHIP`}
+                      </text>
+                    </>
+                  )}
+
+                  {/* Read 3: Z Post Corner */}
+                  {pid === 'W' && (
+                    <>
+                      <circle
+                        r={isFinalCarrier ? 26 : 22}
+                        fill="#F59E0B"
+                        fillOpacity={isFinalCarrier ? 0.35 : 0.12}
+                        stroke={isFinalCarrier ? '#FDE68A' : '#F59E0B'}
+                        strokeWidth={isFinalCarrier ? 2.5 : 1.5}
+                        strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
+                      />
+                      <text
+                        x="0"
+                        y="-26"
+                        textAnchor="middle"
+                        fill={isFinalCarrier ? '#FEF08A' : '#FCD34D'}
+                        fontSize={isFinalCarrier ? '10' : '9'}
+                        fontWeight="800"
+                        className="font-mono-tabular"
+                      >
+                        {isFinalCarrier ? '★ TARGET: 3) Z CORNER' : '3: Z CORNER'}
+                      </text>
+                    </>
+                  )}
+
+                  {/* Checkdown: Backside RB Flat */}
+                  {((targetSide === 'left' && pid === 'LH') || (targetSide !== 'left' && pid === 'RH')) && (
+                    <>
+                      <circle
+                        r={isFinalCarrier ? 26 : 20}
+                        fill="#3B82F6"
+                        fillOpacity={isFinalCarrier ? 0.35 : 0.12}
+                        stroke={isFinalCarrier ? '#BFDBFE' : '#3B82F6'}
+                        strokeWidth={isFinalCarrier ? 2.5 : 1.2}
+                        strokeDasharray={isFinalCarrier ? '5 2.5' : '3 2'}
+                      />
+                      <text
+                        x="0"
+                        y="-26"
+                        textAnchor="middle"
+                        fill={isFinalCarrier ? '#BFDBFE' : '#93C5FD'}
+                        fontSize={isFinalCarrier ? '10' : '8.5'}
+                        fontWeight="800"
+                        className="font-mono-tabular"
+                      >
+                        {isFinalCarrier ? '★ TARGET: CHECKDOWN' : 'CHECKDOWN'}
+                      </text>
+                    </>
+                  )}
+
+                  {/* Backside: Isolated Post */}
+                  {((targetSide === 'left' && pid === 'YTE') || (targetSide !== 'left' && pid === 'XTE')) && (
+                    <>
+                      <circle
+                        r={isFinalCarrier ? 26 : 20}
+                        fill="#F43F5E"
+                        fillOpacity={isFinalCarrier ? 0.35 : 0.12}
+                        stroke={isFinalCarrier ? '#FECDD3' : '#F43F5E'}
+                        strokeWidth={isFinalCarrier ? 2.5 : 1.2}
+                        strokeDasharray={isFinalCarrier ? '5 2.5' : '3 2'}
+                      />
+                      <text
+                        x="0"
+                        y="-26"
+                        textAnchor="middle"
+                        fill={isFinalCarrier ? '#FECDD3' : '#FDA4AF'}
+                        fontSize={isFinalCarrier ? '10' : '8.5'}
+                        fontWeight="800"
+                        className="font-mono-tabular"
+                      >
+                        {isFinalCarrier ? '★ TARGET: BACKSIDE POST' : 'POST'}
                       </text>
                     </>
                   )}
