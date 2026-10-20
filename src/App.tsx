@@ -50,7 +50,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<AppActiveTab>('offense');
 
   // OFFENSE STATE (Split Back Veer)
-  const [selectedPlayId, setSelectedPlayId] = useState<string>('21-inside-veer');
+  const [selectedPlayId, setSelectedPlayId] = useState<string>('22-inside-veer');
   const [concept, setConcept] = useState<OffensiveConcept>('inside_veer');
   const [targetSide, setTargetSide] = useState<TargetSide>('right');
   const [zSide, setZSide] = useState<ZAlignmentSide>('right');
@@ -166,15 +166,16 @@ export default function App() {
     setSelectedPlayId(playId);
     if (playId.includes('inside-veer')) setConcept('inside_veer');
     else if (playId.includes('outside-veer')) setConcept('outside_veer');
-    else if (playId.includes('counter')) setConcept('counter');
+    else if (playId.includes('trap') || playId.includes('counter')) setConcept('trap');
     else if (playId.includes('power-pass') || playId.includes('flood')) setConcept('flood');
     else if (playId.includes('power')) setConcept('power');
     setIsPlaying(false);
     setProgress(0);
     if (playId.includes('power') && !playId.includes('pass') && !playId.includes('flood')) {
       setSelectedPlayerId(targetSide === 'left' ? 'RG' : 'LG');
-    } else if (playId.includes('counter')) {
-      setSelectedPlayerId(targetSide === 'left' ? 'RH' : 'LH');
+    } else if (playId.includes('trap') || playId.includes('counter')) {
+      // Primary RB is RH on 20 Trap (right), LH on 30 Trap (left)
+      setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
     } else if (playId.includes('flood') || playId === '324-power-pass') {
       setSelectedPlayerId('W');
     } else {
@@ -189,8 +190,9 @@ export default function App() {
     setProgress(0);
     if (newConcept === 'power') {
       setSelectedPlayerId(targetSide === 'left' ? 'RG' : 'LG');
-    } else if (newConcept === 'counter') {
-      setSelectedPlayerId(targetSide === 'left' ? 'RH' : 'LH');
+    } else if (newConcept === 'trap' || newConcept === 'counter') {
+      // Primary RB is RH on 20 Trap (right), LH on 30 Trap (left)
+      setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
     } else if (newConcept === 'flood') {
       setSelectedPlayerId('W');
     } else {

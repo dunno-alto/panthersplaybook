@@ -4,7 +4,7 @@ export type PitchKeyBehavior = 'commit_qb' | 'feather_pitch';
 export type EleventhPlayerMode = 'wide_z' | 'wing_z';
 export type XPlayerMode = 'tight_x' | 'wide_x';
 
-export type OffensiveConcept = 'inside_veer' | 'outside_veer' | 'counter' | 'power' | 'flood';
+export type OffensiveConcept = 'inside_veer' | 'outside_veer' | 'trap' | 'counter' | 'power' | 'flood';
 export type TargetSide = 'right' | 'left';
 export type ZAlignmentSide = 'right' | 'left';
 export type ZAlignmentType = 'wide' | 'wing';
@@ -46,7 +46,7 @@ export interface PlayDefinition {
   name: string;
   subtitle: string;
   seriesTag: string;
-  playType: 'Triple Option' | 'Inside Read' | 'Misdirection Option' | 'Power' | 'Play-Action Pass';
+  playType: 'Triple Option' | 'Inside Read' | 'Misdirection Option' | 'Misdirection Trap' | 'Power' | 'Play-Action Pass';
   targetGap: string;
   primaryReadLabel: string;
   secondaryReadLabel: string;
@@ -168,18 +168,18 @@ export function formatOffensivePlayCall(
     ? (zSide === 'right' ? 'Wing Right' : 'Wing Left')
     : (zSide === 'right' ? 'Right' : 'Left');
 
-  // 3. Number & Concept: 21/31 Veer (B-Gap), 24/33 Veer (B-Gap), 34/23 Counter, 34/23 Power
+  // 3. Number & Concept: 22/31 Veer (Playside OG/OT Backside Hip), 24/33 Veer (B-Gap), 20/30 Trap, 34/23 Power
   let numberCode = '';
   let conceptName = '';
   if (concept === 'inside_veer') {
-    numberCode = targetSide === 'right' ? '21' : '31';
+    numberCode = targetSide === 'right' ? '22' : '31';
     conceptName = 'Veer';
   } else if (concept === 'outside_veer') {
     numberCode = targetSide === 'right' ? '24' : '33';
     conceptName = 'Veer';
-  } else if (concept === 'counter') {
-    numberCode = targetSide === 'right' ? '34' : '23';
-    conceptName = 'Counter';
+  } else if (concept === 'trap' || (concept as string) === 'counter') {
+    numberCode = targetSide === 'right' ? '20' : '30';
+    conceptName = 'Trap';
   } else if (concept === 'power') {
     numberCode = targetSide === 'right' ? '34' : '23';
     conceptName = 'Power';
@@ -637,17 +637,17 @@ export const INSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'BACK',
     split: 'Under Center',
     stance: 'Knees bent, thumbs together, scanning keys pre-snap.',
-    aimingPoint: 'Playside B-Gap Seam Mesh Point ➔ Attack Pitch Key Inside Shoulder',
-    footwork: '4:30 step, ride B-gap seam mesh with 2 (Playside Dive Back); read #1 Dive Key; if pulling, attack Pitch Key inside shoulder.',
+    aimingPoint: 'Seam Mesh Point off Backside Hip of Playside OG ➔ Attack Pitch Key Inside Shoulder',
+    footwork: '4:30 step, ride seam mesh with 2 (Playside Dive Back) off backside hip of playside OG; read #1 Dive Key; if pulling, attack Pitch Key inside shoulder.',
     assignmentsByFront: {
-      '5-3': 'Mesh at B-gap seam reading #1 4b-Tech DT; if pulling, attack #2 9-Tech inside shoulder with 3 keeping 4x4 pitch spacing.',
-      '4-4': 'Mesh at B-gap seam reading #1 5-Tech End; if pulling, attack #2 SOLB inside shoulder with 3 keeping 4x4 pitch spacing.',
-      '4-3': 'Mesh at B-gap seam reading #1 Strong End; if pulling, attack #2 Sam LB inside shoulder with 3 keeping 4x4 pitch spacing.',
-      '3-4': 'Mesh at B-gap seam reading #1 4-Tech End; if pulling, attack #2 Strong OLB inside shoulder with 3 keeping 4x4 pitch spacing.',
-      '6-2': 'Mesh at B-gap seam reading #1 4-Tech DT; if pulling, attack #2 9-Tech inside shoulder with 3 keeping 4x4 pitch spacing.',
-      '5-2': 'Mesh at B-gap seam reading #1 4-Tech DT; if pulling, attack #2 Monster inside shoulder with 3 keeping 4x4 pitch spacing.',
+      '5-3': 'Mesh at seam reading #1 4b-Tech DT; if pulling, attack #2 9-Tech inside shoulder with 3 keeping 4x4 pitch spacing.',
+      '4-4': 'Mesh at seam reading #1 5-Tech End; if pulling, attack #2 SOLB inside shoulder with 3 keeping 4x4 pitch spacing.',
+      '4-3': 'Mesh at seam reading #1 Strong End; if pulling, attack #2 Sam LB inside shoulder with 3 keeping 4x4 pitch spacing.',
+      '3-4': 'Mesh at seam reading #1 4-Tech End; if pulling, attack #2 Strong OLB inside shoulder with 3 keeping 4x4 pitch spacing.',
+      '6-2': 'Mesh at seam reading #1 4-Tech DT; if pulling, attack #2 9-Tech inside shoulder with 3 keeping 4x4 pitch spacing.',
+      '5-2': 'Mesh at seam reading #1 4-Tech DT; if pulling, attack #2 Monster inside shoulder with 3 keeping 4x4 pitch spacing.',
     },
-    coachingCue: '1-Back (QB): Mesh at B-gap seam, read dive key; if pulling, attack pitch key inside shoulder on 21 Veer.',
+    coachingCue: '1-Back (QB): Mesh at seam off backside hip of playside OG, read dive key; if pulling, attack pitch key inside shoulder on 22 Veer.',
     commonErrorsFix: 'Looking down at the football during the mesh ruins option reads.',
   },
   LH: {
@@ -667,7 +667,7 @@ export const INSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
       '6-2': 'Backside pitch back: sprint across backfield tracking outside hip of RT into 4x4-yard pitch spacing outside #2 9-Tech End.',
       '5-2': 'Backside pitch back: sprint across backfield tracking outside hip of RT into 4x4-yard pitch spacing outside #2 Monster.',
     },
-    coachingCue: 'Pitch Back (Backside): Track outside hip of playside tackle, keeping 4x4-yard pitch spacing on 21 Veer.',
+    coachingCue: 'Pitch Back (Backside): Track outside hip of playside tackle, keeping 4x4-yard pitch spacing on 22 Veer.',
     commonErrorsFix: 'Trailing too close behind the 1 on option pitches allows one defender to tackle both.',
   },
   RH: {
@@ -677,17 +677,17 @@ export const INSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'BACK',
     split: '4 yards deep, inside foot behind Right Guard outside heel',
     stance: '2-point stance facing straight ahead so defense gets no tip.',
-    aimingPoint: 'Inside Hip of Playside Tackle (RT) ➔ Attacking Vertically through B-Gap',
-    footwork: 'Downhill track aiming at inside hip of playside tackle (RT); soft pocket shelf; attack vertically through B-gap.',
+    aimingPoint: 'Backside Hip of Playside OG & OT ➔ Seam Attack',
+    footwork: 'Downhill track aiming directly at the backside hip of playside OG (RG) and playside OT (RT); soft pocket shelf; attack downhill through seam.',
     assignmentsByFront: {
-      '5-3': 'Playside dive back: aim at RT inside hip, attack vertically through B-gap downhill; hammer through crease.',
-      '4-4': 'Playside dive back: aim at RT inside hip, attack vertically through B-gap downhill; hammer through crease.',
-      '4-3': 'Playside dive back: aim at RT inside hip, attack vertically through B-gap downhill; hammer through crease.',
-      '3-4': 'Playside dive back: aim at RT inside hip, attack vertically through B-gap downhill; hammer through crease.',
-      '6-2': 'Playside dive back: aim at RT inside hip, attack vertically through B-gap downhill; hammer through crease.',
-      '5-2': 'Playside dive back: aim at RT inside hip, attack vertically through B-gap downhill; hammer through crease.',
+      '5-3': 'Playside dive back: aim for backside hip of RG & RT, attack downhill through seam off down blocks; hammer through crease.',
+      '4-4': 'Playside dive back: aim for backside hip of RG & RT, attack downhill through seam off down blocks; hammer through crease.',
+      '4-3': 'Playside dive back: aim for backside hip of RG & RT, attack downhill through seam off down blocks; hammer through crease.',
+      '3-4': 'Playside dive back: aim for backside hip of RG & RT, attack downhill through seam off down blocks; hammer through crease.',
+      '6-2': 'Playside dive back: aim for backside hip of RG & RT, attack downhill through seam off down blocks; hammer through crease.',
+      '5-2': 'Playside dive back: aim for backside hip of RG & RT, attack downhill through seam off down blocks; hammer through crease.',
     },
-    coachingCue: 'Dive Back (Playside): Aim at inside hip of playside tackle, attacking vertically through B-gap on 21 Veer.',
+    coachingCue: 'Dive Back (Playside): Aim for backside hip of playside OG and OT, attacking downhill through the seam on 22 Veer.',
     commonErrorsFix: 'Drifting outside toward C-gap destroys blocking angles on the inside veer.',
   },
   W: {
@@ -857,69 +857,73 @@ export const OUTSIDE_VEER_POSITION_RULES: Record<string, PlayerPositionRule> = {
   },
 };
 
-export const COUNTER_POSITION_RULES: Record<string, PlayerPositionRule> = {
+export const TRAP_POSITION_RULES: Record<string, PlayerPositionRule> = {
   C: {
     ...INSIDE_VEER_POSITION_RULES.C,
+    aimingPoint: 'Engage NT/DT Right in Front ➔ Seal to Backside',
+    footwork: 'Fire into the NT or DT aligned right in front of you, establish playside leverage, and drive/seal him to the backside to lock off the backside A-gap.',
     assignmentsByFront: {
-      '5-3': 'Block back on 0-Tech Nose; prevent A-gap penetration.',
-      '4-4': 'Block back on 3-Tech DT.',
-      '4-3': 'Block back on 3-Tech DT.',
-      '3-4': 'Block back on 0-Tech Nose.',
-      '6-2': 'Block back on 1-Tech Nose.',
-      '5-2': 'Block back on 0-Tech Nose.',
+      '5-3': 'Engage 0-Tech Nose right in front, drive and seal him to the backside away from the trap hole.',
+      '4-4': 'Engage 1-Tech/2i DT right in front, drive and seal him to the backside away from the trap hole.',
+      '4-3': 'Engage 1-Tech Nose right in front, drive and seal him to the backside away from the trap hole.',
+      '3-4': 'Engage 0-Tech Nose right in front, drive and seal him to the backside away from the trap hole.',
+      '6-2': 'Engage 1-Tech Nose right in front, drive and seal him to the backside away from the trap hole.',
+      '5-2': 'Engage 0-Tech Nose right in front, drive and seal him to the backside away from the trap hole.',
     },
-    coachingCue: 'Block back — protect the pulling guard\'s vacate.',
+    coachingCue: 'Center: Seal to the backside with the NT or DT right in front of you — wall off backside penetration.',
   },
   LG: {
     ...INSIDE_VEER_POSITION_RULES.LG,
-    aimingPoint: 'Pull Flat Right across Center — Kick Out Playside Edge Defender',
-    footwork: 'Drop-step flat, pull tight along Center/RG hips, kick out first defender outside RT down block.',
+    aimingPoint: 'Pull Flat Right behind Center — Kick Out Playside Trap Lineman',
+    footwork: 'Drop-step flat, pull tight along Center hips behind down block, kick out penetrated defensive tackle with inside shoulder.',
     assignmentsByFront: {
-      '5-3': 'Pull flat right across Center to kick out playside edge (9-Tech End).',
-      '4-4': 'Pull flat right across Center to kick out playside edge (5-Tech End).',
-      '4-3': 'Pull flat right across Center to kick out playside edge (7-Tech End).',
-      '3-4': 'Pull flat right across Center to kick out playside edge (OLB).',
-      '6-2': 'Pull flat right across Center to kick out playside edge (9-Tech End).',
-      '5-2': 'Pull flat right across Center to kick out playside edge (7-Tech End).',
+      '5-3': 'Pull flat right behind Center to kick out penetrated 4b-Tech DT.',
+      '4-4': 'Pull flat right behind Center to kick out penetrated 3-Tech DT.',
+      '4-3': 'Pull flat right behind Center to kick out penetrated 3-Tech DT.',
+      '3-4': 'Pull flat right behind Center to kick out penetrated 4-Tech End.',
+      '6-2': 'Pull flat right behind Center to kick out penetrated 4-Tech DT.',
+      '5-2': 'Pull flat right behind Center to kick out penetrated 4-Tech DT.',
     },
-    coachingCue: 'Pull flat down the line — kick out the edge with your inside shoulder.',
+    coachingCue: 'Pull flat down the line behind Center\'s down block — kick out the penetrated lineman to blow open the trap lane.',
     commonErrorsFix: 'Looping backwards creates penetration. Step flat along the line of scrimmage immediately.',
   },
   RG: {
     ...INSIDE_VEER_POSITION_RULES.RG,
+    aimingPoint: 'Release to Second Level — Seal Linebacker',
     assignmentsByFront: {
-      '5-3': 'Base down block on 4b-Tech DT; wash inside.',
-      '4-4': 'Base down block on 3-Tech DT; wash inside.',
-      '4-3': 'Base down block on 3-Tech DT; wash inside.',
-      '3-4': 'Base down block on 4-Tech End; wash inside.',
-      '6-2': 'Base down block on 4-Tech DT; wash inside.',
-      '5-2': 'Base down block on 4-Tech DT; wash inside.',
+      '5-3': 'Release inside past DT to climb onto Mike LB, letting DT penetrate into trap block.',
+      '4-4': 'Release past 3-Tech DT to climb onto Inside LB, letting DT penetrate into trap block.',
+      '4-3': 'Release past DT to climb onto Middle LB.',
+      '3-4': 'Release past 4-Tech to climb onto Inside LB.',
+      '6-2': 'Release inside to second level onto LB.',
+      '5-2': 'Release inside to second level onto LB.',
     },
-    coachingCue: 'Pin the defensive front inside with down block.',
+    coachingCue: 'Release inside to linebacker — let the defensive lineman penetrate into the trap block.',
   },
   RT: {
     ...INSIDE_VEER_POSITION_RULES.RT,
+    aimingPoint: 'Release to Linebacker / Seal Inside',
     assignmentsByFront: {
-      '5-3': 'Heavy down block on 4b-Tech DT; wash inside.',
-      '4-4': 'Heavy down block on 3-Tech DT; wash inside.',
-      '4-3': 'Heavy down block on 3-Tech DT; wash inside.',
-      '3-4': 'Heavy down block on 4-Tech End; wash inside.',
-      '6-2': 'Heavy down block on 4-Tech DT; wash inside.',
-      '5-2': 'Heavy down block on 4-Tech DT; wash inside.',
+      '5-3': 'Climb onto second-level linebacker; seal pursuit.',
+      '4-4': 'Climb onto second-level linebacker; seal pursuit.',
+      '4-3': 'Climb onto second-level linebacker; seal pursuit.',
+      '3-4': 'Climb onto second-level linebacker; seal pursuit.',
+      '6-2': 'Climb onto second-level linebacker; seal pursuit.',
+      '5-2': 'Climb onto second-level linebacker; seal pursuit.',
     },
-    coachingCue: 'Down block inside — collapse the edge for the counter tunnel.',
+    coachingCue: 'Climb onto second-level linebacker — seal backside pursuit.',
   },
   YTE: {
     ...INSIDE_VEER_POSITION_RULES.YTE,
     assignmentsByFront: {
-      '5-3': 'Down block on 9-Tech End or seal to second-level LB.',
+      '5-3': 'Down block on 9-Tech End or seal second-level LB.',
       '4-4': 'Down block on 5-Tech End.',
       '4-3': 'Down block on Strong End.',
       '3-4': 'Down block on Strong OLB.',
       '6-2': 'Down block on 9-Tech End.',
       '5-2': 'Down block on 7-Tech End.',
     },
-    coachingCue: 'Down block to seal the inside wall.',
+    coachingCue: 'Down block to seal the edge.',
   },
   LT: {
     ...INSIDE_VEER_POSITION_RULES.LT,
@@ -947,46 +951,46 @@ export const COUNTER_POSITION_RULES: Record<string, PlayerPositionRule> = {
   },
   QB: {
     ...INSIDE_VEER_POSITION_RULES.QB,
-    aimingPoint: 'Reverse Pivot ➔ Deep Backfield Mesh with 3 ➔ Bootleg Fake Left',
-    footwork: 'Reverse pivot, meet 3 deep in the backfield (not at LOS), seat ball firmly, bootleg fake away.',
+    aimingPoint: 'Snap ➔ 180° Spin Fake to Off RB on Sweep Behind ➔ Backfield Mesh with Primary RB',
+    footwork: 'Take snap, execute rapid 180° spin to fake to off RB sweeping behind 1, spin back to meet primary RB returning from pitch-fake step, seat ball into stomach at mesh, bootleg fake away.',
     assignmentsByFront: {
-      '5-3': 'Reverse pivot, hand off to 3 deep in the backfield on counter mesh, bootleg fake left.',
-      '4-4': 'Reverse pivot, hand off to 3 deep in the backfield on counter mesh, bootleg fake left.',
-      '4-3': 'Reverse pivot, hand off to 3 deep in the backfield on counter mesh, bootleg fake left.',
-      '3-4': 'Reverse pivot, hand off to 3 deep in the backfield on counter mesh, bootleg fake left.',
-      '6-2': 'Reverse pivot, hand off to 3 deep in the backfield on counter mesh, bootleg fake left.',
-      '5-2': 'Reverse pivot, hand off to 3 deep in the backfield on counter mesh, bootleg fake left.',
+      '5-3': 'Take snap, spin 180° fake to off RB on sweep behind 1, square to primary RB returning from pitch fake for backfield mesh handoff.',
+      '4-4': 'Take snap, spin 180° fake to off RB on sweep behind 1, square to primary RB returning from pitch fake for backfield mesh handoff.',
+      '4-3': 'Take snap, spin 180° fake to off RB on sweep behind 1, square to primary RB returning from pitch fake for backfield mesh handoff.',
+      '3-4': 'Take snap, spin 180° fake to off RB on sweep behind 1, square to primary RB returning from pitch fake for backfield mesh handoff.',
+      '6-2': 'Take snap, spin 180° fake to off RB on sweep behind 1, square to primary RB returning from pitch fake for backfield mesh handoff.',
+      '5-2': 'Take snap, spin 180° fake to off RB on sweep behind 1, square to primary RB returning from pitch fake for backfield mesh handoff.',
     },
-    coachingCue: 'Direct handoff deep in backfield — not a pass at the LOS.',
-  },
-  LH: {
-    ...INSIDE_VEER_POSITION_RULES.LH,
-    aimingPoint: 'Timing Step Left ➔ Deep Backfield Mesh ➔ Playside 4-Hole Cutback',
-    footwork: 'Take a timing step to the outside left before mesh is established, plant, come across into deep backfield mesh, take handoff from QB, and burst through 4-hole.',
-    assignmentsByFront: {
-      '5-3': 'Timing step left, take backfield handoff from QB, cut through 4-hole behind pulling LG.',
-      '4-4': 'Timing step left, take backfield handoff from QB, cut through 4-hole behind pulling LG.',
-      '4-3': 'Timing step left, take backfield handoff from QB, cut through 4-hole behind pulling LG.',
-      '3-4': 'Timing step left, take backfield handoff from QB, cut through 4-hole behind pulling LG.',
-      '6-2': 'Timing step left, take backfield handoff from QB, cut through 4-hole behind pulling LG.',
-      '5-2': 'Timing step left, take backfield handoff from QB, cut through 4-hole behind pulling LG.',
-    },
-    coachingCue: 'Timing step to the side first before mesh — take ball deep in backfield and cut vertical.',
-    commonErrorsFix: 'Rushing to the mesh before the timing step ruins pulling guard clearance. Take the deliberate step to the side.',
+    coachingCue: '1-Back: Take snap, spin 180° to fake to off RB on sweep behind 1, then square to primary RB for the mesh handoff.',
   },
   RH: {
     ...INSIDE_VEER_POSITION_RULES.RH,
-    aimingPoint: 'Playside Block / Seal Perimeter Alley',
-    footwork: 'Downhill step to fit edge defender or isolate linebacker on 4-hole.',
+    aimingPoint: 'Pitch-Fake Step Outside Right ➔ Cutback to 1 for Mesh ➔ Quick Trap Seam',
+    footwork: 'Take one large explosive step to your outside right as if running for a pitch, plant hard on outside foot, cut back sharply to 1 for the mesh handoff, then accelerate through the trap seam.',
     assignmentsByFront: {
-      '5-3': 'Seal playside perimeter or isolate linebacker.',
-      '4-4': 'Seal playside perimeter or isolate linebacker.',
-      '4-3': 'Seal playside perimeter or isolate linebacker.',
-      '3-4': 'Seal playside perimeter or isolate linebacker.',
-      '6-2': 'Seal playside perimeter or isolate linebacker.',
-      '5-2': 'Seal playside perimeter or isolate linebacker.',
+      '5-3': 'Pitch-fake step outside right, cut back to 1 for mesh, take handoff and burst through quick trap seam behind pulling LG.',
+      '4-4': 'Pitch-fake step outside right, cut back to 1 for mesh, take handoff and burst through quick trap seam behind pulling LG.',
+      '4-3': 'Pitch-fake step outside right, cut back to 1 for mesh, take handoff and burst through quick trap seam behind pulling LG.',
+      '3-4': 'Pitch-fake step outside right, cut back to 1 for mesh, take handoff and burst through quick trap seam behind pulling LG.',
+      '6-2': 'Pitch-fake step outside right, cut back to 1 for mesh, take handoff and burst through quick trap seam behind pulling LG.',
+      '5-2': 'Pitch-fake step outside right, cut back to 1 for mesh, take handoff and burst through quick trap seam behind pulling LG.',
     },
-    coachingCue: 'Seal the playside edge or hunt second-level backer.',
+    coachingCue: 'Primary RB: One large step as if running for pitch to outside, then come back to 1 for the mesh and burst through the trap.',
+    commonErrorsFix: 'Do not rush downhill immediately. The large pitch-fake step outside is critical to freeze linebackers and open the trap hole.',
+  },
+  LH: {
+    ...INSIDE_VEER_POSITION_RULES.LH,
+    aimingPoint: 'Sweep Behind 1 ➔ Take 180° Fake ➔ Attack B-Gap Off Strong OT Hip ➔ Climb to Backer',
+    footwork: 'Sprint on sweep track crossing tightly behind 1, take 180° spin fake, bend downhill through B-gap off Strong OT hip, and climb to block second-level linebacker.',
+    assignmentsByFront: {
+      '5-3': 'Sweep behind 1, take 180° spin fake, run through B-gap off Strong OT hip, and climb to Mike LB.',
+      '4-4': 'Sweep behind 1, take 180° spin fake, run through B-gap off Strong OT hip, and climb to Inside LB.',
+      '4-3': 'Sweep behind 1, take 180° spin fake, run through B-gap off Strong OT hip, and climb to Middle LB.',
+      '3-4': 'Sweep behind 1, take 180° spin fake, run through B-gap off Strong OT hip, and climb to Inside LB.',
+      '6-2': 'Sweep behind 1, take 180° spin fake, run through B-gap off Strong OT hip, and climb to second-level LB.',
+      '5-2': 'Sweep behind 1, take 180° spin fake, run through B-gap off Strong OT hip, and climb to second-level LB.',
+    },
+    coachingCue: 'Off RB (The Fake): Run through B-gap off Strong OT hip and climb to backer — sell the dive to freeze linebackers.',
   },
   W: {
     ...INSIDE_VEER_POSITION_RULES.W,
@@ -1000,6 +1004,8 @@ export const COUNTER_POSITION_RULES: Record<string, PlayerPositionRule> = {
     },
   },
 };
+
+export const COUNTER_POSITION_RULES = TRAP_POSITION_RULES;
 
 export const POWER_POSITION_RULES: Record<string, PlayerPositionRule> = {
   C: {
@@ -1375,24 +1381,24 @@ export const FLOOD_POSITION_RULES: Record<string, PlayerPositionRule> = {
 export const BASE_POSITION_RULES = INSIDE_VEER_POSITION_RULES;
 
 export const VEER_PLAYBOOK: PlayDefinition[] = [
-  // 1. INSIDE VEER (22 VEER / 31 VEER)
+  // 1. INSIDE VEER (22/31 VEER)
   {
-    id: '21-inside-veer',
-    code: '21 VEER',
-    name: '21 Veer or 31 Veer',
-    subtitle: 'Playside Tackle Releases Inside to Mike LB — Reads #1 DT & #2 Pitch Key',
+    id: '22-inside-veer',
+    code: '22 VEER',
+    name: '22/31 Veer',
+    subtitle: 'Dive Back Aims for Backside Hip of Playside OG & OT — Reads #1 DT & #2 Pitch Key',
     seriesTag: 'Core 01',
     playType: 'Triple Option',
-    targetGap: 'Playside B-Gap (Tackle Inside Hip) / Perimeter Alley',
+    targetGap: 'Playside Seam (Backside Hip of Playside OG/OT) / Perimeter Alley',
     primaryReadLabel: '#1 Dive Key (Playside DT)',
     secondaryReadLabel: '#2 Pitch Key (EMLOS End / Edge Force)',
     summary:
-      'The foundational 21/31 Veer triple option (21 Veer to the right, 31 Veer to the left). Dive Back (Playside) aims at the inside hip of the playside tackle, attacking vertically through B-gap. Pitch Back (Backside) tracks the outside hip of the playside tackle, keeping 4x4-yard pitch spacing. 1-Back (QB) meshes at the B-gap seam, reading the dive key; if #1 crashes with a full commit, 1 pulls along the backfield track and options #2; the pitch happens in the backfield (never a forward pitch) when #2 commits to 1.',
+      'The foundational 22/31 Veer triple option (22 Veer to the right, 31 Veer to the left). Dive Back (Playside) aims for the backside hip of the playside OG and OT, attacking downhill through the seam. Pitch Back (Backside) tracks the outside hip of the playside tackle, keeping 4x4-yard pitch spacing. 1-Back (QB) meshes at the seam off the backside hip of the playside OG, reading the dive key; if #1 crashes with a full commit, 1 pulls into the backfield and options #2; the pitch happens in the backfield (never a forward pitch) when #2 commits to 1.',
     whenToCall:
       'First play of the game and whenever the defense packs 8 or 9 players into the box to stop inside runs.',
     qbDecisionMatrix: {
       crashPull: 'If #1 Dive Key crashes with a full commit to tackle the dive back → 1 pulls the ball into the backfield and attacks the #2 pitch key along the backfield track.',
-      squeezeGive: 'If #1 Dive Key sits square, widens, or Bull Rushes → GIVE to playside dive back attacking vertically through B-gap.',
+      squeezeGive: 'If #1 Dive Key sits square, widens, or Bull Rushes → GIVE to playside dive back aiming for the backside hip of playside OG and OT.',
       pitchPhase: 'When #2 read commits to 1 in the backfield → 1 pitches backward/laterally to backside pitch back in the backfield (never a forward pitch); if #2 commits to 3 by feathering wide → 1 keeps and turns vertically upfield inside him.',
     },
     coachingPhases: [
@@ -1405,8 +1411,8 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
       {
         phase: 2,
         timeRange: [0.25, 0.55],
-        title: 'Phase 2: B-Gap Seam Mesh & Tackle Inside Hip Track',
-        detail: 'Playside dive back aims at inside hip of playside tackle, attacking vertically through B-gap. 1 meshes at B-gap seam reading #1.',
+        title: 'Phase 2: Seam Mesh & Backside Hip Track',
+        detail: 'Playside dive back aims for the backside hip of playside OG and OT, attacking downhill through the seam. 1 meshes at seam reading #1.',
       },
       {
         phase: 3,
@@ -1441,10 +1447,10 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
 
       const finalCarrier = diveGive ? 'RH' : pitchTriggered ? 'LH' : 'QB';
       const outcomeLabel = diveGive
-        ? 'GIVE TO 2 (21 Veer B-Gap Dive)'
+        ? 'GIVE TO 2 (22 Veer Seam Dive)'
         : pitchTriggered
-        ? 'PITCH TO 3 (21 Veer Backfield Pitch)'
-        : '1 KEEPER (21 Veer Inside Cut)';
+        ? 'PITCH TO 3 (22 Veer Backfield Pitch)'
+        : '1 KEEPER (22 Veer Inside Cut)';
 
       const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
         C: { role: 'block_scoop', points: [base.C, { x: 506, y: 350 }, { x: 488, y: 318 }] },
@@ -1460,52 +1466,52 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
             : [base.XTE, { x: 405, y: 325 }, { x: 486, y: 192 }],
         },
         W: { role: 'block_veer', points: [base.W, { x: base.W.x + 28, y: 335 }, { x: 742, y: 268 }] },
-        // Dive Back (Playside): Aims at inside hip of playside tackle (RT), attacking vertically through B-gap
+        // Dive Back (Playside): Aims for backside hip of playside OG (RG) and OT (RT), attacking downhill through seam
         RH: {
           role: 'dive',
           points: diveGive
             ? [
                 base.RH,
-                { x: 580, y: 445 }, // aims downhill at RT inside hip
-                { x: 584, y: 410 }, // meshes with 1 in backfield at RT inside hip
-                { x: 584, y: 350 }, // attacks vertically through B-gap across LOS
-                { x: 584, y: 250 }, // second level vertical acceleration
-                { x: 584, y: 150 }, // vertical breakaway finish
+                { x: 550, y: 442 }, // aims downhill directly at backside hip of playside OG/OT
+                { x: 544, y: 412 }, // meshes with 1 in backfield off backside hip of playside OG
+                { x: 546, y: 348 }, // creases downhill through seam across LOS
+                { x: 550, y: 245 }, // second level acceleration
+                { x: 552, y: 150 }, // secondary breakaway
               ]
             : [
                 base.RH,
-                { x: 580, y: 445 },
-                { x: 584, y: 410 }, // full commit tackle by crashing #1
-                { x: 584, y: 375 },
-                { x: 584, y: 360 },
-                { x: 584, y: 350 },
+                { x: 550, y: 442 },
+                { x: 544, y: 412 }, // full commit tackle by crashing #1 DT
+                { x: 544, y: 380 },
+                { x: 544, y: 360 },
+                { x: 544, y: 350 },
               ],
         },
-        // 1-Back (QB): Meshes at B-gap seam; if pulling, attacks #2 along backfield track; pitches in backfield when #2 commits to 1
+        // 1-Back (QB): Meshes at seam off backside hip of playside OG; if pulling, attacks #2 in backfield; pitches in backfield when #2 commits to 1
         QB: {
           role: 'qb',
           points: diveGive
             ? [
                 base.QB,
-                { x: 574, y: 430 }, // steps to B-gap seam
-                { x: 578, y: 410 }, // meshes at B-gap seam beside Dive Back
-                { x: 625, y: 410 }, // carries out bootleg fake along backfield
+                { x: 538, y: 426 }, // steps to seam off backside hip of playside OG
+                { x: 542, y: 412 }, // meshes at seam beside Dive Back
+                { x: 620, y: 410 }, // carries out option fake along backfield
                 { x: 660, y: 395 },
                 { x: 685, y: 380 },
               ]
             : qbKeep
             ? [
                 base.QB,
-                { x: 574, y: 430 },
-                { x: 578, y: 410 }, // pulls ball at B-gap seam
+                { x: 538, y: 426 },
+                { x: 542, y: 412 }, // pulls ball at seam
                 { x: 630, y: 404 }, // attacks #2 along backfield track; #2 commits wide to 3-back
                 { x: 630, y: 280 }, // 1 plants and cuts vertically upfield inside #2
                 { x: 630, y: 155 }, // bursts through seam
               ]
             : [
                 base.QB,
-                { x: 574, y: 430 },
-                { x: 578, y: 410 }, // pulls ball at B-gap seam
+                { x: 538, y: 426 },
+                { x: 542, y: 412 }, // pulls ball at seam
                 { x: 630, y: 404 }, // attacks #2 along backfield track; #2 commits to 1 in backfield
                 { x: 634, y: 404 }, // pitches ball in backfield and absorbs tackle
                 { x: 636, y: 404 },
@@ -1544,26 +1550,26 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
           pitchTriggered,
           finalCarrier: targetSide === 'left' ? (finalCarrier === 'RH' ? 'LH' : finalCarrier === 'LH' ? 'RH' : 'QB') : finalCarrier,
           outcomeLabel: targetSide === 'left'
-            ? (diveGive ? 'GIVE TO 3 (31 Veer B-Gap Dive)' : pitchTriggered ? 'PITCH TO 2 (31 Veer Backfield Pitch)' : '1 KEEPER (31 Veer Inside Cut)')
+            ? (diveGive ? 'GIVE TO 3 (31 Veer Seam Dive)' : pitchTriggered ? 'PITCH TO 2 (31 Veer Backfield Pitch)' : '1 KEEPER (31 Veer Inside Cut)')
             : outcomeLabel,
-          expectedYards: diveGive ? '+7.0 Yds (Vertical B-Gap Seam)' : pitchTriggered ? '+14.5 Yds (Perimeter Sideline Break)' : '+9.5 Yds (Inside Shoulder Seam)',
+          expectedYards: diveGive ? '+7.0 Yds (Vertical Seam)' : pitchTriggered ? '+14.5 Yds (Perimeter Sideline Break)' : '+9.5 Yds (Inside Shoulder Seam)',
           coachingExplanation: diveGive
             ? (diveBehavior === 'upfield'
-              ? '#1 Dive Key executed a Bull Rush into the line — 1 leaves ball in stomach of playside dive back attacking vertically through the B-gap into the secondary.'
-              : 'Playside dive back aimed at inside hip of playside tackle and attacked vertically through the B-gap. #1 Dive Key sat/widened, so 1 gave the ball cleanly.')
+              ? '#1 Dive Key executed a Bull Rush into the line — 1 leaves ball in stomach of playside dive back aiming for the backside hip of playside OG and OT.'
+              : 'Playside dive back aimed for the backside hip of playside OG and OT and attacked downhill through the seam. #1 Dive Key sat/widened, so 1 gave the ball cleanly.')
             : pitchTriggered
-            ? '#1 Dive Key crashed with a full commit on the B-gap dive. 1 pulled into the backfield. When #2 Pitch Key committed to 1 in the backfield, 1 pitched cleanly backward/laterally in the backfield to the 4x4 pitch back, who secured it before exploding down the sideline.'
-            : '#1 Dive Key crashed with a full commit on the B-gap dive. 1 pulled into the backfield. When #2 Pitch Key committed to the 3-back by feathering wide, 1 planted in the backfield and cut vertically upfield inside him.',
+            ? '#1 Dive Key crashed with a full commit on the dive. 1 pulled into the backfield. When #2 Pitch Key committed to 1 in the backfield, 1 pitched cleanly backward/laterally in the backfield to the 4x4 pitch back, who secured it before exploding down the sideline.'
+            : '#1 Dive Key crashed with a full commit on the dive. 1 pulled into the backfield. When #2 Pitch Key committed to the 3-back by feathering wide, 1 planted in the backfield and cut vertically upfield inside him.',
         },
       };
     },
   },
 
-  // 2. OUTSIDE VEER (24 VEER / 33 VEER)
+  // 2. OUTSIDE VEER (24/33 VEER)
   {
     id: '24-outside-veer',
     code: '24 VEER',
-    name: '24 Veer or 33 Veer',
+    name: '24/33 Veer',
     subtitle: 'RT & RG Down-Block Interior — Y Releases Inside to LB — Reads EMLOS (#1) & Corner (#2)',
     seriesTag: 'Core 02',
     playType: 'Triple Option',
@@ -1732,96 +1738,109 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
     },
   },
 
-  // 3. COUNTER (23 COUNTER / 34 COUNTER)
+  // 3. TRAP (20/30 TRAP)
   {
-    id: '34-counter',
-    code: '34 COUNTER',
-    name: '23 Counter or 34 Counter',
-    subtitle: 'Runner Takes Timing Step to Side Before Mesh — Direct Handoff in Deep Backfield (No Pass at LOS) — Behind Pulling Guard',
+    id: '20-trap',
+    code: '20 TRAP',
+    name: '20/30 Trap',
+    subtitle: 'Center Seals NT/DT to Backside — 1 Spins 180° Fake — Fake Runs Through B-Gap Off Strong OT Hip to Backer — Primary RB Pitch-Fake Step & Mesh',
     seriesTag: 'Core 03',
-    playType: 'Misdirection Option',
-    targetGap: 'Playside 4-Hole / 3-Hole (Off-Tackle Cutback)',
-    primaryReadLabel: 'No Read — Pulling Guard Kickout Collision',
-    secondaryReadLabel: 'Linebacker Flow / Cutback Seam',
+    playType: 'Misdirection Trap',
+    targetGap: 'Playside 0-Hole / A-Gap Quick Trap',
+    primaryReadLabel: 'Center Backside Seal & Pulling Guard Trap Kickout',
+    secondaryReadLabel: 'Interior DL Penetration / LB Flow',
     summary:
-      'The classic Split Back 23 Counter or 34 Counter misdirection run. The ball runner (3 / LH on 34 Counter; 2 / RH on 23 Counter) takes a deliberate timing step to the outside before the backfield mesh is established, freezing the linebackers. The runner meets the QB in the deep backfield (well behind the LOS, not as a pass at the LOS) to secure the direct handoff, then accelerates through the off-tackle hole behind the pulling Guard\'s kickout block.',
+      'The signature 20/30 Trap misdirection play (20 Trap to the right, 30 Trap to the left). The Center engages the NT or DT right in front of him and seals him to the backside. 1-back takes the snap and spins 180 degrees to fake to the off RB sweeping behind 1. The fake runner continues downhill running through the B-gap off the Strong OT hip and climbs to block the linebacker. Meanwhile, the primary RB takes one large step as if running for a pitch to his outside, then comes back to 1 for the mesh handoff and explodes through the trap seam behind the pulling Guard\'s kickout block.',
     whenToCall:
-      'When linebackers over-pursue the 22/31 Veer action or flow hard to the perimeter.',
+      'When defensive tackles penetrate aggressively upfield or linebackers flow hard to outside veer/pitch flow.',
     qbDecisionMatrix: {
-      crashPull: 'No pass or option pitch at the LOS — direct handoff deep in the backfield. QB reverse-pivots into backfield and seats ball firmly to the runner.',
-      squeezeGive: 'Runner takes timing step to the outside before establishing mesh, secures direct handoff in deep backfield, and cuts North-South through the hole.',
-      pitchPhase: 'QB carries out naked bootleg fake away to freeze backside pursuit.',
+      crashPull: 'Center seals to the backside with the NT or DT right in front of him. Backside Guard pulls flat behind Center to kick out trap defender.',
+      squeezeGive: '1-back spins 180° to fake to off RB; the fake runs through the B-gap off the Strong OT hip and climbs to the linebacker. Primary RB takes pitch-fake step outside, then comes back to 1 for the mesh.',
+      pitchPhase: 'Primary RB secures direct mesh handoff from 1 and explodes through the quick trap seam into the secondary.',
     },
     coachingPhases: [
       {
         phase: 1,
         timeRange: [0, 0.25],
-        title: 'Phase 1: Timing Step & Linebacker Freeze',
-        detail: 'Runner takes a deliberate timing step to the outside before establishing the mesh, freezing linebackers.',
+        title: 'Phase 1: Center Backside Seal & 180° Spin Fake',
+        detail: 'Center seals to the backside with the NT or DT right in front of him. 1-back takes snap and executes a rapid 180° spin to fake to off RB sweeping behind 1.',
       },
       {
         phase: 2,
-        timeRange: [0.25, 0.55],
-        title: 'Phase 2: Deep Backfield Mesh & Direct Handoff',
-        detail: 'QB reverse-pivots deep into backfield and seats ball firmly into runner\'s stomach deep behind LOS (never a pass at LOS).',
+        timeRange: [0.25, 0.50],
+        title: 'Phase 2: Fake B-Gap Track & Primary RB Pitch-Fake Step',
+        detail: 'The fake runner attacks downhill running through the B-gap off the Strong OT hip and climbs to backer. Primary RB takes one large explosive step to his outside as if running for a pitch.',
       },
       {
         phase: 3,
-        timeRange: [0.55, 0.8],
-        title: 'Phase 3: Pulling Guard Kickout',
-        detail: 'Backside Guard skip-pulls flat across Center and kicks out the edge defender to blow open the off-tackle hole.',
+        timeRange: [0.50, 0.70],
+        title: 'Phase 3: Backfield Mesh & Trap Kickout',
+        detail: 'Primary RB comes back to 1 for the mesh handoff. Pulling Guard kicks out the penetrated lineman to blow open the trap lane.',
       },
       {
         phase: 4,
-        timeRange: [0.8, 1.0],
-        title: 'Phase 4: North-South Cutback',
-        detail: 'Runner plants inside the kickout and bursts into the secondary.',
+        timeRange: [0.70, 1.0],
+        title: 'Phase 4: North-South Trap Burst',
+        detail: 'Primary RB secures handoff and explodes vertically through the trap seam into the second level.',
       },
     ],
-    positionRules: COUNTER_POSITION_RULES,
+    positionRules: TRAP_POSITION_RULES,
     getOffensivePaths: (_front, _diveBehavior, _pitchBehavior, eleventhMode, xMode = 'tight_x', zSide = 'right', targetSide = 'right') => {
       const base = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
 
       const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
-        C: { role: 'block_down', points: [base.C, { x: 518, y: 354 }, { x: 526, y: 325 }] },
-        LG: { role: 'block_pull', points: [base.LG, { x: 508, y: 418 }, { x: 602, y: 412 }, { x: 652, y: 382 }, { x: 668, y: 340 }] },
-        RG: { role: 'block_down', points: [base.RG, { x: 536, y: 350 }, { x: 528, y: 320 }] },
-        RT: { role: 'block_down', points: [base.RT, { x: 574, y: 350 }, { x: 560, y: 316 }] },
-        YTE: { role: 'block_down', points: [base.YTE, { x: 616, y: 350 }, { x: 602, y: 320 }] },
-        LT: { role: 'block_scoop', points: [base.LT, { x: 418, y: 350 }, { x: 412, y: 318 }] },
+        // Center seals to the backside with the NT or DT right in front of him
+        C: { role: 'block_down', points: [base.C, { x: 496, y: 362 }, { x: 472, y: 338 }] },
+        // Backside Guard pulls flat across behind Center to trap/kick out penetrated lineman
+        LG: { role: 'block_pull', points: [base.LG, { x: 476, y: 405 }, { x: 520, y: 400 }, { x: 555, y: 365 }, { x: 565, y: 330 }] },
+        // Playside Guard releases inside to second level (LB) to let trap lineman penetrate
+        RG: { role: 'block_down', points: [base.RG, { x: 536, y: 350 }, { x: 528, y: 285 }] },
+        // Playside Tackle (Strong OT) climbs to second level / seals inside; fake runs off Strong OT inside hip
+        RT: { role: 'block_down', points: [base.RT, { x: 596, y: 350 }, { x: 605, y: 280 }] },
+        YTE: { role: 'block_down', points: [base.YTE, { x: 630, y: 350 }, { x: 615, y: 290 }] },
+        LT: { role: 'block_scoop', points: [base.LT, { x: 418, y: 355 }, { x: 428, y: 325 }] },
         XTE: {
           role: 'block_veer',
           points: xMode === 'wide_x'
-            ? [base.XTE, { x: 195, y: 340 }, { x: 245, y: 265 }]
-            : [base.XTE, { x: 415, y: 325 }, { x: 488, y: 195 }],
+            ? [base.XTE, { x: 200, y: 340 }, { x: 250, y: 260 }]
+            : [base.XTE, { x: 400, y: 330 }, { x: 470, y: 210 }],
         },
-        W: { role: 'block_veer', points: [base.W, { x: base.W.x + 22, y: 332 }, { x: 745, y: 265 }] },
-        // LH is runner on 34 Counter: takes timing step to the outside left before mesh is established, then deep backfield mesh with QB
-        LH: {
-          role: 'dive',
-          points: [
-            base.LH,
-            { x: 388, y: 490 }, // timing step to the outside left before mesh is established
-            { x: 488, y: 452 }, // deep backfield mesh with QB (handoff secured here behind LOS)
-            { x: 560, y: 420 }, // following pulling LG
-            { x: 618, y: 348 }, // bursting through 4-hole off-tackle
-            { x: 628, y: 165 }, // North-South breakaway
-          ],
-        },
+        W: { role: 'block_veer', points: [base.W, { x: base.W.x + 20, y: 330 }, { x: 740, y: 240 }] },
+        // 1-Back (QB): takes snap, spins 180° to fake to off RB (LH) on sweep behind 1, squares to primary RB (RH) for mesh handoff, then boots away
         QB: {
           role: 'qb',
           points: [
             base.QB,
-            { x: 494, y: 430 }, // reverse pivot deep into backfield
-            { x: 488, y: 452 }, // meeting runner deep in backfield for direct handoff
-            { x: 430, y: 450 }, // naked bootleg fake left
-            { x: 360, y: 420 },
-            { x: 300, y: 350 },
+            { x: 500, y: 424 }, // takes snap, spins 180° facing backfield
+            { x: 512, y: 422 }, // fakes to off RB (LH) sweeping behind 1 and turns back to primary RB
+            { x: 518, y: 418 }, // meets primary RB (RH) at mesh point for clean handoff
+            { x: 460, y: 435 }, // bootleg fake away to freeze backside contain
+            { x: 400, y: 415 },
           ],
         },
+        // Off RB (LH on 20 Trap, The Fake): runs sweep behind 1, takes 180° fake, runs through B-gap off Strong OT hip, and climbs to backer
+        LH: {
+          role: 'dive',
+          points: [
+            base.LH,
+            { x: 468, y: 448 }, // accelerates on sweep track
+            { x: 504, y: 430 }, // sweeps tightly behind 1 taking 180° spin fake
+            { x: 580, y: 395 }, // bends downhill aiming off the Strong OT (RT) hip
+            { x: 584, y: 340 }, // runs through B-gap off Strong OT hip across LOS
+            { x: 576, y: 220 }, // climbs to second level and locks onto linebacker
+          ],
+        },
+        // Primary RB (RH on 20 Trap): takes one large step as if running for pitch to outside, then comes back to 1 for the mesh
         RH: {
-          role: 'block_veer',
-          points: [base.RH, { x: 590, y: 420 }, { x: 645, y: 355 }, { x: 655, y: 280 }],
+          role: 'dive',
+          points: [
+            base.RH,
+            { x: 620, y: 478 }, // one large step as if running for a pitch to his outside right!
+            { x: 558, y: 445 }, // plants on outside foot and cuts sharply back inside toward 1
+            { x: 518, y: 418 }, // meets 1 for backfield mesh and receives direct handoff
+            { x: 522, y: 350 }, // bursts through trap seam opened by Center backside seal & pulling LG
+            { x: 525, y: 155 }, // explosive breakaway into the secondary
+          ],
         },
       };
 
@@ -1833,21 +1852,21 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
           diveGive: true,
           qbKeep: false,
           pitchTriggered: false,
-          finalCarrier: targetSide === 'left' ? 'RH' : 'LH',
-          outcomeLabel: targetSide === 'left' ? 'DIRECT HANDOFF TO 2 (23 Counter Cutback)' : 'DIRECT HANDOFF TO 3 (34 Counter Cutback)',
-          expectedYards: '+12.5 Yds (Misdirection Cutback)',
+          finalCarrier: targetSide === 'left' ? 'LH' : 'RH',
+          outcomeLabel: targetSide === 'left' ? 'DIRECT HANDOFF TO 3 (30 Trap)' : 'DIRECT HANDOFF TO 2 (20 Trap)',
+          expectedYards: '+11.5 Yds (Quick Trap Seam)',
           coachingExplanation:
-            'Runner took a deliberate timing step to the side before establishing the mesh, secured the direct handoff deep in the backfield (not as a pass at the LOS), and accelerated into the hole behind the pulling Guard.',
+            'The Center sealed to the backside with the NT/DT right in front of him. 1-back spun 180° to fake to the off RB, who ran through the B-gap off the Strong OT hip and climbed to the linebacker. Primary RB took one large pitch-fake step outside, then came back to 1 for the mesh, taking the handoff and bursting through the trap seam behind the pulling Guard\'s kickout block.',
         },
       };
     },
   },
 
-  // 4. POWER (34 POWER / 23 POWER)
+  // 4. POWER (34/23 POWER)
   {
     id: '34-power',
     code: '34 POWER',
-    name: '34 Power or 23 Power',
+    name: '34/23 Power',
     subtitle: 'Runner Takes Hesitation Step Before Running to Allow Guard to Clear Lane — Lead ISO Block',
     seriesTag: 'Core 04',
     playType: 'Power',
@@ -1855,7 +1874,7 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
     primaryReadLabel: 'No Read — Backside Guard Kickout Pull on Edge',
     secondaryReadLabel: 'Lead Blocker ISO on Playside Linebacker',
     summary:
-      'The classic Split Back 34 Power or 23 Power run. The ball runner (3 / LH on 34 Power; 2 / RH on 23 Power) takes a deliberate hesitation step in the backfield before running to allow the pulling Guard (LG on 34 Power; RG on 23 Power) to clear the running lane. 3 secures the direct handoff at 4:30 and presses downhill into the 4-hole (C-gap) behind LG\'s kickout block and RH\'s lead block.',
+      'The classic Split Back 34/23 Power run (34 Power to the right, 23 Power to the left). The ball runner (3 / LH on 34 Power; 2 / RH on 23 Power) takes a deliberate hesitation step in the backfield before running to allow the pulling Guard (LG on 34 Power; RG on 23 Power) to clear the running lane. 3 secures the direct handoff at 4:30 and presses downhill into the 4-hole (C-gap) behind LG\'s kickout block and RH\'s lead block.',
     whenToCall:
       'Short yardage (3rd & 2, Goal Line), bad weather when option pitching is risky, or whenever defensive ends play soft/feathered.',
     qbDecisionMatrix: {
@@ -1956,11 +1975,11 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
     },
   },
 
-  // 5. DOUBLE TIGHT RIGHT 36 FLOOD (PLAY-ACTION FLOOD PASS)
+  // 5. FLOOD (36/35 FLOOD)
   {
     id: '324-power-pass',
     code: '36 FLOOD',
-    name: 'Double Tight Right 36 Flood',
+    name: '36/35 Flood',
     subtitle: 'Play-Action Flood — Z Post Corner · Y 7-Yd Whip Out · 3 Back Block SDE & Release Arrow · 2 Back Block Backside DE (2 Count) & Release Flat · RG Pull to Backside DE · RT Inside Shift · X Post',
     seriesTag: 'Core 05',
     playType: 'Play-Action Pass',
@@ -1968,7 +1987,7 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
     primaryReadLabel: 'Progression: 1) RB Arrow ➔ 2) Y 7-Yd Whip Out',
     secondaryReadLabel: '3rd Read: Z Post Corner | Checkdown: 2 Flat / Backside: X Post',
     summary:
-      'Double Tight Right 36 Flood. Play-action flood concept off the power look. QB progression reads: 1) RB on Arrow route into the flat to challenge edge leverage immediately, 2) Y on 7-yd Whip Out snapping back out to the sideline, and 3) Z on Post Corner stretching deep coverage. 2 back protects backside then checks into flat. Backside guard pulls across to stone backside DE.',
+      'The 36/35 Flood play-action passing concept (36 Flood to the right, 35 Flood to the left) off the power look. QB progression reads: 1) RB on Arrow route into the flat to challenge edge leverage immediately, 2) Y on 7-yd Whip Out snapping back out to the sideline, and 3) Z on Post Corner stretching deep coverage. 2 back protects backside then checks into flat. Backside guard pulls across to stone backside DE.',
     whenToCall:
       'When the defense bites hard on 24 Power run action or stacks the box against Veer, leaving perimeter zones vulnerable to flood overload.',
     qbDecisionMatrix: {
@@ -2144,10 +2163,10 @@ export const PRACTICE_DRILLS: PracticeDrill[] = [
     durationMin: 10,
     playersInvolved: 'QBs, Left Halfbacks (LH), Right Halfbacks (RH), 1 Coach as Read Key',
     equipment: '3 Footballs, 3 Cones (B-gap & C-gap landmarks), 1 Coaching Towel',
-    objective: 'Master both the 21/31 Veer (B-Gap / #1 DT read, Tackle inside hip track) and Outside Veer (24/33 Veer / #1 EMLOS read) meshes without ever looking down at the football.',
+    objective: 'Master both the 22/31 Veer (Playside OG/OT Backside Hip track / #1 DT read) and Outside Veer (24/33 Veer / #1 EMLOS read) meshes without ever looking down at the football.',
     setupSteps: [
       'Set cones for Center, Right Guard, and Right Tackle splits.',
-      'Reps 1–5: 21/31 Veer track (Playside dive back aims at inside hip of playside tackle, attacking vertically through B-gap; 1 meshes at B-gap seam; backside back tracks tackle outside hip keeping 4x4 pitch spacing).',
+      'Reps 1–5: 22/31 Veer track (Playside dive back aims for backside hip of playside OG and OT, attacking downhill through seam; 1 meshes at seam off backside hip of OG; backside back tracks tackle outside hip keeping 4x4 pitch spacing).',
       'Reps 6–10: Outside Veer track (Playside dive back aims into Guard-Tackle B-gap seam on 24/33 Veer, Coach stands on #1 EMLOS outside RT, backside back works wider pitch trail).',
     ],
     coachingPoints: [
@@ -2190,9 +2209,9 @@ export const PRACTICE_DRILLS: PracticeDrill[] = [
     durationMin: 10,
     playersInvolved: 'QBs, Tight Ends (YTE), Wideouts (Z/X), Halfbacks (LH/RH)',
     equipment: '3 Footballs, 4 Sideline Cones, 2 Pass Rush Dummies',
-    objective: 'Train the Double Tight Right 36 Flood pass protection and rhythm passing: 1) RB arrow release to flat, 2) Y 7-yd whip out, 3) Z post-corner.',
+    objective: 'Train the 36/35 Flood pass protection and rhythm passing: 1) RB arrow release to flat, 2) Y 7-yd whip out, 3) Z post-corner.',
     setupSteps: [
-      'Align QB, LH, RH, YTE, Z, and X in Double Tight Right 36 Flood formation.',
+      'Align QB, LH, RH, YTE, Z, and X in 36/35 Flood formation.',
       'Dummy on SDE for 3-back to strike before releasing arrow to flat; backside dummy for RG pull pickup.',
       'On snap: Play-action fake, RG pulls to backside DE, 2-back attacks outside shoulder of backside DE for 2 count then releases to flat, RT shifts inside, 3-back releases on arrow to flat, Y drives 7 yards and whips out.',
     ],
@@ -2225,17 +2244,17 @@ function adaptPositionRulesForTargetSide(
 
     if (concept === 'inside_veer') {
       if (pid === 'LH') {
-        newAiming = 'Inside Hip of Playside Tackle (LT) ➔ Attacking Vertically through B-Gap';
-        newFootwork = 'Downhill track aiming at inside hip of playside tackle (LT); soft pocket shelf; attack vertically through B-gap.';
-        newCue = 'Dive Back (Playside): Aim at inside hip of playside tackle, attacking vertically through B-gap on 31 Veer.';
+        newAiming = 'Backside Hip of Playside OG (LG) & OT (LT) ➔ Seam Attack';
+        newFootwork = 'Downhill track aiming directly at the backside hip of playside OG (LG) and playside OT (LT); soft pocket shelf; attack downhill through seam.';
+        newCue = 'Dive Back (Playside): Aim for backside hip of playside OG and OT, attacking downhill through the seam on 31 Veer.';
       } else if (pid === 'RH') {
         newAiming = 'Track Outside Hip of Playside Tackle — 4x4-Yard Pitch Spacing';
         newFootwork = 'Crossover step left, track outside hip of playside tackle, keeping 4x4-yard pitch spacing outside left edge.';
         newCue = 'Pitch Back (Backside): Track outside hip of playside tackle, keeping 4x4-yard pitch spacing on 31 Veer.';
       } else if (pid === 'QB') {
-        newAiming = 'Playside Left B-Gap Seam Mesh Point ➔ Attack Pitch Key Inside Shoulder';
-        newFootwork = 'Mesh at left B-gap seam reading dive key; if pulling, attack pitch key inside shoulder.';
-        newCue = '1-Back (QB): Mesh at B-gap seam, read dive key; if pulling, attack pitch key inside shoulder on 31 Veer.';
+        newAiming = 'Playside Left Seam Mesh Point off Backside Hip of Playside OG ➔ Attack Pitch Key Inside Shoulder';
+        newFootwork = 'Mesh at left seam off backside hip of playside OG reading dive key; if pulling, attack pitch key inside shoulder.';
+        newCue = '1-Back (QB): Mesh at seam off backside hip of playside OG, read dive key; if pulling, attack pitch key inside shoulder on 31 Veer.';
       } else if (pid === 'LT') {
         newAiming = 'Inside Veer Release past #1 Dive Key to Will/Mike LB';
         newCue = 'Rip past #1 without contact directly to the second level.';
@@ -2271,21 +2290,25 @@ function adaptPositionRulesForTargetSide(
         newAiming = 'Direct Handoff to 2 at 4:30 ➔ Bootleg Fake Right';
         newCue = 'Seat ball deep into 2; sprint out naked bootleg fake right.';
       }
-    } else if (concept === 'counter') {
-      if (pid === 'RH') {
-        newAiming = 'Timing Step Right ➔ Deep Backfield Mesh with QB ➔ Left 3-Hole Cutback';
-        newFootwork = 'Take a timing step to the outside right before mesh is established, plant, come across into deep backfield mesh (not at LOS), secure handoff, and cut behind RG.';
-        newCue = '2-Back (Ball Runner): Timing step to the outside first before mesh — take direct handoff deep in backfield on 23 Counter.';
-      } else if (pid === 'LH') {
-        newAiming = 'Playside Lead / Seal Edge or Hunt Linebacker';
-        newCue = '3-Back: Downhill step to seal edge or isolate linebacker on 23 Counter.';
+    } else if (concept === 'trap' || concept === 'counter') {
+      if (pid === 'LH') {
+        newAiming = 'Pitch-Fake Step Outside Left ➔ Cutback to 1 for Mesh ➔ Left Trap Seam';
+        newFootwork = 'Take one large explosive step to your outside left as if running for a pitch, plant hard on outside foot, cut back sharply to 1 for the mesh handoff, then accelerate through the left trap seam.';
+        newCue = '3-Back (Primary RB): One large step as if running for pitch to outside, then come back to 1 for the mesh and burst through the trap on 30 Trap.';
+      } else if (pid === 'RH') {
+        newAiming = 'Sweep Behind 1 ➔ Take 180° Fake ➔ Attack Left B-Gap Off Strong LT Hip ➔ Climb to Backer';
+        newFootwork = 'Sprint on sweep track crossing tightly behind 1, take 180° spin fake, bend downhill through left B-gap off Strong LT hip, and climb to block second-level linebacker.';
+        newCue = '2-Back (The Fake): Sweep behind 1, take 180° spin fake, run through B-gap off Strong LT hip, and climb to backer on 30 Trap.';
+      } else if (pid === 'C') {
+        newAiming = 'Engage NT/DT Right in Front ➔ Seal to Right Backside';
+        newCue = 'Center: Seal to the backside with the NT or DT right in front of you — wall off backside penetration on 30 Trap.';
       } else if (pid === 'RG') {
-        newAiming = 'Pull Flat Left across Center — Kick Out Left Edge';
-        newCue = 'Backside RG: Pull flat left along line of scrimmage, kick out left edge defender.';
+        newAiming = 'Pull Flat Left behind Center — Kick Out Left Trap Lineman';
+        newCue = 'Backside RG: Pull flat left behind Center\'s down block, kick out penetrated lineman on 30 Trap.';
       } else if (pid === 'QB') {
-        newAiming = 'Reverse Pivot Right ➔ Deep Backfield Mesh with 2 ➔ Bootleg Fake Right';
-        newFootwork = 'Reverse pivot, meet 2 deep in the backfield (not at LOS), seat ball firmly, bootleg fake away.';
-        newCue = 'Direct handoff deep in backfield on 23 Counter — not a forward pass at the LOS.';
+        newAiming = 'Snap ➔ 180° Spin Fake to 2 on Sweep Behind ➔ Backfield Mesh with 3';
+        newFootwork = 'Take snap, execute rapid 180° spin to fake to 2 sweeping behind 1, spin back to meet 3 returning from pitch-fake step, hand off cleanly at mesh, bootleg fake away.';
+        newCue = '1-Back: Take snap, spin 180° to fake to 2 on sweep behind 1, then square to 3 for direct mesh handoff on 30 Trap.';
       }
     } else if (concept === 'flood') {
       if (pid === 'XTE') {
@@ -2324,6 +2347,7 @@ export function getActivePlayDefinition(
   const baseMap: Record<OffensiveConcept, PlayDefinition> = {
     inside_veer: VEER_PLAYBOOK[0],
     outside_veer: VEER_PLAYBOOK[1],
+    trap: VEER_PLAYBOOK[2],
     counter: VEER_PLAYBOOK[2],
     power: VEER_PLAYBOOK[3],
     flood: VEER_PLAYBOOK[4],

@@ -129,8 +129,8 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
       ? 'inside_veer'
       : selectedPlay.id.includes('outside-veer')
       ? 'outside_veer'
-      : selectedPlay.id.includes('counter')
-      ? 'counter'
+      : selectedPlay.id.includes('trap') || selectedPlay.id.includes('counter')
+      ? 'trap'
       : selectedPlay.id.includes('power-pass') || selectedPlay.id.includes('flood')
       ? 'flood'
       : 'power');
@@ -149,9 +149,11 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
   const isOptionPlay =
     activeConcept === 'inside_veer' ||
     activeConcept === 'outside_veer' ||
+    activeConcept === 'trap' ||
     activeConcept === 'counter' ||
     selectedPlay.playType === 'Triple Option' ||
     selectedPlay.playType === 'Misdirection Option' ||
+    selectedPlay.playType === 'Misdirection Trap' ||
     selectedPlay.playType === 'Inside Read';
 
   const isPower = activeConcept === 'power' || selectedPlay.playType === 'Power';
@@ -172,9 +174,10 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
       onSelectConcept(concept);
     } else {
       const playIdMap: Record<OffensiveConcept, string> = {
-        inside_veer: '21-inside-veer',
+        inside_veer: '22-inside-veer',
         outside_veer: '24-outside-veer',
-        counter: '34-counter',
+        trap: '20-trap',
+        counter: '20-trap',
         power: '34-power',
         flood: '324-power-pass',
       };
@@ -212,46 +215,46 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
   }[] = [
     {
       id: 'inside_veer',
-      name: '21 Veer or 31 Veer',
-      rightNumber: '21',
+      name: '22/31 Veer',
+      rightNumber: '22',
       leftNumber: '31',
-      callout: '21 Veer or 31 Veer',
-      tag: 'B-Gap Veer',
-      description: 'Playside Dive (Tackle Inside Hip) · Backside Pitch (4x4 Spacing) · 1 Attacks Pitch Key Inside Shoulder',
+      callout: '22/31 Veer',
+      tag: 'Core Veer',
+      description: 'Dive Back Aims for Backside Hip of Playside OG & OT · Backside Pitch (4x4 Spacing) · Backfield Pitch',
     },
     {
       id: 'outside_veer',
-      name: '24 Veer or 33 Veer',
+      name: '24/33 Veer',
       rightNumber: '24',
       leftNumber: '33',
-      callout: '24 Veer or 33 Veer',
+      callout: '24/33 Veer',
       tag: 'B-Gap Option',
       description: 'Playside Down-Block · B-Gap Dive (2/3) · Reads EMLOS (#1) & Force (#2)',
     },
     {
-      id: 'counter',
-      name: '23 Counter or 34 Counter',
-      rightNumber: '34',
-      leftNumber: '23',
-      callout: '23 Counter or 34 Counter',
-      tag: 'Timing Step',
-      description: 'Timing Step to Side · Deep Backfield Handoff (No Pass at LOS) · Pulling Guard',
+      id: 'trap',
+      name: '20/30 Trap',
+      rightNumber: '20',
+      leftNumber: '30',
+      callout: '20/30 Trap',
+      tag: 'Quick Trap',
+      description: 'Center Seals Backside NT/DT · Fake Runs B-Gap Off Strong OT to Backer · Primary RB Pitch-Fake & Mesh',
     },
     {
       id: 'power',
-      name: '34 Power or 23 Power',
+      name: '34/23 Power',
       rightNumber: '34',
       leftNumber: '23',
-      callout: '34 Power or 23 Power',
+      callout: '34/23 Power',
       tag: 'Hesitation Step',
       description: 'Hesitation Step to Let Guard Clear · Lead ISO Block · Direct Handoff',
     },
     {
       id: 'flood',
-      name: 'Double Tight 36 Flood',
+      name: '36/35 Flood',
       rightNumber: '36',
       leftNumber: '35',
-      callout: '36 Flood or 35 Flood',
+      callout: '36/35 Flood',
       tag: 'Play-Action Pass',
       description: 'Play-Action Fake · Progression: 1) RB Flat 2) Y Whip Out 3) Z Corner',
     },
@@ -536,7 +539,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                             {concept.name}
                           </p>
                           <p className="text-[11px] text-slate-400 truncate">
-                            Call: <span className="text-teal-300 font-mono font-bold">{activeNumber} {concept.id === 'counter' ? 'Counter' : concept.id === 'power' ? 'Power' : concept.id === 'flood' ? 'Flood' : 'Veer'}</span> · {concept.description}
+                            Call: <span className="text-teal-300 font-mono font-bold">{activeNumber} {concept.id === 'trap' || (concept.id as string) === 'counter' ? 'Trap' : concept.id === 'power' ? 'Power' : concept.id === 'flood' ? 'Flood' : 'Veer'}</span> · {concept.description}
                           </p>
                         </div>
                       </div>

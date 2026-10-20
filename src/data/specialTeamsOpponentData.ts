@@ -1363,3 +1363,409 @@ export function interpolatePlayerPath(
     y: p0.y + (p1.y - p0.y) * segT,
   };
 }
+
+/**
+ * Determines whether a player is the primary returner / ball carrier in a special teams play,
+ * and what progress fraction the ball is secured/caught.
+ */
+export function getSTCatchTiming(
+  unitId: SpecialTeamsUnitId,
+  schemeId: string,
+  playerId: string,
+  isOpponent: boolean
+): { isCarrier: boolean; catchProgress: number } {
+  if (!isOpponent) {
+    // Our team players
+    if (unitId === 'kick_return' && playerId === 'RTR1') {
+      return { isCarrier: true, catchProgress: schemeId === 'hands_team' ? 0.45 : 0.42 };
+    }
+    if (unitId === 'punt_return' && playerId === 'PR') {
+      return { isCarrier: true, catchProgress: 0.58 };
+    }
+    if (unitId === 'punt_coverage' && schemeId === 'p3_power_35' && playerId === 'P3') {
+      return { isCarrier: true, catchProgress: 0.15 };
+    }
+    if (unitId === 'fg_pat' && schemeId === 'holder_rollout_pass' && playerId === 'H') {
+      return { isCarrier: true, catchProgress: 0.15 };
+    }
+    if (unitId === 'fg_pat' && schemeId === 'holder_rollout_pass' && playerId === 'RW') {
+      return { isCarrier: true, catchProgress: 0.75 };
+    }
+    if (unitId === 'fg_pat' && schemeId === 'swinging_gate' && (playerId === 'G4' || playerId === 'RH')) {
+      return { isCarrier: true, catchProgress: 0.15 };
+    }
+  } else {
+    // Opponent players
+    if (unitId === 'kickoff' && (playerId === 'OPP_R1' || playerId === 'OPP_KR1' || playerId === 'R1')) {
+      return { isCarrier: true, catchProgress: schemeId === 'sky_kick_right' ? 0.55 : 0.45 };
+    }
+    if (unitId === 'punt_coverage' && (playerId === 'OPP_PR1' || playerId === 'PR1')) {
+      return { isCarrier: true, catchProgress: 0.58 };
+    }
+  }
+
+  return { isCarrier: false, catchProgress: 0 };
+}
+
+/**
+ * Calculates live player position, holding returners at their fielding spot until catch time
+ */
+export function getSTPlayerLivePosition(
+  player: {
+    id: string;
+    x: number;
+    y: number;
+    targetX?: number;
+    targetY?: number;
+    waypoints?: Array<{ x: number; y: number }>;
+  },
+  unitId: SpecialTeamsUnitId,
+  schemeId: string,
+  isOpponent: boolean,
+  progress: number
+): { x: number; y: number } {
+  const targetX = player.targetX ?? player.x;
+  const targetY = player.targetY ?? player.y;
+
+  const { isCarrier, catchProgress } = getSTCatchTiming(unitId, schemeId, player.id, isOpponent);
+
+  if (!isCarrier || catchProgress <= 0) {
+    // Standard player movement over full play progress 0..1
+    return interpolatePlayerPath(player.x, player.y, targetX, targetY, player.waypoints, progress);
+  }
+
+  // Returner / Ball carrier behavior:
+  // Before catch: returner stays at catch/fielding spot tracking the ball
+  if (progress <= catchProgress) {
+    return { x: player.x, y: player.y };
+  }
+
+  // After catch: returner advances along return route
+  const returnProgress = Math.min(1, (progress - catchProgress) / (1 - catchProgress));
+  return interpolatePlayerPath(player.x, player.y, targetX, targetY, player.waypoints, returnProgress);
+}
+
+/**
+ * Computes exact football position during flight and locks it to the returner during return
+ */
+export function getLiveSTBallPosition(
+  unitId: SpecialTeamsUnitId,
+  schemeId: string,
+  ballHash: 'left' | 'middle' | 'right',
+  ourPlayers: Array<{ id: string; x: number; y: number; targetX?: number; targetY?: number; waypoints?: Array<{ x: number; y: number }> }>,
+  opponents: Array<{ id: string; x: number; y: number; targetX?: number; targetY?: number; waypoints?: Array<{ x: number; y: number }> }>,
+  progress: number
+): { x: number; y: number; height: number; phaseLabel: string } {
+  const hashOffsetX = ballHash === 'left' ? -50 : ballHash === 'right' ? 50 : 0;
+
+  switch (unitId) {
+    case 'kick_return': {
+      const returner = ourPlayers.find((p) => p.id === 'RTR1') || { id: 'RTR1', x: 430, y: 560 };
+      const catchT = schemeId === 'hands_team' ? 0.45 : 0.42;
+
+      if (schemeId === 'hands_team') {
+        if (progress <= 0.12) {
+          return { x: 500, y: 140, height: 0, phaseLabel: 'Pre-Kick Alignment' };
+        }
+        if (progress < catchT) {
+          const t = (progress - 0.12) / (catchT - 0.12);
+          const curX = 500 + (returner.x - 500) * t;
+          const curY = 140 + (returner.y - 140) * t;
+          const height = 20 * Math.sin(t * Math.PI);
+          return { x: curX, y: curY, height, phaseLabel: 'Onside Squib' };
+        }
+        const retPos = getSTPlayerLivePosition(returner, unitId, schemeId, false, progress);
+        return { x: retPos.x, y: retPos.y, height: 0, phaseLabel: 'Secured on Turf' };
+      }
+
+      // wheel_left or wheel_right
+      if (progress <= 0.12) {
+        return { x: 500, y: 140, height: 0, phaseLabel: 'Pre-Kick Alignment' };
+      }
+      if (progress < catchT) {
+        const t = (progress - 0.12) / (catchT - 0.12);
+        const curX = 500 + (returner.x - 500) * t;
+        const curY = 140 + (returner.y - 140) * t;
+        const height = 75 * Math.sin(t * Math.PI);
+        return { x: curX, y: curY, height, phaseLabel: 'Kickoff Flight' };
+      }
+
+      // Return in progress: ball is carried directly by Returner Primary in lockstep!
+      const retPos = getSTPlayerLivePosition(returner, unitId, schemeId, false, progress);
+      const isSlipstream = progress >= 0.70;
+      return {
+        x: retPos.x,
+        y: retPos.y,
+        height: 0,
+        phaseLabel: isSlipstream ? 'Wedge Slipstream Break' : 'Wheel Cut with Ball',
+      };
+    }
+
+    case 'punt_return': {
+      const pr = ourPlayers.find((p) => p.id === 'PR') || { id: 'PR', x: 500, y: 540 };
+      const catchT = 0.58;
+
+      if (progress <= 0.15) {
+        const t = progress / 0.15;
+        return { x: 500, y: 230 + (110 - 230) * t, height: 10 * Math.sin(t * Math.PI), phaseLabel: 'Opponent Long Snap' };
+      }
+      if (progress <= 0.22) {
+        return { x: 500, y: 115, height: 0, phaseLabel: 'Punter Setup' };
+      }
+      if (progress < catchT) {
+        const t = (progress - 0.22) / (catchT - 0.22);
+        const curX = 500 + (pr.x - 500) * t;
+        const curY = 115 + (pr.y - 115) * t;
+        const height = 75 * Math.sin(t * Math.PI);
+        return { x: curX, y: curY, height, phaseLabel: 'Opponent Punt Flight' };
+      }
+
+      // Return in progress: ball is carried directly by Returner Primary in lockstep!
+      const prPos = getSTPlayerLivePosition(pr, unitId, schemeId, false, progress);
+      return {
+        x: prPos.x,
+        y: prPos.y,
+        height: 0,
+        phaseLabel: 'Punt Return Behind Wall',
+      };
+    }
+
+    case 'kickoff': {
+      const oppR1 = opponents.find((o) => o.id === 'OPP_R1' || o.id === 'OPP_KR1' || o.id === 'R1') || {
+        id: 'OPP_R1',
+        x: 580,
+        y: 90,
+      };
+
+      if (schemeId === 'onside_kick_right') {
+        if (progress <= 0.12) {
+          return { x: 500, y: 520, height: 0, phaseLabel: 'Pre-Kick Alignment' };
+        }
+        if (progress <= 0.45) {
+          const t = (progress - 0.12) / (0.45 - 0.12);
+          return {
+            x: 500 + (680 - 500) * t,
+            y: 520 + (480 - 520) * t,
+            height: 18 * Math.sin(t * Math.PI),
+            phaseLabel: 'Bounding Onside',
+          };
+        }
+        return { x: 680, y: 475, height: 0, phaseLabel: 'Turf Recovery' };
+      }
+
+      if (schemeId === 'sky_kick_right') {
+        const catchT = 0.55;
+        if (progress <= 0.12) {
+          return { x: 500, y: 520, height: 0, phaseLabel: 'Pre-Kick Alignment' };
+        }
+        if (progress < catchT) {
+          const t = (progress - 0.12) / (catchT - 0.12);
+          return {
+            x: 500 + (750 - 500) * t,
+            y: 520 + (230 - 520) * t,
+            height: 65 * Math.sin(t * Math.PI),
+            phaseLabel: 'Sky Pooch Arc',
+          };
+        }
+        const oppPos = getSTPlayerLivePosition(oppR1, unitId, schemeId, true, progress);
+        return { x: oppPos.x, y: oppPos.y, height: 0, phaseLabel: 'Fair Catch Downed' };
+      }
+
+      // base_kickoff: deep kick, opponent returns
+      const catchT = 0.45;
+      if (progress <= 0.12) {
+        return { x: 500, y: 520, height: 0, phaseLabel: 'Pre-Kick Alignment' };
+      }
+      if (progress < catchT) {
+        const t = (progress - 0.12) / (catchT - 0.12);
+        const curX = 500 + (oppR1.x - 500) * t;
+        const curY = 520 + (oppR1.y - 520) * t;
+        const height = 80 * Math.sin(t * Math.PI);
+        return { x: curX, y: curY, height, phaseLabel: 'Deep Kickoff Flight' };
+      }
+
+      // Opponent return in progress: ball is carried directly by OPP_R1 in lockstep!
+      const oppPos = getSTPlayerLivePosition(oppR1, unitId, schemeId, true, progress);
+      return {
+        x: oppPos.x,
+        y: oppPos.y,
+        height: 0,
+        phaseLabel: 'Opponent Return Advance',
+      };
+    }
+
+    case 'punt_coverage': {
+      if (schemeId === 'p3_power_35') {
+        const p3 = ourPlayers.find((p) => p.id === 'P3') || { id: 'P3', x: 535, y: 460 };
+        const catchT = 0.15;
+        if (progress <= catchT) {
+          const t = progress / catchT;
+          return {
+            x: 500 + (p3.x - 500) * t,
+            y: 390 + (p3.y - 390) * t,
+            height: 12 * Math.sin(t * Math.PI),
+            phaseLabel: 'Direct Snap to P3',
+          };
+        }
+        const p3Pos = getSTPlayerLivePosition(p3, unitId, schemeId, false, progress);
+        return { x: p3Pos.x, y: p3Pos.y, height: 0, phaseLabel: '5-Hole Power Run' };
+      }
+
+      if (schemeId === 'directional_left') {
+        if (progress <= 0.15) {
+          const t = progress / 0.15;
+          return { x: 500, y: 390 + (490 - 390) * t, height: 10 * Math.sin(t * Math.PI), phaseLabel: 'Long Snap' };
+        }
+        if (progress <= 0.22) {
+          return { x: 500, y: 485, height: 0, phaseLabel: 'Punter Setup' };
+        }
+        if (progress <= 0.65) {
+          const t = (progress - 0.22) / (0.65 - 0.22);
+          return {
+            x: 500 + (180 - 500) * t,
+            y: 485 + (110 - 485) * t,
+            height: 70 * Math.sin(t * Math.PI),
+            phaseLabel: 'Directional Coffin Corner',
+          };
+        }
+        return { x: 170, y: 110, height: 0, phaseLabel: 'Fair Catch Pin' };
+      }
+
+      // base_punt: opponent returns
+      const oppPR1 = opponents.find((o) => o.id === 'OPP_PR1' || o.id === 'PR1') || {
+        id: 'OPP_PR1',
+        x: 500,
+        y: 95,
+      };
+      const catchT = 0.58;
+
+      if (progress <= 0.15) {
+        const t = progress / 0.15;
+        return { x: 500, y: 390 + (490 - 390) * t, height: 10 * Math.sin(t * Math.PI), phaseLabel: 'Long Snap' };
+      }
+      if (progress <= 0.22) {
+        return { x: 500, y: 485, height: 0, phaseLabel: 'Punter Setup' };
+      }
+      if (progress < catchT) {
+        const t = (progress - 0.22) / (catchT - 0.22);
+        const curX = 500 + (oppPR1.x - 500) * t;
+        const curY = 485 + (oppPR1.y - 485) * t;
+        const height = 75 * Math.sin(t * Math.PI);
+        return { x: curX, y: curY, height, phaseLabel: 'High Hangtime Punt' };
+      }
+
+      // Opponent punt return in progress: ball is carried directly by OPP_PR1 in lockstep!
+      const oppPos = getSTPlayerLivePosition(oppPR1, unitId, schemeId, true, progress);
+      return {
+        x: oppPos.x,
+        y: oppPos.y,
+        height: 0,
+        phaseLabel: 'Opponent Punt Return',
+      };
+    }
+
+    case 'fg_pat': {
+      if (schemeId === 'holder_rollout_pass') {
+        const holder = ourPlayers.find((p) => p.id === 'H') || { id: 'H', x: 500 + hashOffsetX, y: 460 };
+        const rw = ourPlayers.find((p) => p.id === 'RW') || { id: 'RW', x: 760, y: 280 };
+
+        if (progress <= 0.15) {
+          const t = progress / 0.15;
+          return {
+            x: 500 + hashOffsetX,
+            y: 390 + (460 - 390) * t,
+            height: 8 * Math.sin(t * Math.PI),
+            phaseLabel: 'Snap to Holder',
+          };
+        }
+        if (progress <= 0.45) {
+          const hPos = getSTPlayerLivePosition(holder, unitId, schemeId, false, progress);
+          return { x: hPos.x, y: hPos.y, height: 0, phaseLabel: 'Holder Rollout' };
+        }
+        if (progress <= 0.75) {
+          const t = (progress - 0.45) / (0.75 - 0.45);
+          return {
+            x: 620 + (rw.x - 620) * t,
+            y: 420 + (rw.y - 420) * t,
+            height: 25 * Math.sin(t * Math.PI),
+            phaseLabel: 'Pass to RW',
+          };
+        }
+        const rwPos = getSTPlayerLivePosition(rw, unitId, schemeId, false, progress);
+        return { x: rwPos.x, y: rwPos.y, height: 0, phaseLabel: 'Touchdown Run' };
+      }
+
+      if (schemeId === 'swinging_gate') {
+        if (progress <= 0.15) {
+          const t = progress / 0.15;
+          return {
+            x: 500 + hashOffsetX,
+            y: 390 + (460 - 390) * t,
+            height: 6 * Math.sin(t * Math.PI),
+            phaseLabel: 'Snap to Gate',
+          };
+        }
+        const t = (progress - 0.15) / 0.85;
+        return {
+          x: 500 + (380 - 500) * t,
+          y: 460 + (300 - 460) * t,
+          height: 0,
+          phaseLabel: 'Perimeter Sweep',
+        };
+      }
+
+      // base_pat
+      if (progress <= 0.15) {
+        const t = progress / 0.15;
+        return {
+          x: 500 + hashOffsetX,
+          y: 390 + (460 - 390) * t,
+          height: 8 * Math.sin(t * Math.PI),
+          phaseLabel: 'Snap to Holder',
+        };
+      }
+      if (progress <= 0.28) {
+        return { x: 500 + hashOffsetX, y: 460, height: 0, phaseLabel: 'Holder Set' };
+      }
+      if (progress <= 0.75) {
+        const t = (progress - 0.28) / (0.75 - 0.28);
+        return {
+          x: 500 + hashOffsetX + (500 - (500 + hashOffsetX)) * t,
+          y: 460 + (60 - 460) * t,
+          height: 85 * Math.sin(t * Math.PI),
+          phaseLabel: 'Field Goal Flight',
+        };
+      }
+      return { x: 500, y: 35, height: 10, phaseLabel: 'Kick is Good!' };
+    }
+
+    case 'fg_block': {
+      if (progress <= 0.15) {
+        const t = progress / 0.15;
+        return { x: 500, y: 230 + (160 - 230) * t, height: 8 * Math.sin(t * Math.PI), phaseLabel: 'Opponent Snap to Holder' };
+      }
+      if (progress <= 0.28) {
+        return { x: 500, y: 160, height: 0, phaseLabel: 'Holder Sets Ball' };
+      }
+      if (progress <= 0.40) {
+        const t = (progress - 0.28) / (0.40 - 0.28);
+        return {
+          x: 500 + (510 - 500) * t,
+          y: 160 + (165 - 160) * t,
+          height: 12 * Math.sin(t * Math.PI),
+          phaseLabel: 'BLOCKED AT LAUNCH SPOT!',
+        };
+      }
+      const t = (progress - 0.40) / 0.60;
+      return {
+        x: 510 + (540 - 510) * t,
+        y: 165 + (210 - 165) * t,
+        height: 4 * Math.sin(t * Math.PI),
+        phaseLabel: 'Ball Loose / Recovered',
+      };
+    }
+
+    default:
+      return { x: 500, y: 390, height: 0, phaseLabel: 'Play Action' };
+  }
+}

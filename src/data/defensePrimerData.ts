@@ -368,7 +368,7 @@ export const COMMON_OFFENSE_FORMATIONS: Record<OffensiveFormationId, OffenseForm
       ROV: { x: 330, y: 345, sequentialTech: '2x2 Outside Contain', gap: 'Cutback / Bootleg', depthYards: 2, assignmentNote: '2x2 yards outside LOS Outside contain for cutback/reverse' },
       SAM: { x: 710, y: 345, sequentialTech: '2x2 Outside Contain (Pitch)', gap: 'Pitch Option', depthYards: 2, assignmentNote: '2x2 Outside Contain, take pitch on outside shoulder' },
       MIKE: { x: 565, y: 300, sequentialTech: '34 Tech (QB Keep)', gap: 'QB Keep Fit', depthYards: 4, assignmentNote: '34 Tech, attack QB keep on mesh' },
-      WILL: { x: 435, y: 300, sequentialTech: '14 Tech (Fold Fill)', gap: 'Weak A Gap', depthYards: 4, assignmentNote: '14 Tech inside shade WG, fold downhill on counter' },
+      WILL: { x: 435, y: 300, sequentialTech: '14 Tech (Fold Fill)', gap: 'Weak A Gap', depthYards: 4, assignmentNote: '14 Tech inside shade WG, fold downhill on trap' },
       LCB: { x: 170, y: 325, sequentialTech: 'Press-Bail (6 yds)', gap: 'Deep 1/3', depthYards: 6, assignmentNote: 'Lock X receiver' },
       RCB: { x: 830, y: 325, sequentialTech: 'Press-Bail (6 yds)', gap: 'Deep 1/3', depthYards: 6, assignmentNote: 'Lock Z receiver' },
       FS: { x: 440, y: 170, sequentialTech: 'Single-High Post (12 yds)', gap: 'Deep Middle', depthYards: 12, assignmentNote: 'Alley fill on option breakaway' },

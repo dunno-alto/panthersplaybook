@@ -35,6 +35,8 @@ import {
   getSTBallTrajectory,
   interpolateBall,
   interpolatePlayerPath,
+  getSTPlayerLivePosition,
+  getLiveSTBallPosition,
 } from '../data/specialTeamsOpponentData';
 
 interface SpecialTeamsSectionProps {
@@ -91,13 +93,15 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
   const selectedOpponent =
     activeOpponents.find((o) => o.id === selectedOpponentId) || activeOpponents[0];
 
-  // Ball trajectory
-  const ballTrajectory = getSTBallTrajectory(
+  // Ball trajectory synchronized with returner
+  const currentBall = getLiveSTBallPosition(
     selectedUnitId,
     activeScheme.id,
-    ballHash === 'left_hash' ? 'left' : ballHash === 'right_hash' ? 'right' : 'middle'
+    ballHash === 'left_hash' ? 'left' : ballHash === 'right_hash' ? 'right' : 'middle',
+    rawActivePlayers,
+    activeOpponents,
+    progress
   );
-  const currentBall = interpolateBall(ballTrajectory, progress);
 
   // Animation Loop (60fps requestAnimationFrame)
   const isLoopingRef = useRef(isLooping);
@@ -813,7 +817,7 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                     </text>
 
                     <path
-                      d="M 570 560 Q 510 535, 800 460 L 835 260"
+                      d="M 430 560 Q 370 535, 835 460 L 835 260"
                       fill="none"
                       stroke="#F59E0B"
                       strokeWidth="3.5"
@@ -933,12 +937,11 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
             {showOpponents &&
               activeOpponents.map((opp) => {
                 const isSelected = selectedOpponentId === opp.id;
-                const curPos = interpolatePlayerPath(
-                  opp.x,
-                  opp.y,
-                  opp.targetX,
-                  opp.targetY,
-                  opp.waypoints,
+                const curPos = getSTPlayerLivePosition(
+                  opp,
+                  selectedUnitId,
+                  activeScheme.id,
+                  true,
                   progress
                 );
 
@@ -1021,12 +1024,11 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
             {rawActivePlayers.map((p) => {
               const isSelected = selectedPlayerId === p.id;
               const isKey = p.isKickerOrKey;
-              const curPos = interpolatePlayerPath(
-                p.x,
-                p.y,
-                p.targetX ?? p.x,
-                p.targetY ?? p.y,
-                p.waypoints,
+              const curPos = getSTPlayerLivePosition(
+                p,
+                selectedUnitId,
+                activeScheme.id,
+                false,
                 progress
               );
 

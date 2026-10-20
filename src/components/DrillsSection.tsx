@@ -43,7 +43,7 @@ export const DrillsSection: React.FC = () => {
     {
       title: '04. Default 1 Rule: "Give Unless #1 Forces You to Pull"',
       detail:
-        'The Dive to the playside dive back (2 on 21 Veer / 24 Veer; 3 on 31 Veer / 33 Veer) attacks vertically through the B-gap and is automatic unless #1 crashes inside to tackle the dive back. If #1 sits square, widens, or Bull Rushes, 1 gives cleanly to the dive back.',
+        'The Dive to the playside dive back (2 on 22 Veer / 24 Veer; 3 on 31 Veer / 33 Veer) aims for the backside hip of playside OG and OT (seam attack on 22/31 Veer, B-gap on 24/33 Veer) and is automatic unless #1 crashes inside to tackle the dive back. If #1 sits square, widens, or Bull Rushes, 1 gives cleanly to the dive back.',
     },
   ];
 
