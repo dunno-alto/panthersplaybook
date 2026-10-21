@@ -16,12 +16,12 @@ import {
   RotateCcw,
   Target,
   Lock,
+  Volume2,
 } from 'lucide-react';
 import {
   COVERAGE_SCHEMES,
   CoverageScheme,
   DEFENSE_PLAYERS,
-  DEFENSIVE_PRIMER_CHAPTERS,
   DefPlayerPosition,
   DefenseFormation,
   FORMATION_INFO,
@@ -44,12 +44,185 @@ interface DefenseCoordinatorProps {
   onOpenPrintModal: () => void;
 }
 
+interface DefensiveSignalItem {
+  id: string;
+  category: 'formations' | 'coverages' | 'fronts' | 'blitzes' | 'verbal';
+  categoryLabel: string;
+  name: string;
+  iconEmoji: string;
+  signalMotion: string;
+  whoSignals: string;
+  onFieldMeaning: string;
+  coachingRule: string;
+}
+
+const DEFENSIVE_SIGNALS_LIST: DefensiveSignalItem[] = [
+  {
+    id: 'base_sig',
+    category: 'formations',
+    categoryLabel: 'Formation',
+    name: 'BASE (3-4)',
+    iconEmoji: '✊',
+    signalMotion: 'Fist held straight up in the air, palm facing out toward the field',
+    whoSignals: 'Sideline Coordinator ➔ All 11 Defenders',
+    onFieldMeaning: 'Normal 3-4 base alignment. 3 down linemen on LOS (NG 0-tech, SDE 6-tech, WDE 4-tech). 4 linebackers stacked off LOS (Mike 34-tech @ 4 yds, Will 14-tech @ 4 yds, Sam 2x2 contain, Rover 2x2 contain).',
+    coachingRule: 'NG 0-tech head-up on Center defaults to Strong A gap on run action.',
+  },
+  {
+    id: 'shield_sig',
+    category: 'formations',
+    categoryLabel: 'Formation',
+    name: 'SHIELD (5-2)',
+    iconEmoji: '👊',
+    signalMotion: 'Fist held firmly in front of body/chest, palm facing in toward chest',
+    whoSignals: 'Sideline Coordinator ➔ All 11 Defenders',
+    onFieldMeaning: 'Sam and Rover walk up onto the line of scrimmage in 2x0 outside the end offensive lineman, creating an impenetrable 5-man front. Mike & Will stack at 4.5 yards depth.',
+    coachingRule: 'Sam & Rover must never surrender outside contain—stone wall the perimeter.',
+  },
+  {
+    id: 'vanguard_sig',
+    category: 'formations',
+    categoryLabel: 'Formation',
+    name: 'VANGUARD (Goal Line)',
+    iconEmoji: '⚔️',
+    signalMotion: 'Crossed arms in front of chest or downward double chopping motion',
+    whoSignals: 'Sideline Coordinator ➔ All 11 Defenders',
+    onFieldMeaning: 'Short yardage & goal line package. 5-man defensive front locked on LOS. Middle linebackers (Mike & Will) walk up to 2-yard depth; Safeties creep down to 5-yard depth.',
+    coachingRule: 'MLB rule: If stacked directly over an offensive lineman, pick the open gap assignment and align over it.',
+  },
+  {
+    id: 'shell_sig',
+    category: 'formations',
+    categoryLabel: 'Formation',
+    name: 'SHELL (Prevent)',
+    iconEmoji: '🛡️',
+    signalMotion: 'Both open hands pressed backwards as if pushing a wall behind you',
+    whoSignals: 'Sideline Coordinator ➔ All 11 Defenders',
+    onFieldMeaning: 'Deep prevent shell. Outside linebackers (Sam & Rover) drop to 4 yards off; inside linebackers drop back to 6 yards depth; Safeties bail to 12-14 yards depth.',
+    coachingRule: 'Linemen: Expect pass and pin your ears back—hunt the sack!',
+  },
+  {
+    id: 'green_sig',
+    category: 'coverages',
+    categoryLabel: 'Coverage',
+    name: 'GREEN (Cover 3 Sky)',
+    iconEmoji: '👇',
+    signalMotion: 'Index finger pointing straight down at the ground / turf',
+    whoSignals: 'Sideline Coordinator / Free Safety ➔ Secondary & LBs',
+    onFieldMeaning: '3 Deep Thirds (Free Safety in deep middle third, LCB in deep weak third, RCB in deep strong third). Strong Safety rolls down into strong box/curl (8-man box).',
+    coachingRule: 'Cornerbacks align 7 yards off with OUTSIDE LEVERAGE; take 3-step bail at snap to protect the sideline and deep outside third.',
+  },
+  {
+    id: 'blue_sig',
+    category: 'coverages',
+    categoryLabel: 'Coverage',
+    name: 'BLUE (Cover 2 Zone)',
+    iconEmoji: '👆',
+    signalMotion: 'Index finger pointing straight up toward the sky',
+    whoSignals: 'Sideline Coordinator / Safeties ➔ Secondary & LBs',
+    onFieldMeaning: '2 Deep Safeties dividing field into halves (12-14 yds). 5 underneath zone defenders (CBs, Will, Mike, Sam/Rov).',
+    coachingRule: 'Cornerbacks align 5 yards off with OUTSIDE LEVERAGE. Re-route #1 WR inside toward deep safety help, then squat at 2-5 yards in the flat.',
+  },
+  {
+    id: 'black_sig',
+    category: 'coverages',
+    categoryLabel: 'Coverage',
+    name: 'BLACK (Cover 1 Man)',
+    iconEmoji: '👕',
+    signalMotion: 'Tug of the football jersey with one hand at chest level',
+    whoSignals: 'Sideline Coordinator ➔ Secondary & LBs',
+    onFieldMeaning: 'Single-high Free Safety deep middle roamer. Strong Safety in hole/robber/spy. 5 underneath defenders in tight man-to-man coverage. Cornerbacks align 7 yards off with inside leverage (not automatic press).',
+    coachingRule: 'Will and Mike share the backfield back outside-in. Non-covering linebacker plays Hole/Robber/Spy.',
+  },
+  {
+    id: 'jam_sig',
+    category: 'coverages',
+    categoryLabel: 'Coverage Modifier',
+    name: '“JAM” Call (Press Modifier)',
+    iconEmoji: '🙌',
+    signalMotion: 'Both hands raised up, palms facing out, with a forward pushing/punching motion',
+    whoSignals: 'Defensive Coordinator / Secondary Call',
+    onFieldMeaning: 'Cornerbacks walk up directly onto the Line of Scrimmage over receivers. Hand-fight and deliver physical two-handed contact at the snap, then tightly ride the receiver\'s inside hip.',
+    coachingRule: 'Strict press technique: Never allow an uncontested inside release.',
+  },
+  {
+    id: 'base_front_sig',
+    category: 'fronts',
+    categoryLabel: 'DL Front',
+    name: 'Base Front (Gap Integrity)',
+    iconEmoji: '✋',
+    signalMotion: 'No call needed (or flat open hand held level)',
+    whoSignals: 'Default Front Call',
+    onFieldMeaning: 'Defensive line holds base gap integrity. Nose Tackle aligns 0-Tech on Center and controls Strong A. Strong DE in 6-Tech (Strong C). Weak DE in 4-Tech (Weak B).',
+    coachingRule: 'If you don’t hear a slant call, either pick the gap in front of you or default pick the strong direction gap.',
+  },
+  {
+    id: 'slant_sig',
+    category: 'fronts',
+    categoryLabel: 'DL Front',
+    name: 'SLANT (Weak Slant)',
+    iconEmoji: '👉',
+    signalMotion: 'Horizontal hand-swipe motion across chest toward the weak side',
+    whoSignals: 'Defensive Coordinator / Mike Linebacker',
+    onFieldMeaning: 'All 3 down linemen slant hard one gap toward the weak side. NT slants into Weak A; Strong DE slants into Strong B; Weak DE slants into Weak C/D.',
+    coachingRule: 'Slant call is strictly to the weak side—there is no strong slant call in this system.',
+  },
+  {
+    id: 'blitz_sig',
+    category: 'blitzes',
+    categoryLabel: 'Pressure Call',
+    name: 'LB Blitz (Mike / Will / Sam / Rov)',
+    iconEmoji: '⚡',
+    signalMotion: 'Verbal position name call shouted: “MIKE!”, “WILL!”, “SAM!”, or “ROVER!”',
+    whoSignals: 'Defensive Coordinator ➔ Specific Linebacker',
+    onFieldMeaning: 'Individual linebacker shoots their assigned gap based on DL alignment. Sam shoots strong edge/C-gap; Rover shoots weak edge/C-gap; Mike & Will shoot interior open gaps.',
+    coachingRule: 'No packaged fire/dog blitzes. Calls are strictly individual position names. Cornerbacks and Safeties never blitz.',
+  },
+  {
+    id: 'rip_sig',
+    category: 'verbal',
+    categoryLabel: 'Verbal Call',
+    name: '“RIP!” Strength Call',
+    iconEmoji: '📢',
+    signalMotion: 'Verbal shout by Mike Linebacker pointing right: “RIP! RIP! RIP!”',
+    whoSignals: 'Mike Linebacker ➔ Entire Defense',
+    onFieldMeaning: 'Designates Strong Right. Called when Tight End aligns on Offense Right / Defense Left, or when passing strength/field wide-side favors the right.',
+    coachingRule: 'Sets Sam to the right edge and Rover to the left boundary edge.',
+  },
+  {
+    id: 'liz_sig',
+    category: 'verbal',
+    categoryLabel: 'Verbal Call',
+    name: '“LIZ!” Strength Call',
+    iconEmoji: '📢',
+    signalMotion: 'Verbal shout by Mike Linebacker pointing left: “LIZ! LIZ! LIZ!”',
+    whoSignals: 'Mike Linebacker ➔ Entire Defense',
+    onFieldMeaning: 'Designates Strong Left. Called when Tight End aligns on Offense Left / Defense Right, or default balanced formation middle call.',
+    coachingRule: 'Sets Sam to the left edge and Rover to the right boundary edge.',
+  },
+  {
+    id: 'reload_sig',
+    category: 'verbal',
+    categoryLabel: 'Emergency Reset',
+    name: '“RELOAD!” Reset Call',
+    iconEmoji: '🚨',
+    signalMotion: 'Both arms circling overhead while shouting “RELOAD! RELOAD!”',
+    whoSignals: 'Safeties / Middle Linebackers ➔ All 11 Players',
+    onFieldMeaning: 'Emergency reset shouted whenever offense executes a hurry-up, no-huddle, or muddle-huddle tempo. Cancels all exotic checks.',
+    coachingRule: 'All 11 players sprint into base alignment immediately, eyes locked on the ball, ready to fire at the snap.',
+  },
+];
+
 export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinatorProps) {
   // 4 Core Live Call Components: <Formation-Front-Coverage-Blitz>
   const [formation, setFormation] = useState<DefenseFormation>('base');
   const [frontCall, setFrontCall] = useState<SelectableFront | null>(null); // null = Base gap integrity (default)
   const [coverageScheme, setCoverageScheme] = useState<CoverageScheme>('green');
   const [blitzCall, setBlitzCall] = useState<'MIKE' | 'WILL' | 'SAM' | 'ROV' | null>(null);
+
+  // Cover Black Specific Rules: Normal (7 yds off) vs "Jam" (Press on LOS) & Will/Mike shared backfield flow
+  const [isJamCall, setIsJamCall] = useState<boolean>(false);
+  const [backfieldFlow, setBackfieldFlow] = useState<'weak' | 'strong'>('weak');
 
   // Field & Scout Setup with Auto-Detect Strength Call
   const [autoDetectStrength, setAutoDetectStrength] = useState<boolean>(true);
@@ -60,11 +233,14 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
   const [showZoneDrops, setShowZoneDrops] = useState<boolean>(true);
   const [coverageRoleFilter, setCoverageRoleFilter] = useState<'ALL' | 'LB' | 'DB'>('ALL');
   const [showPressureArrows, setShowPressureArrows] = useState<boolean>(true);
-  const [showGaps, setShowGaps] = useState<boolean>(true);
+  const [showGrid, setShowGrid] = useState<boolean>(false);
+  const [showLosGaps, setShowLosGaps] = useState<boolean>(false);
+  const [showSecondaryBadges, setShowSecondaryBadges] = useState<boolean>(false);
   const [showTechniqueOverlay, setShowTechniqueOverlay] = useState<boolean>(true);
   const [offenseFormation, setOffenseFormation] = useState<OffensiveFormationId>('pro_i');
   const [alignmentMode, setAlignmentMode] = useState<'base_fronts' | 'offense_adjust'>('base_fronts');
-  const [activePrimerChapter, setActivePrimerChapter] = useState<string>('philosophy');
+  const [defenseSubTab, setDefenseSubTab] = useState<'playart' | 'signals'>('playart');
+  const [signalsCategoryFilter, setSignalsCategoryFilter] = useState<'ALL' | 'formations' | 'coverages' | 'fronts' | 'blitzes' | 'verbal'>('ALL');
 
   // Auto-detect strength based on the 4 rules from defensive perspective:
   // 1: TE side
@@ -93,12 +269,14 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
   // "Mike, Will, Sam, Rover"
   const formationCode = activeFormationInfo.codeName; // 'BASE' | 'SHIELD' | 'VANGUARD' | 'SHELL'
   const frontCode = frontCall ? (LINE_SLANTS[frontCall]?.callCode || frontCall.toUpperCase()) : null; // 'SLANT' | 'PINCH' | 'OUT' | null
-  const coverageCode = activeCoverage.codeName; // 'BLUE' | 'GREEN' | 'BLACK'
+  const coverageCode = coverageScheme === 'black'
+    ? (isJamCall ? 'BLACK-JAM' : 'BLACK')
+    : activeCoverage.codeName; // 'BLUE' | 'GREEN' | 'BLACK' | 'BLACK-JAM'
   const blitzCode = blitzCall
     ? (DEFENSE_PLAYERS.find((p) => p.id === blitzCall)?.name.toUpperCase().split(' ')[0] || blitzCall)
     : null; // 'MIKE' | 'WILL' | 'SAM' | 'ROVER' | null
 
-  // Spoken live call (e.g., BASE-PINCH-BLUE-MIKE or BASE-BLUE)
+  // Spoken live call (e.g., BASE-PINCH-BLUE-MIKE or BASE-BLACK-JAM)
   const liveCallParts = [formationCode, frontCode, coverageCode, blitzCode].filter(Boolean);
   const liveCallFormatted = liveCallParts.join('-');
 
@@ -118,10 +296,121 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
     setFrontCall(null);
     setCoverageScheme('green');
     setBlitzCall(null);
+    setIsJamCall(false);
+    setBackfieldFlow('weak');
     setAlignmentMode('base_fronts');
   };
 
   const getPlayerCoords = (player: (typeof DEFENSE_PLAYERS)[0]): FormationCoord => {
+    // Cover Black: CBs are not automatic press! Normal Black = 7 yds off, inside leverage. Jam = on LOS hand fighting at snap.
+    if (coverageScheme === 'black' && (player.id === 'LCB' || player.id === 'RCB')) {
+      const oppPlayers = activeOffenseConfig.players;
+      const wrLeft =
+        oppPlayers.filter((p) => p.isEligible && p.x < 350).sort((a, b) => a.x - b.x)[0] ||
+        oppPlayers.find((p) => p.id === 'OWR1') || { x: 160, y: 412 };
+      const wrRight =
+        oppPlayers.filter((p) => p.isEligible && p.x > 650).sort((a, b) => b.x - a.x)[0] ||
+        oppPlayers.find((p) => p.id === 'OWR2' || p.id === 'OWR4' || p.id === 'OWR5') || { x: 840, y: 412 };
+
+      if (player.id === 'LCB') {
+        if (isJamCall) {
+          return {
+            x: wrLeft.x + 8, // tight inside shade on receiver
+            y: 374,          // on line of scrimmage
+            depthYards: 0.5,
+            alignmentDesc: 'Jam Call: On LOS in press stance, hand fighting at snap then covering inside hip tightly',
+            technique: 'Jam (LOS) · Hand Fight',
+            sequentialTech: 'Jam at LOS',
+            gap: 'Tight Inside Hip',
+          };
+        } else {
+          return {
+            x: wrLeft.x + 16, // inside leverage (shaded toward field center)
+            y: 300,           // 7 yards off LOS (depthYards: 7)
+            depthYards: 7,
+            alignmentDesc: 'Normal Black: 7 yards off, inside leverage',
+            technique: 'Off-Man (7 yds inside shade)',
+            sequentialTech: 'Off-Man (7 yds)',
+            gap: 'Inside Hip Lock',
+          };
+        }
+      }
+
+      if (player.id === 'RCB') {
+        if (isJamCall) {
+          return {
+            x: wrRight.x - 8, // tight inside shade on receiver
+            y: 374,           // on line of scrimmage
+            depthYards: 0.5,
+            alignmentDesc: 'Jam Call: On LOS in press stance, hand fighting at snap then covering inside hip tightly',
+            technique: 'Jam (LOS) · Hand Fight',
+            sequentialTech: 'Jam at LOS',
+            gap: 'Tight Inside Hip',
+          };
+        } else {
+          return {
+            x: wrRight.x - 16, // inside leverage (shaded toward field center)
+            y: 300,            // 7 yards off LOS (depthYards: 7)
+            depthYards: 7,
+            alignmentDesc: 'Normal Black: 7 yards off, inside leverage',
+            technique: 'Off-Man (7 yds inside shade)',
+            sequentialTech: 'Off-Man (7 yds)',
+            gap: 'Inside Hip Lock',
+          };
+        }
+      }
+    }
+
+    // Cover 2 (Blue) and Cover 3 (Green): CBs have outside leverage on #1 WR
+    if ((coverageScheme === 'blue' || coverageScheme === 'green') && (player.id === 'LCB' || player.id === 'RCB')) {
+      const oppPlayers = activeOffenseConfig.players;
+      const wrLeft =
+        oppPlayers.filter((p) => p.isEligible && p.x < 350).sort((a, b) => a.x - b.x)[0] ||
+        oppPlayers.find((p) => p.id === 'OWR1') || { x: 160, y: 412 };
+      const wrRight =
+        oppPlayers.filter((p) => p.isEligible && p.x > 650).sort((a, b) => b.x - a.x)[0] ||
+        oppPlayers.find((p) => p.id === 'OWR2' || p.id === 'OWR4' || p.id === 'OWR5') || { x: 840, y: 412 };
+
+      const isBlue = coverageScheme === 'blue';
+      let depthYards = isBlue ? 5 : 7;
+      let y = isBlue ? 325 : 300;
+      if (formation === 'shell') {
+        depthYards = isBlue ? 6 : 9;
+        y = isBlue ? 310 : 285;
+      } else if (formation === 'vanguard') {
+        depthYards = 1.5;
+        y = 360;
+      }
+
+      if (player.id === 'LCB') {
+        return {
+          x: wrLeft.x - 18, // outside leverage (shaded toward left sideline)
+          y,
+          depthYards,
+          alignmentDesc: isBlue
+            ? 'Cover 2 (Blue): Outside leverage (5 yds off) · Funnel #1 inside to safety, squat in flat'
+            : 'Cover 3 (Green): Outside leverage (7 yds off) · Outside-in cushion, protect sideline, bail deep 1/3',
+          technique: isBlue ? 'Outside Leverage · Flat Squat' : 'Outside Leverage · 3-Step Bail',
+          sequentialTech: isBlue ? 'Flat Squat (Outside Lev)' : 'Deep 1/3 (Outside Lev)',
+          gap: isBlue ? 'Flat / Cloud (Outside Lev)' : 'Deep 1/3 (Outside Lev)',
+        };
+      }
+
+      if (player.id === 'RCB') {
+        return {
+          x: wrRight.x + 18, // outside leverage (shaded toward right sideline)
+          y,
+          depthYards,
+          alignmentDesc: isBlue
+            ? 'Cover 2 (Blue): Outside leverage (5 yds off) · Funnel #1 inside to safety, squat in flat'
+            : 'Cover 3 (Green): Outside leverage (7 yds off) · Outside-in cushion, protect sideline, bail deep 1/3',
+          technique: isBlue ? 'Outside Leverage · Flat Squat' : 'Outside Leverage · 3-Step Bail',
+          sequentialTech: isBlue ? 'Flat Squat (Outside Lev)' : 'Deep 1/3 (Outside Lev)',
+          gap: isBlue ? 'Flat / Cloud (Outside Lev)' : 'Deep 1/3 (Outside Lev)',
+        };
+      }
+    }
+
     const formationBase = player.formations[formation];
     if (alignmentMode === 'base_fronts') {
       return formationBase;
@@ -285,244 +574,644 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
   };
 
   const getAssignedGap = (player: (typeof DEFENSE_PLAYERS)[0], coords: FormationCoord): string => {
-    // Check if player is on an active slant from frontCall
-    if (activeFront) {
-      if (frontCall === 'slant') {
-        const isStrongLeft = strengthCall === 'liz';
-        if (player.id === 'NT') return 'Weak A';
-        if (player.id === 'LDE') return isStrongLeft ? 'Weak C' : 'Strong A/B';
-        if (player.id === 'RDE') return isStrongLeft ? 'Strong A/B' : 'Weak C';
-      }
-      const slant = activeFront.slants.find((s) => s.playerId === player.id);
-      if (slant?.targetGap) {
-        return slant.targetGap.replace(' Gap', '').replace('-Gap', '');
-      }
-    }
-    // Check if blitzing
+    // 1. Blitz call overrides run gap fit
     if (blitzCall === player.id) {
       if (player.id === 'MIKE') return 'A-Gap Blitz';
       if (player.id === 'WILL') return 'B-Gap Blitz';
       if (player.id === 'SAM') return 'Edge Blitz';
       if (player.id === 'ROV') return 'Edge Blitz';
     }
-    // Base def line & linebacker front gaps reflecting strengthCall (LIZ = Def Left / Screen Right, RIP = Def Right / Screen Left)
+
     const isStrongLeft = strengthCall === 'liz';
-    if (player.id === 'NT') return 'Strong A';
-    if (player.id === 'LDE') return isStrongLeft ? 'Weak B' : 'Strong C';
-    if (player.id === 'RDE') return isStrongLeft ? 'Strong C' : 'Weak B';
-    if (player.id === 'SAM') return isStrongLeft ? 'Strong D' : 'Weak D';
-    if (player.id === 'ROV') return isStrongLeft ? 'Weak D' : 'Strong D';
-    if (player.id === 'MIKE') return isStrongLeft ? 'Strong B' : 'Weak A';
-    if (player.id === 'WILL') return isStrongLeft ? 'Weak A' : 'Strong B';
-    if (player.id === 'LCB' || player.id === 'RCB') return 'Deep 1/3';
-    if (player.id === 'FS') return 'Deep Post';
-    if (player.id === 'SS') return 'Sky Force';
+
+    // 2. Defensive Line Gap Fits based on frontCall (Base, Slant, Pinch, Out)
+    if (player.id === 'NT') {
+      if (frontCall === 'slant') return 'Weak A (Slant)';
+      if (frontCall === 'pinch') return 'Both A (Bull)';
+      if (frontCall === 'out') return 'Strong A (Slant)';
+      return 'Strong A';
+    }
+
+    if (player.id === 'LDE') {
+      // If Liz, LDE is Weak DE; If Rip, LDE is Strong DE
+      const isWeakDE = isStrongLeft;
+      if (frontCall === 'slant') {
+        return isWeakDE ? 'Weak C (Slant)' : 'Strong A/B (2i Slant)';
+      }
+      if (frontCall === 'pinch') {
+        return isWeakDE ? 'Weak A/B (Pinch)' : 'Strong A/B (Pinch)';
+      }
+      if (frontCall === 'out') {
+        return isWeakDE ? 'Weak C (Angle Out)' : 'Strong C (Angle Out)';
+      }
+      return isWeakDE ? 'Weak B (4-Tech)' : 'Strong C (6-Tech)';
+    }
+
+    if (player.id === 'RDE') {
+      // If Liz, RDE is Strong DE; If Rip, RDE is Weak DE
+      const isStrongDE = isStrongLeft;
+      if (frontCall === 'slant') {
+        return isStrongDE ? 'Strong A/B (2i Slant)' : 'Weak C (Slant)';
+      }
+      if (frontCall === 'pinch') {
+        return isStrongDE ? 'Strong A/B (Pinch)' : 'Weak A/B (Pinch)';
+      }
+      if (frontCall === 'out') {
+        return isStrongDE ? 'Strong C (Angle Out)' : 'Weak C (Angle Out)';
+      }
+      return isStrongDE ? 'Strong C (6-Tech)' : 'Weak B (4-Tech)';
+    }
+
+    // 3. Outside Linebackers: Outside Edge / Contain on Run
+    if (player.id === 'SAM') {
+      return 'Strong D (Contain)';
+    }
+    if (player.id === 'ROV') {
+      return 'Weak D (Contain)';
+    }
+
+    // 4. Inside Linebackers: OPEN GAP PRINCIPLE ON RUN
+    // "Linebackers gap responsibility is on run and it changes based on what the front 3 are doing:
+    //  - If Weak DE is in a 4 tech going B gap, and Rov has outside contain/C gap, then Will has the open gap to his side (Weak A).
+    //  - NT going strong side A gap, Strong DE going C gap, Sam has outside contain/D gap then Mike has to take B gap, because it's the open gap (Strong B)."
+    if (player.id === 'WILL') {
+      // Will is Weak-Side Inside Linebacker
+      if (frontCall === 'slant') {
+        // Slant call: NT slants to Weak A, Weak DE slants to Weak C, Rov has Weak D.
+        // Open gap to weak side is Weak B!
+        return 'Weak B (Open Gap)';
+      }
+      if (frontCall === 'pinch') {
+        // Pinch call: Interior squeezed (A/B gaps collapsed). Spill fit to Weak C.
+        return 'Weak C (Spill Fit)';
+      }
+      if (frontCall === 'out') {
+        // Out call: Weak DE in Weak C, Rover in Weak D -> Weak B is open!
+        return 'Weak B (Open Gap)';
+      }
+      // Base Front: Weak DE in 4-tech takes Weak B, Rover has outside contain -> Will has open gap:
+      return 'Weak A (Open Gap)';
+    }
+
+    if (player.id === 'MIKE') {
+      // Mike is Strong-Side Inside Linebacker
+      if (frontCall === 'slant') {
+        // Slant call: NT slanted away to Weak A, Strong DE slants inside (2i).
+        // Strong A gap is open!
+        return 'Strong A (Open Gap)';
+      }
+      if (frontCall === 'pinch') {
+        // Pinch call: Interior squeezed, spills outside to Strong C:
+        return 'Strong C (Spill Fit)';
+      }
+      if (frontCall === 'out') {
+        // Out call: Strong DE in Strong C, NT in Strong A, Sam has Strong D -> Strong B is open!
+        return 'Strong B (Open Gap)';
+      }
+      // Base Front: NT in Strong A, Strong DE in Strong C, Sam in Strong D -> Mike has open gap:
+      return 'Strong B (Open Gap)';
+    }
+
+    // 5. Secondary Run Support & Force
+    if (player.id === 'LCB') {
+      return 'Boundary Run Force';
+    }
+    if (player.id === 'RCB') {
+      return 'Field Run Force';
+    }
+    if (player.id === 'FS') {
+      return 'Deep Alley Fill';
+    }
+    if (player.id === 'SS') {
+      return 'Strong Alley Force';
+    }
+
     if (coords.gap) {
       return coords.gap.split('(')[0].replace(' Gap', '').trim();
     }
     return '';
   };
 
-  // D-Line Arrows: Base front gap assignments (when frontCall is null), Slant, Pinch, Wide
-  const activeLinemenArrows = useMemo(() => {
+  // Pass Coverage Responsibility (Threat Counting in Cover Black, Drops in Cover 2/3)
+  const getPassCoverageResponsibility = (player: (typeof DEFENSE_PLAYERS)[0]): { title: string; detail: string } => {
+    if (player.isDefensiveLine) {
+      if (blitzCall === player.id) {
+        return { title: 'Blitz Pass Rush', detail: 'Interior pass rush track' };
+      }
+      return { title: 'Base 3-Man Rush', detail: 'Pocket collapse · Contain QB in pocket' };
+    }
+
+    if (blitzCall === player.id) {
+      return { title: 'Assigned Blitz Track', detail: 'Pressure rush through assigned gap' };
+    }
+
+    if (coverageScheme === 'black') {
+      if (offenseFormation === 'heavy_2te') {
+        if (player.id === 'LCB') return { title: '🔒 #1 Threat to Left (X)', detail: 'Boundary WR · Matchup outside-in' };
+        if (player.id === 'ROV') return { title: '🔒 #2 Threat to Left (Y1)', detail: 'Left TE (Y1) · Outside-in match' };
+        if (player.id === 'WILL') return { title: '🔒 #3 Threat (TB)', detail: 'Tailback in backfield · Outside-in match' };
+        if (player.id === 'RCB') return { title: '🔒 #1 Threat to Right (Y2)', detail: 'Right TE (Y2) · Outside-in match' };
+        if (player.id === 'SAM') return { title: '🔒 #2 Threat to Right (TB)', detail: 'Tailback to strong side · Outside-in match' };
+        if (player.id === 'MIKE') {
+          return backfieldFlow === 'strong'
+            ? { title: '🔒 #3 Threat to Right (FB)', detail: 'Fullback to strong side' }
+            : { title: '🔒 #4 Threat to Left (FB)', detail: 'Fullback crossing to Will\'s side' };
+        }
+        if (player.id === 'FS') return { title: '🦅 Deep Post Free Roamer', detail: 'Single-high safety capping verticals' };
+        if (player.id === 'SS') return { title: '🔒 Hole / Robber / Spy', detail: 'Down safety low hole patrol & spy support' };
+      } else {
+        if (player.id === 'LCB') return { title: isJamCall ? '💥 Press-Man Jam (LOS)' : '🔒 #1 Threat: X (7 Yds Inside Lev)', detail: 'Man-to-man on #1 boundary receiver X' };
+        if (player.id === 'RCB') return { title: isJamCall ? '💥 Press-Man Jam (LOS)' : '🔒 #1 Threat: Z (7 Yds Inside Lev)', detail: 'Man-to-man on #1 field receiver Z' };
+        if (player.id === 'SAM') return { title: '🔒 #2 Threat: Y (Tight End)', detail: 'Man-to-man lock on Tight End Y · Outside-in match' };
+        if (player.id === 'ROV') {
+          return backfieldFlow === 'weak'
+            ? { title: '🔒 #2 Threat: TB (Weak Flow)', detail: 'Matches 2nd threat to weak side (Tailback release)' }
+            : { title: 'Weak Edge Contain / Spy', detail: 'Maintains backside contain against reverse / bootleg' };
+        }
+        if (player.id === 'WILL') {
+          return backfieldFlow === 'weak'
+            ? { title: '🔒 #3 Threat: Fullback (FB)', detail: 'Attached to Fullback (FB) in man-to-man coverage' }
+            : { title: '🔒 #4 Threat: Fullback (FB)', detail: '4th defender matching 4th strong-side threat (FB)' };
+        }
+        if (player.id === 'MIKE') {
+          return backfieldFlow === 'strong'
+            ? { title: '🔒 #3 Threat: TB (Strong Flow)', detail: 'Matches 3rd threat to strong side (Tailback release)' }
+            : { title: '🐀 Hole / QB Spy', detail: 'Patrols low hole & spies QB scramble when flow goes away' };
+        }
+        if (player.id === 'SS') return { title: '🔒 Hole / Robber / Spy', detail: 'Down safety playing the hole, robber & underneath spy support' };
+        if (player.id === 'FS') return { title: '🦅 Deep Post Free Roamer', detail: 'Single-high safety capping deep post & vertical threats' };
+      }
+    } else if (coverageScheme === 'blue') {
+      if (player.id === 'LCB' || player.id === 'RCB') return { title: 'Flat Squat (Outside Leverage)', detail: 'Outside leverage, re-route #1 WR inside, squat in flat at 2-5 yds' };
+      if (player.id === 'FS' || player.id === 'SS') return { title: 'Deep 1/2 Field Cap', detail: 'Deep half coverage, split field hash to sideline' };
+      if (player.id === 'WILL') return { title: 'Weak Curl-to-Flat Drop', detail: 'Zone drop to weak curl landmark (10-12 yds)' };
+      if (player.id === 'MIKE') return { title: 'Middle Hole / Hook Drop', detail: 'Zone drop to low hole / middle hook (8-10 yds)' };
+      if (player.id === 'SAM') return { title: 'Strong Curl-to-Flat Drop', detail: 'Zone drop to strong curl landmark (10-12 yds)' };
+      if (player.id === 'ROV') return { title: 'Weak Flat Buzz / Overhang', detail: 'Buzz weak flat to bracket quick speed outs' };
+    } else if (coverageScheme === 'green') {
+      if (player.id === 'LCB' || player.id === 'RCB') return { title: 'Deep Outside 1/3 (Outside Lev)', detail: 'Outside leverage, protect sideline, 3-step bail capping deep third' };
+      if (player.id === 'FS') return { title: 'Deep Middle 1/3 Post Cap', detail: 'Middle of field post cap from hash to hash' };
+      if (player.id === 'SS') return { title: 'Strong Sky Flat Curl', detail: 'Sky force down to strong flat / curl seam' };
+      if (player.id === 'WILL') return { title: 'Weak Hook / Curl Drop', detail: 'Zone drop 10-12 yds to weak hash curl' };
+      if (player.id === 'MIKE') return { title: 'Middle Hook / Low Hole', detail: 'Zone drop 8-10 yds to middle hook hole' };
+      if (player.id === 'SAM') return { title: 'Strong Hook / Seam Drop', detail: 'Drop underneath #2 vertical in strong seam' };
+      if (player.id === 'ROV') return { title: 'Weak Flat Curl / Robber', detail: 'Buzz weak underneath seam to curl' };
+    }
+
+    return {
+      title: activeCoverage.responsibilities[player.id] || 'Pass Coverage Drop',
+      detail: 'Standard coverage responsibility for active call',
+    };
+  };
+
+  interface FrontGapArrow {
+    playerId: string;
+    arrowEnd: { x: number; y: number };
+    technique: string;
+    targetGap: string;
+    label: string;
+    type: 'dl' | 'olb' | 'ilb';
+    stroke: string;
+    markerEnd: string;
+  }
+
+  // Pass Assignment Description Label on Playart (swapped in place of gap label)
+  const getPassAssignmentLabel = (player: (typeof DEFENSE_PLAYERS)[0]): string => {
+    if (player.isDefensiveLine) {
+      if (blitzCall === player.id) return 'BLITZ RUSH';
+      return 'PASS RUSH';
+    }
+
+    if (blitzCall === player.id) {
+      return 'BLITZ TRACK';
+    }
+
+    if (coverageScheme === 'black') {
+      if (offenseFormation === 'heavy_2te') {
+        if (player.id === 'LCB') return isJamCall ? 'JAM: X (LOS)' : '#1 THREAT (X)';
+        if (player.id === 'ROV') return '#2 THREAT (Y1)';
+        if (player.id === 'WILL') return '#3 THREAT (TB)';
+        if (player.id === 'RCB') return isJamCall ? 'JAM: Y2 (LOS)' : '#1 THREAT (Y2)';
+        if (player.id === 'SAM') return '#2 THREAT (TB)';
+        if (player.id === 'MIKE') {
+          return backfieldFlow === 'strong' ? '#3 THREAT (FB)' : '#4 THREAT (FB)';
+        }
+        if (player.id === 'FS') return 'DEEP POST';
+        if (player.id === 'SS') return 'HOLE / ROBBER / SPY';
+      } else {
+        if (player.id === 'LCB') return isJamCall ? 'JAM: X (LOS)' : '#1 THREAT (X)';
+        if (player.id === 'RCB') return isJamCall ? 'JAM: Z (LOS)' : '#1 THREAT (Z)';
+        if (player.id === 'SAM') return '#2 THREAT (Y)';
+        if (player.id === 'ROV') return backfieldFlow === 'weak' ? '#2 THREAT (TB)' : 'BACKSIDE CONTAIN';
+        if (player.id === 'WILL') return backfieldFlow === 'weak' ? '#3 THREAT (FB)' : '#4 THREAT (FB)';
+        if (player.id === 'MIKE') return backfieldFlow === 'strong' ? '#3 THREAT (TB)' : 'HOLE / QB SPY';
+        if (player.id === 'FS') return 'DEEP POST';
+        if (player.id === 'SS') return 'HOLE / ROBBER / SPY';
+      }
+    } else if (coverageScheme === 'blue') {
+      if (player.id === 'LCB' || player.id === 'RCB') return 'FLAT SQUAT (OUTSIDE LEV)';
+      if (player.id === 'FS' || player.id === 'SS') return 'DEEP 1/2';
+      if (player.id === 'WILL') return 'CURL / FLAT';
+      if (player.id === 'MIKE') return 'MIDDLE HOLE';
+      if (player.id === 'SAM') return 'CURL / FLAT';
+      if (player.id === 'ROV') return 'FLAT BUZZ';
+    } else if (coverageScheme === 'green') {
+      if (player.id === 'LCB' || player.id === 'RCB') return 'DEEP 1/3 (OUTSIDE LEV)';
+      if (player.id === 'FS') return 'DEEP MID 1/3';
+      if (player.id === 'SS') return 'SKY FLAT';
+      if (player.id === 'WILL') return 'HOOK / CURL';
+      if (player.id === 'MIKE') return 'MIDDLE HOLE';
+      if (player.id === 'SAM') return 'STRONG HOOK';
+      if (player.id === 'ROV') return 'FLAT / SEAM';
+    }
+
+    return (activeCoverage.responsibilities[player.id] || 'COVERAGE DROP').toUpperCase();
+  };
+
+  // End Man on Line of Scrimmage (EMLOS) coordinates for active offensive formation
+  const { emlosLeft, emlosRight } = useMemo(() => {
+    const leftPlayersOnLOS = activeOffenseConfig.players.filter(
+      (p) => p.y <= 425 && (p.id === 'OLT' || p.id === 'OTE1' || (p.id === 'OTE' && p.x < 500) || p.label === 'Y1' || (p.label === 'TE' && p.x < 500))
+    );
+    const rightPlayersOnLOS = activeOffenseConfig.players.filter(
+      (p) => p.y <= 425 && (p.id === 'ORT' || p.id === 'OTE2' || (p.id === 'OTE' && p.x > 500) || p.label === 'Y2' || (p.label === 'TE' && p.x > 500))
+    );
+
+    const leftEMLOS = leftPlayersOnLOS.length > 0
+      ? leftPlayersOnLOS.reduce((min, p) => (p.x < min.x ? p : min), leftPlayersOnLOS[0])
+      : activeOffenseConfig.players.find((p) => p.id === 'OLT') || { x: 390, y: 412, label: 'LT' };
+
+    const rightEMLOS = rightPlayersOnLOS.length > 0
+      ? rightPlayersOnLOS.reduce((max, p) => (p.x > max.x ? p : max), rightPlayersOnLOS[0])
+      : activeOffenseConfig.players.find((p) => p.id === 'ORT') || { x: 610, y: 412, label: 'RT' };
+
+    return {
+      emlosLeft: leftEMLOS,
+      emlosRight: rightEMLOS,
+    };
+  }, [activeOffenseConfig]);
+
+  // Front Gap Arrows: Base Front Gaps, Slants, and Linebacker Run Fits (Sam/Rov 3 yds outside EMLOS, Will/Mike Open Gaps)
+  const activeFrontGapArrows = useMemo(() => {
     const isStrongLeft = strengthCall === 'liz'; // Def Left = Screen Right (x > 500)
 
+    // ROV and SAM run gap assignment: point arrows 3 yards outside of the EMLOS at heel depth of LOS (y=418)
+    // Scale: 1 yd ~ 18.5px -> 3 yds outside = 55px beyond EMLOS
+    const rovArrow: FrontGapArrow = {
+      playerId: 'ROV',
+      arrowEnd: { x: emlosLeft.x - 55, y: 418 },
+      technique: '3 Yds Outside EMLOS',
+      targetGap: 'Weak D-Gap Contain',
+      label: 'Weak D (3 Yds Out)',
+      type: 'olb',
+      stroke: '#F59E0B',
+      markerEnd: 'url(#slantArrow)',
+    };
+
+    const samArrow: FrontGapArrow = {
+      playerId: 'SAM',
+      arrowEnd: { x: emlosRight.x + 55, y: 418 },
+      technique: '3 Yds Outside EMLOS',
+      targetGap: 'Strong D-Gap Contain',
+      label: 'Strong D (3 Yds Out)',
+      type: 'olb',
+      stroke: '#F59E0B',
+      markerEnd: 'url(#slantArrow)',
+    };
+
+    // WILL and MIKE gap assignments: open gap principle at heel depth of LOS (y=418)
+    let willArrow: FrontGapArrow;
+    let mikeArrow: FrontGapArrow;
+
+    if (frontCall === 'slant') {
+      // Slant weak: NT slants Weak A, Weak DE slants Weak C -> Will takes Weak B; Mike takes Strong A
+      willArrow = {
+        playerId: 'WILL',
+        arrowEnd: { x: isStrongLeft ? 418 : 583, y: 418 },
+        technique: 'Slant Fill (Open Gap)',
+        targetGap: 'Weak B (Open Gap)',
+        label: 'Weak B (Open)',
+        type: 'ilb',
+        stroke: '#F59E0B',
+        markerEnd: 'url(#slantArrow)',
+      };
+      mikeArrow = {
+        playerId: 'MIKE',
+        arrowEnd: { x: isStrongLeft ? 528 : 472, y: 418 },
+        technique: 'Slant Fill (Open Gap)',
+        targetGap: 'Strong A (Open Gap)',
+        label: 'Strong A (Open)',
+        type: 'ilb',
+        stroke: '#F59E0B',
+        markerEnd: 'url(#slantArrow)',
+      };
+    } else if (frontCall === 'pinch') {
+      // Pinch: Interior squeezed, Will and Mike spill outside to C-gaps
+      willArrow = {
+        playerId: 'WILL',
+        arrowEnd: { x: isStrongLeft ? 360 : 640, y: 418 },
+        technique: 'Spill Fit (C-Gap)',
+        targetGap: 'Weak C (Spill Fit)',
+        label: 'Weak C (Spill)',
+        type: 'ilb',
+        stroke: '#F59E0B',
+        markerEnd: 'url(#slantArrow)',
+      };
+      mikeArrow = {
+        playerId: 'MIKE',
+        arrowEnd: { x: isStrongLeft ? 640 : 360, y: 418 },
+        technique: 'Spill Fit (C-Gap)',
+        targetGap: 'Strong C (Spill Fit)',
+        label: 'Strong C (Spill)',
+        type: 'ilb',
+        stroke: '#F59E0B',
+        markerEnd: 'url(#slantArrow)',
+      };
+    } else if (frontCall === 'out') {
+      // Angle Out: DEs angle to C-gaps -> Will takes Weak B; Mike takes Strong B
+      willArrow = {
+        playerId: 'WILL',
+        arrowEnd: { x: isStrongLeft ? 418 : 583, y: 418 },
+        technique: 'Angle Fill (Open Gap)',
+        targetGap: 'Weak B (Open Gap)',
+        label: 'Weak B (Open)',
+        type: 'ilb',
+        stroke: '#F59E0B',
+        markerEnd: 'url(#slantArrow)',
+      };
+      mikeArrow = {
+        playerId: 'MIKE',
+        arrowEnd: { x: isStrongLeft ? 583 : 418, y: 418 },
+        technique: 'Angle Fill (Open Gap)',
+        targetGap: 'Strong B (Open Gap)',
+        label: 'Strong B (Open)',
+        type: 'ilb',
+        stroke: '#F59E0B',
+        markerEnd: 'url(#slantArrow)',
+      };
+    } else {
+      // Base Front: Weak DE takes Weak B, Rov contains -> Will takes Weak A (Open Gap)
+      // NT takes Strong A, Strong DE takes Strong C, Sam contains -> Mike takes Strong B (Open Gap)
+      willArrow = {
+        playerId: 'WILL',
+        arrowEnd: { x: isStrongLeft ? 472 : 528, y: 418 },
+        technique: 'Base Fill (Open Gap)',
+        targetGap: 'Weak A (Open Gap)',
+        label: 'Weak A (Open)',
+        type: 'ilb',
+        stroke: '#F59E0B',
+        markerEnd: 'url(#slantArrow)',
+      };
+      mikeArrow = {
+        playerId: 'MIKE',
+        arrowEnd: { x: isStrongLeft ? 583 : 418, y: 418 },
+        technique: 'Base Fill (Open Gap)',
+        targetGap: 'Strong B (Open Gap)',
+        label: 'Strong B (Open)',
+        type: 'ilb',
+        stroke: '#F59E0B',
+        markerEnd: 'url(#slantArrow)',
+      };
+    }
+
+    // Defensive Line Gap Arrows (all ending just behind OL at heel depth y=418)
+    let dlArrows: FrontGapArrow[] = [];
     if (frontCall === 'slant') {
       if (isStrongLeft) {
-        // Strong side is right -> Slant weak is slanting LEFT (toward x < 500)
-        return [
-          { playerId: 'NT', arrowEnd: { x: 465, y: 430 }, technique: 'Slant 1-Tech (Weak)', targetGap: 'Weak A-Gap', label: 'Slant Weak A' },
-          { playerId: 'LDE', arrowEnd: { x: 385, y: 430 }, technique: 'Slant 7-Tech (Weak)', targetGap: 'Weak C-Gap', label: 'Slant Weak C' },
-          { playerId: 'RDE', arrowEnd: { x: 550, y: 430 }, technique: 'Slant 2i-Tech', targetGap: 'Strong A/B-Gap', label: 'Slant Inside' },
+        dlArrows = [
+          { playerId: 'NT', arrowEnd: { x: 465, y: 418 }, technique: 'Slant 1-Tech (Weak)', targetGap: 'Weak A-Gap', label: 'Slant Weak A', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+          { playerId: 'LDE', arrowEnd: { x: 385, y: 418 }, technique: 'Slant 7-Tech (Weak)', targetGap: 'Weak C-Gap', label: 'Slant Weak C', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+          { playerId: 'RDE', arrowEnd: { x: 550, y: 418 }, technique: 'Slant 2i-Tech', targetGap: 'Strong A/B-Gap', label: 'Slant Inside', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
         ];
       } else {
-        // Strong side is left -> Slant weak is slanting RIGHT (toward x > 500)
-        return [
-          { playerId: 'NT', arrowEnd: { x: 535, y: 430 }, technique: 'Slant 1-Tech (Weak)', targetGap: 'Weak A-Gap', label: 'Slant Weak A' },
-          { playerId: 'RDE', arrowEnd: { x: 615, y: 430 }, technique: 'Slant 7-Tech (Weak)', targetGap: 'Weak C-Gap', label: 'Slant Weak C' },
-          { playerId: 'LDE', arrowEnd: { x: 450, y: 430 }, technique: 'Slant 2i-Tech', targetGap: 'Strong A/B-Gap', label: 'Slant Inside' },
+        dlArrows = [
+          { playerId: 'NT', arrowEnd: { x: 535, y: 418 }, technique: 'Slant 1-Tech (Weak)', targetGap: 'Weak A-Gap', label: 'Slant Weak A', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+          { playerId: 'RDE', arrowEnd: { x: 615, y: 418 }, technique: 'Slant 7-Tech (Weak)', targetGap: 'Weak C-Gap', label: 'Slant Weak C', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+          { playerId: 'LDE', arrowEnd: { x: 450, y: 418 }, technique: 'Slant 2i-Tech', targetGap: 'Strong A/B-Gap', label: 'Slant Inside', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
         ];
       }
-    }
-
-    if (frontCall === 'pinch') {
-      return LINE_SLANTS.pinch.slants;
-    }
-
-    if (frontCall === 'out') {
-      return LINE_SLANTS.out.slants;
-    }
-
-    // BASE FRONT GAP INTEGRITY ARROWS (When frontCall is null / Base):
-    if (formation === 'shield') {
-      return [
-        {
-          playerId: 'NT',
-          arrowEnd: { x: isStrongLeft ? 525 : 475, y: 430 },
-          technique: '0-Tech (Strong A)',
-          targetGap: 'Strong A',
-          label: 'Strong A',
-        },
-        {
-          playerId: 'LDE',
-          arrowEnd: { x: isStrongLeft ? 418 : 360, y: 430 },
-          technique: isStrongLeft ? '4-Tech (Weak B)' : '6-Tech (Strong C)',
-          targetGap: isStrongLeft ? 'Weak B' : 'Strong C',
-          label: isStrongLeft ? 'Weak B' : 'Strong C',
-        },
-        {
-          playerId: 'RDE',
-          arrowEnd: { x: isStrongLeft ? 635 : 585, y: 430 },
-          technique: isStrongLeft ? '6-Tech (Strong C)' : '4-Tech (Weak B)',
-          targetGap: isStrongLeft ? 'Strong C' : 'Weak B',
-          label: isStrongLeft ? 'Strong C' : 'Weak B',
-        },
-        {
-          playerId: 'ROV',
-          arrowEnd: { x: isStrongLeft ? 275 : 305, y: 430 },
-          technique: '2x0 Edge',
-          targetGap: isStrongLeft ? 'Weak Contain' : 'Strong Contain',
-          label: isStrongLeft ? 'Weak Edge' : 'Strong Edge',
-        },
-        {
-          playerId: 'SAM',
-          arrowEnd: { x: isStrongLeft ? 725 : 695, y: 430 },
-          technique: '2x0 Edge',
-          targetGap: isStrongLeft ? 'Strong Contain' : 'Weak Contain',
-          label: isStrongLeft ? 'Strong Edge' : 'Weak Edge',
-        },
+    } else if (frontCall === 'pinch') {
+      dlArrows = [
+        { playerId: 'NT', arrowEnd: { x: 500, y: 418 }, technique: 'Bull Rush Center', targetGap: 'Both A-Gaps', label: 'Center Bull', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+        { playerId: 'LDE', arrowEnd: { x: 450, y: 418 }, technique: 'Pinch B-to-A', targetGap: 'Weak A/B Squeeze', label: 'Pinch Inside', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+        { playerId: 'RDE', arrowEnd: { x: 550, y: 418 }, technique: 'Pinch B-to-A', targetGap: 'Strong A/B Squeeze', label: 'Pinch Inside', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+      ];
+    } else if (frontCall === 'out') {
+      dlArrows = [
+        { playerId: 'NT', arrowEnd: { x: isStrongLeft ? 525 : 475, y: 418 }, technique: 'Slant 1-Tech', targetGap: 'Strong A-Gap', label: 'A-Gap Wedge', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+        { playerId: 'LDE', arrowEnd: { x: 380, y: 418 }, technique: 'Angle to 6/7-Tech', targetGap: 'Weak C-Gap', label: 'Angle Out', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+        { playerId: 'RDE', arrowEnd: { x: 620, y: 418 }, technique: 'Angle to 6/7-Tech', targetGap: 'Strong C-Gap', label: 'Angle Out', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+      ];
+    } else if (formation === 'vanguard') {
+      dlArrows = [
+        { playerId: 'NT', arrowEnd: { x: 500, y: 418 }, technique: '0-Tech Submarine', targetGap: 'A-Gap Wedge', label: 'Submarine A', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+        { playerId: 'LDE', arrowEnd: { x: 420, y: 418 }, technique: '4-Tech Tight Squeeze', targetGap: 'B-Gap Seal', label: 'B-Gap Seal', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+        { playerId: 'RDE', arrowEnd: { x: 580, y: 418 }, technique: '6-Tech Tight Squeeze', targetGap: 'C-Gap Seal', label: 'C-Gap Seal', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+      ];
+    } else if (formation === 'shell') {
+      dlArrows = [
+        { playerId: 'NT', arrowEnd: { x: 500, y: 418 }, technique: 'Bull Rush', targetGap: 'Sack QB', label: 'Bull Rush', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+        { playerId: 'LDE', arrowEnd: { x: 405, y: 418 }, technique: 'Speed Edge Rush', targetGap: 'Sack QB', label: 'Speed Rush', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+        { playerId: 'RDE', arrowEnd: { x: 595, y: 418 }, technique: 'Speed Edge Rush', targetGap: 'Sack QB', label: 'Speed Rush', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+      ];
+    } else {
+      // Base 3-4 Front:
+      dlArrows = [
+        { playerId: 'NT', arrowEnd: { x: isStrongLeft ? 525 : 475, y: 418 }, technique: '0-Tech (Strong A)', targetGap: 'Strong A', label: 'Strong A', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+        { playerId: 'LDE', arrowEnd: { x: isStrongLeft ? 418 : 360, y: 418 }, technique: isStrongLeft ? '4-Tech' : '6-Tech', targetGap: isStrongLeft ? 'Weak B' : 'Strong C', label: isStrongLeft ? 'Weak B' : 'Strong C', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
+        { playerId: 'RDE', arrowEnd: { x: isStrongLeft ? 635 : 585, y: 418 }, technique: isStrongLeft ? '6-Tech' : '4-Tech', targetGap: isStrongLeft ? 'Strong C' : 'Weak B', label: isStrongLeft ? 'Strong C' : 'Weak B', type: 'dl', stroke: '#F59E0B', markerEnd: 'url(#slantArrow)' },
       ];
     }
 
-    if (formation === 'vanguard') {
-      return [
-        {
-          playerId: 'NT',
-          arrowEnd: { x: 500, y: 435 },
-          technique: '0-Tech Submarine',
-          targetGap: 'A-Gap Wedge',
-          label: 'Submarine A',
-        },
-        {
-          playerId: 'LDE',
-          arrowEnd: { x: 420, y: 430 },
-          technique: '4-Tech Tight Squeeze',
-          targetGap: 'B-Gap Seal',
-          label: 'B-Gap Seal',
-        },
-        {
-          playerId: 'RDE',
-          arrowEnd: { x: 580, y: 430 },
-          technique: '6-Tech Tight Squeeze',
-          targetGap: 'C-Gap Seal',
-          label: 'C-Gap Seal',
-        },
-      ];
-    }
-
-    if (formation === 'shell') {
-      return [
-        {
-          playerId: 'NT',
-          arrowEnd: { x: 500, y: 450 },
-          technique: 'Bull Rush',
-          targetGap: 'Sack QB',
-          label: 'Bull Rush',
-        },
-        {
-          playerId: 'LDE',
-          arrowEnd: { x: 405, y: 450 },
-          technique: 'Speed Edge Rush',
-          targetGap: 'Sack QB',
-          label: 'Speed Rush',
-        },
-        {
-          playerId: 'RDE',
-          arrowEnd: { x: 595, y: 450 },
-          technique: 'Speed Edge Rush',
-          targetGap: 'Sack QB',
-          label: 'Speed Rush',
-        },
-      ];
-    }
-
-    // Default Base 3-4 Front:
-    return [
-      {
-        playerId: 'NT',
-        arrowEnd: { x: isStrongLeft ? 525 : 475, y: 430 },
-        technique: '0-Tech (Strong A)',
-        targetGap: 'Strong A',
-        label: 'Strong A',
-      },
-      {
-        playerId: 'LDE',
-        arrowEnd: { x: isStrongLeft ? 418 : 360, y: 430 },
-        technique: isStrongLeft ? '4-Tech' : '6-Tech',
-        targetGap: isStrongLeft ? 'Weak B' : 'Strong C',
-        label: isStrongLeft ? 'Weak B' : 'Strong C',
-      },
-      {
-        playerId: 'RDE',
-        arrowEnd: { x: isStrongLeft ? 635 : 585, y: 430 },
-        technique: isStrongLeft ? '6-Tech' : '4-Tech',
-        targetGap: isStrongLeft ? 'Strong C' : 'Weak B',
-        label: isStrongLeft ? 'Strong C' : 'Weak B',
-      },
-    ];
-  }, [formation, frontCall, strengthCall]);
+    // Return all Front 7 gap arrows: DL + Linebackers (Rov, Sam, Will, Mike)
+    return [...dlArrows, rovArrow, samArrow, willArrow, mikeArrow];
+  }, [formation, frontCall, strengthCall, emlosLeft, emlosRight]);
 
   // Helper to get offensive receiver/back targets for Black coverage lock lines
   const getBlackCoverageTarget = (assign: PlayerCoverageAssignment): { x: number; y: number; label: string } => {
     const pId = assign.playerId;
     const oppPlayers = activeOffenseConfig.players;
+    const isStrongLeft = strengthCall === 'liz';
+    const isHeavy2TE = offenseFormation === 'heavy_2te';
+
+    // SPECIAL THREAT-MATCHING RULE FOR DOUBLE TIGHT END HEAVY:
+    // Matchup based on threats from outside in:
+    // Left side:
+    // - LCB has #1 threat (X) to his side
+    // - Rover has #2 threat (Y1) to his side
+    // - Will has #3 threat (TB)
+    // - Mike has #4 threat (FB) to Will's side
+    // Right side:
+    // - RCB has #1 threat to his side (Y2)
+    // - Sam has #2 threat (TB) to his side
+    // - Mike has #3 threat (TB) to his side
+    if (isHeavy2TE) {
+      if (pId === 'LCB') {
+        const xWr = oppPlayers.find((p) => p.id === 'OWR1') || { x: 150, y: 412, label: 'X' };
+        if (isJamCall) {
+          return { x: xWr.x + 8, y: 382, label: '#1 Threat: X (Jam @ LOS)' };
+        }
+        return { x: xWr.x + 16, y: xWr.y - 18, label: '#1 Threat: X' };
+      }
+      if (pId === 'ROV') {
+        const y1 = oppPlayers.find((p) => p.id === 'OTE1' || p.label === 'Y1') || { x: 330, y: 412, label: 'Y1' };
+        return { x: y1.x, y: 382, label: '#2 Threat: Y1 (Left TE)' };
+      }
+      if (pId === 'RCB') {
+        const y2 = oppPlayers.find((p) => p.id === 'OTE2' || p.label === 'Y2') || { x: 670, y: 412, label: 'Y2' };
+        if (isJamCall) {
+          return { x: y2.x - 8, y: 382, label: '#1 Threat: Y2 (Jam @ LOS)' };
+        }
+        return { x: y2.x - 16, y: y2.y - 18, label: '#1 Threat: Y2 (Right TE)' };
+      }
+      if (pId === 'SAM') {
+        // Sam has #2 threat (TB) to his side
+        const tb = oppPlayers.find((p) => p.id === 'OTB') || { x: 500, y: 530, label: 'TB' };
+        if (backfieldFlow === 'strong') {
+          return { x: 580, y: 442, label: '#2 Threat: TB (Strong Release)' };
+        } else {
+          return { x: 610, y: 430, label: '#2 Threat to his side (TB)' };
+        }
+      }
+      if (pId === 'WILL') {
+        // Will has #3 threat (TB)
+        const tb = oppPlayers.find((p) => p.id === 'OTB') || { x: 500, y: 530, label: 'TB' };
+        if (backfieldFlow === 'weak') {
+          return { x: 420, y: 442, label: '#3 Threat: TB (Weak Release)' };
+        } else {
+          return { x: 440, y: 430, label: '#3 Threat: TB' };
+        }
+      }
+      if (pId === 'MIKE') {
+        // Mike has #3 threat (TB) to his side and #4 threat (FB) to Will's side
+        const fb = oppPlayers.find((p) => p.id === 'OFB') || { x: 500, y: 485, label: 'FB' };
+        if (backfieldFlow === 'strong') {
+          return { x: 540, y: 460, label: '#3 Threat: FB (to his side)' };
+        } else {
+          return { x: 460, y: 460, label: '#4 Threat: FB (to Will\'s side)' };
+        }
+      }
+      if (pId === 'FS') {
+        return { x: assign.dropTarget.x, y: assign.dropTarget.y, label: 'Centerfield Roamer' };
+      }
+      if (pId === 'SS') {
+        return { x: 630, y: 220, label: 'Strong Alley Robber / Y2 Bracket' };
+      }
+    }
+
     if (pId === 'LCB') {
       const wrLeft =
         oppPlayers.filter((p) => p.isEligible && p.x < 350).sort((a, b) => a.x - b.x)[0] ||
-        oppPlayers.find((p) => p.id === 'OWR1');
-      if (wrLeft) return { x: wrLeft.x, y: wrLeft.y - 18, label: `#1 WR (${wrLeft.label})` };
+        oppPlayers.find((p) => p.id === 'OWR1') || { x: 160, y: 412, label: 'X' };
+      if (isJamCall) {
+        return { x: wrLeft.x + 8, y: 382, label: `Jam #1 WR (${wrLeft.label}) at LOS` };
+      }
+      return { x: wrLeft.x + 16, y: wrLeft.y - 18, label: `#1 WR (${wrLeft.label}) [Inside Hip]` };
     }
     if (pId === 'RCB') {
       const wrRight =
         oppPlayers.filter((p) => p.isEligible && p.x > 650).sort((a, b) => b.x - a.x)[0] ||
-        oppPlayers.find((p) => p.id === 'OWR2' || p.id === 'OWR4' || p.id === 'OWR5');
-      if (wrRight) return { x: wrRight.x, y: wrRight.y - 18, label: `#1 WR (${wrRight.label})` };
+        oppPlayers.find((p) => p.id === 'OWR2' || p.id === 'OWR4' || p.id === 'OWR5') || { x: 840, y: 412, label: 'Z' };
+      if (isJamCall) {
+        return { x: wrRight.x - 8, y: 382, label: `Jam #1 WR (${wrRight.label}) at LOS` };
+      }
+      return { x: wrRight.x - 16, y: wrRight.y - 18, label: `#1 WR (${wrRight.label}) [Inside Hip]` };
     }
-    if (pId === 'SS') {
-      const te =
-        oppPlayers.find((p) => p.id.includes('TE') || (p.label.startsWith('Y') && p.isEligible)) ||
-        oppPlayers.find((p) => p.id === 'OWR3' || p.id === 'OTE');
-      if (te) return { x: te.x, y: te.y - 18, label: `TE / #2 (${te.label})` };
-    }
-    if (pId === 'WILL') {
-      const rbStrong =
-        oppPlayers.find((p) => p.id === 'OTB' || p.id === 'ORB') ||
-        oppPlayers.find((p) => p.role.includes('Back'));
-      if (rbStrong) return { x: rbStrong.x + 12, y: rbStrong.y - 16, label: `Strong RB (${rbStrong.label})` };
-    }
-    if (pId === 'ROV') {
-      const rbWeak =
-        oppPlayers.find((p) => p.id === 'OFB') ||
-        oppPlayers.find((p) => p.id === 'OTB');
-      if (rbWeak) return { x: rbWeak.x - 12, y: rbWeak.y - 16, label: `Weak RB (${rbWeak.label})` };
-    }
+    // Sam: "Sam does not have Strong Hook, he has Y."
     if (pId === 'SAM') {
-      const te = oppPlayers.find((p) => p.id.includes('TE') || (p.label.startsWith('Y') && p.isEligible));
-      if (te) return { x: te.x, y: 385, label: `Jam TE (${te.label}) on LOS` };
+      const teY =
+        oppPlayers.find((p) => (p.id.includes('TE') || (p.label.startsWith('Y') && p.isEligible)) && (isStrongLeft ? p.x > 500 : p.x < 500)) ||
+        oppPlayers.find((p) => p.id.includes('TE') || p.label === 'Y' || (p.label.startsWith('Y') && p.isEligible)) ||
+        oppPlayers.find((p) => p.role.toLowerCase().includes('tight end')) ||
+        { x: isStrongLeft ? 670 : 330, y: 412, label: 'Y' };
+      return { x: teY.x, y: teY.y - 18, label: `#2 Threat: Y (${teY.label})` };
     }
+
+    // Rover: "Rov will have the 2nd threat, which would be the TB if the TB goes to the weak side. Teal line should connect to the TB."
+    if (pId === 'ROV') {
+      if (backfieldFlow === 'weak') {
+        const tbWeakX = isStrongLeft ? 420 : 580;
+        return { x: tbWeakX, y: 465, label: '#2 Threat: TB (Weak Flow)' };
+      } else {
+        const weakEdgeX = isStrongLeft ? 330 : 670;
+        return { x: weakEdgeX, y: 382, label: 'Backside Edge Contain / Spy' };
+      }
+    }
+
+    // Will: "Will should be attached to the fullback... and Will still has the FB to the strong side because he is the 4th defender and FB is the 4th Strong Side threat."
+    if (pId === 'WILL') {
+      if (backfieldFlow === 'strong') {
+        const fbStrongX = isStrongLeft ? 535 : 465;
+        return { x: fbStrongX, y: 460, label: '#4 Threat: Fullback (FB)' };
+      } else {
+        const fbWeakX = isStrongLeft ? 465 : 535;
+        return { x: fbWeakX, y: 460, label: '#3 Threat: Fullback (FB)' };
+      }
+    }
+
+    // Mike: "Mike has the TB to the strong side."
     if (pId === 'MIKE') {
-      return { x: assign.dropTarget.x, y: assign.dropTarget.y, label: 'Rat in Hole / Spy' };
+      if (backfieldFlow === 'strong') {
+        const tbStrongX = isStrongLeft ? 580 : 420;
+        return { x: tbStrongX, y: 465, label: '#3 Threat: TB (Strong Flow)' };
+      } else {
+        return { x: 500, y: 250, label: 'Hole / Underneath QB Spy' };
+      }
     }
+
+    // Strong Safety: "SS will have Hole/Robber/Spy"
+    if (pId === 'SS') {
+      const holeX = isStrongLeft ? 580 : 420;
+      return { x: holeX, y: 235, label: 'Hole / Robber / Spy' };
+    }
+
     if (pId === 'FS') {
-      return { x: assign.dropTarget.x, y: assign.dropTarget.y, label: 'Centerfield Roamer' };
+      return { x: assign.dropTarget.x, y: assign.dropTarget.y, label: 'Centerfield Deep Post Roamer' };
     }
     return { x: assign.dropTarget.x, y: assign.dropTarget.y, label: assign.landmarkLabel };
   };
-
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* UNIFIED DEFENSIVE CALL SIMULATOR CONSOLE (Directly Before Playart) */}
-      <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-4 lg:p-5 shadow-xl space-y-4">
+      {/* Defensive Sub-Navigation Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#070E13] p-2.5 rounded-2xl border border-[#162A33] shadow-lg">
+        <div className="flex items-center gap-1.5 p-1 bg-[#050C10] rounded-xl border border-[#162A33]">
+          <button
+            onClick={() => setDefenseSubTab('playart')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+              defenseSubTab === 'playart'
+                ? 'bg-teal-400 text-slate-950 shadow-md font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-[#0B1A24]'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            <span>Playart & Call Simulator</span>
+          </button>
+          <button
+            onClick={() => setDefenseSubTab('signals')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+              defenseSubTab === 'signals'
+                ? 'bg-teal-400 text-slate-950 shadow-md font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-[#0B1A24]'
+            }`}
+          >
+            <Radio className="w-4 h-4" />
+            <span>Defensive Signals & Communication</span>
+          </button>
+        </div>
+
+        <button
+          onClick={onOpenPrintModal}
+          className="px-3.5 py-2 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/40 text-xs font-mono font-bold hover:bg-teal-500/30 transition-colors flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+        >
+          <Printer className="w-3.5 h-3.5" />
+          <span>Print Sideline Call Sheet</span>
+        </button>
+      </div>
+
+      {defenseSubTab === 'playart' ? (
+        <>
+          {/* UNIFIED DEFENSIVE CALL SIMULATOR CONSOLE (Directly Before Playart) */}
+          <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-4 lg:p-5 shadow-xl space-y-4">
         {/* Top Header & Live Call Row */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#162A33]/80">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -747,6 +1436,123 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
           </div>
         </div>
 
+        {/* Cover Black Specific Rules & Technique Tuning Strip */}
+        {coverageScheme === 'black' && (
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-950/40 via-[#0B1720] to-[#0A1822] border border-amber-500/40 text-xs space-y-3 shadow-lg">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              {/* CB Technique: Normal Black (7 Yds Off) vs Jam Call (Press on LOS) */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-mono font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  CB Coverage Call:
+                </span>
+                <div className="inline-flex rounded-lg border border-amber-500/30 bg-[#070E13] p-0.5 font-mono text-[11px]">
+                  <button
+                    onClick={() => setIsJamCall(false)}
+                    className={`px-3 py-1.5 rounded font-bold cursor-pointer transition-all flex items-center gap-1.5 ${
+                      !isJamCall
+                        ? 'bg-amber-400 text-slate-950 shadow ring-1 ring-amber-300'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>👕 Normal Black</span>
+                    <span className="text-[9.5px] opacity-80 font-normal">(7 Yds Off · Inside Lev)</span>
+                  </button>
+                  <button
+                    onClick={() => setIsJamCall(true)}
+                    className={`px-3 py-1.5 rounded font-bold cursor-pointer transition-all flex items-center gap-1.5 ${
+                      isJamCall
+                        ? 'bg-amber-400 text-slate-950 shadow ring-1 ring-amber-300'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>🙌 Call: &quot;JAM&quot;</span>
+                    <span className="text-[9.5px] opacity-80 font-normal">(Press @ LOS · Hand Fight)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Will & Mike Shared Responsibility */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-mono font-bold text-teal-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-teal-400" />
+                  Backfield Flow (Will &amp; Mike Share):
+                </span>
+                <div className="inline-flex rounded-lg border border-teal-500/30 bg-[#070E13] p-0.5 font-mono text-[11px]">
+                  <button
+                    onClick={() => setBackfieldFlow('weak')}
+                    className={`px-3 py-1.5 rounded font-bold cursor-pointer transition-all flex items-center gap-1.5 ${
+                      backfieldFlow === 'weak'
+                        ? 'bg-teal-400 text-slate-950 shadow ring-1 ring-teal-300'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>👈 Back to Weak Side</span>
+                    <span className="text-[9.5px] opacity-80 font-normal">(Rov has TB · Will has FB · Mike Spies)</span>
+                  </button>
+                  <button
+                    onClick={() => setBackfieldFlow('strong')}
+                    className={`px-3 py-1.5 rounded font-bold cursor-pointer transition-all flex items-center gap-1.5 ${
+                      backfieldFlow === 'strong'
+                        ? 'bg-teal-400 text-slate-950 shadow ring-1 ring-teal-300'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>👉 Back to Strong Side</span>
+                    <span className="text-[9.5px] opacity-80 font-normal">(Mike has TB · Will has FB · Sam has Y)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cover 2 Blue Outside Leverage Doctrine Banner */}
+        {coverageScheme === 'blue' && (
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-sky-950/40 via-[#0B1720] to-[#0A1822] border border-sky-500/40 text-xs space-y-2 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono font-bold text-sky-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-sky-400" />
+                  Cover 2 (Blue) CB Leverage Rule:
+                </span>
+                <span className="px-2 py-0.5 rounded bg-sky-950/90 text-sky-200 border border-sky-500/50 font-mono font-bold text-[11px]">
+                  OUTSIDE LEVERAGE (5 Yds Off)
+                </span>
+              </div>
+              <span className="text-slate-400 font-mono text-[10px]">
+                Hand Signal: 👆 Point at the sky
+              </span>
+            </div>
+            <p className="text-[11px] font-sans text-slate-300 leading-relaxed">
+              In Cover 2 (Blue), Cornerbacks align with <strong>OUTSIDE LEVERAGE</strong> on #1 wide receivers. Deliver a physical re-route at the line of scrimmage to funnel the receiver inside toward deep safety help, then squat at 2-5 yards in the flat to shut down bubbles, screens, and quick out routes.
+            </p>
+          </div>
+        )}
+
+        {/* Cover 3 Green Outside Leverage Doctrine Banner */}
+        {coverageScheme === 'green' && (
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/40 via-[#0B1720] to-[#0A1822] border border-emerald-500/40 text-xs space-y-2 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  Cover 3 (Green) CB Leverage Rule:
+                </span>
+                <span className="px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-200 border border-emerald-500/50 font-mono font-bold text-[11px]">
+                  OUTSIDE LEVERAGE (7 Yds Off · 3-Step Bail)
+                </span>
+              </div>
+              <span className="text-slate-400 font-mono text-[10px]">
+                Hand Signal: 👇 Point at the grass/turf
+              </span>
+            </div>
+            <p className="text-[11px] font-sans text-slate-300 leading-relaxed">
+              In Cover 3 (Green), Cornerbacks align 7 yards off with <strong>OUTSIDE LEVERAGE</strong>. Maintain outside-in cushion to protect the sideline, funnel all route breaks inside toward the single-high Free Safety, and bail 3 steps at snap to cap the deep outside third.
+            </p>
+          </div>
+        )}
+
         {/* Scout Offense & Auto Strength Calibration Strip */}
         <div className="p-3 rounded-xl bg-[#09151E] border border-teal-500/20 text-xs space-y-2.5">
           {/* Row 1: Scout Formation & Alignment Mode */}
@@ -957,16 +1763,34 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                 onChange={(e) => setShowPressureArrows(e.target.checked)}
                 className="rounded border-slate-700 text-amber-400 focus:ring-0"
               />
-              <span>Pressure / Slants</span>
+              <span>Front Gap Arrows (DL & LBs)</span>
             </label>
             <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
               <input
                 type="checkbox"
-                checked={showGaps}
-                onChange={(e) => setShowGaps(e.target.checked)}
+                checked={showGrid}
+                onChange={(e) => setShowGrid(e.target.checked)}
                 className="rounded border-slate-700 text-teal-400 focus:ring-0"
               />
-              <span>Gap Badges</span>
+              <span>Field Grid</span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
+              <input
+                type="checkbox"
+                checked={showLosGaps}
+                onChange={(e) => setShowLosGaps(e.target.checked)}
+                className="rounded border-slate-700 text-teal-400 focus:ring-0"
+              />
+              <span>LOS Gap Tags</span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
+              <input
+                type="checkbox"
+                checked={showSecondaryBadges}
+                onChange={(e) => setShowSecondaryBadges(e.target.checked)}
+                className="rounded border-slate-700 text-teal-400 focus:ring-0"
+              />
+              <span>Secondary Pass Badges (DBs)</span>
             </label>
             <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
               <input
@@ -991,6 +1815,27 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
             </span>
           </div>
         )}
+
+        {/* Chalkboard Legend Strip */}
+        <div className="px-3.5 py-2 rounded-lg bg-[#07131B] border border-[#162A33] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="flex items-center gap-2 text-teal-300 font-semibold">
+              <span className="inline-block w-6 border-b-2 border-dashed border-teal-400" />
+              <span>Pass Assignment (Teal Dashed · No Arrow)</span>
+            </span>
+            <span className="flex items-center gap-2 text-amber-300 font-semibold">
+              <span className="flex items-center">
+                <span className="inline-block w-4 h-0.5 bg-amber-400" />
+                <span className="inline-block w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-l-[5px] border-l-amber-400" />
+                <span className="inline-block w-2.5 h-2.5 rounded-full border border-amber-400 bg-[#061219] ml-1" />
+              </span>
+              <span>Run Gap Responsibility (Orange Arrow + Target Circle at Heel Depth)</span>
+            </span>
+          </div>
+          <span className="text-slate-400 text-[10.5px]">
+            EMLOS ± 3 Yds (Rov/Sam) · Open Gaps (Will/Mike)
+          </span>
+        </div>
 
         {/* Interactive SVG Chalkboard Canvas */}
         <div className="relative w-full aspect-[16/10] bg-[#050C10] rounded-xl border border-[#162A33] overflow-hidden select-none">
@@ -1020,6 +1865,28 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                 orient="auto-start-reverse"
               >
                 <path d="M 0 1 L 10 5 L 0 9 z" fill="#C084FC" />
+              </marker>
+              <marker
+                id="lbGapArrowBlue"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#60A5FA" />
+              </marker>
+              <marker
+                id="lbEdgeArrowTeal"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#2DD4BF" />
               </marker>
               <marker
                 id="covArrowBlue"
@@ -1062,7 +1929,7 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
 
             {/* Field Grid */}
             <rect width="1000" height="620" fill="#04090D" />
-            <rect width="1000" height="620" fill="url(#grid)" />
+            {showGrid && <rect width="1000" height="620" fill="url(#grid)" />}
 
             {/* Yard lines: LOS is at y=390 (Defense is above y=390, Offense below) */}
             <line x1="60" y1="210" x2="940" y2="210" stroke="#162D38" strokeWidth="1" strokeDasharray="3 3" />
@@ -1120,7 +1987,7 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
             </g>
 
             {/* Gap Labels across LOS */}
-            {showGaps && (
+            {showLosGaps && (
               <g>
                 {(strengthCall === 'liz'
                   ? [
@@ -1203,12 +2070,12 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                 x="500"
                 y="555"
                 fill="#38BDF8"
-                fontSize="11"
+                fontSize="11.5"
                 fontFamily="monospace"
                 fontWeight="bold"
                 textAnchor="middle"
               >
-                Offense: {activeOffenseConfig.name} · {activeOffenseConfig.formationStyle} ({activeOffenseConfig.personnel})
+                {activeOffenseConfig.name} {activeOffenseConfig.personnel}
               </text>
             </g>
 
@@ -1380,11 +2247,10 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                   const isSelected = selectedPlayerId === p.id;
                   const isBlitzing = blitzCall === p.id;
 
-                  // 1. BLACK COVERAGE (Cover 1 Man-Free)
+                  // 1. BLACK COVERAGE (Cover 1 Man-Free) - Teal dashed lines with NO arrow connecting to the assignment
                   if (coverageScheme === 'black') {
                     const target = getBlackCoverageTarget(assign);
-                    const markerEnd = 'url(#covArrowBlack)';
-                    const themeColor = '#F59E0B';
+                    const themeColor = '#2DD4BF'; // Teal for pass assignments
 
                     if (assign.playerId === 'FS') {
                       // Free Safety: Single-High Free Roamer
@@ -1394,7 +2260,7 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                           onClick={() => setSelectedPlayerId(p.id)}
                           className="cursor-pointer group"
                         >
-                          {/* Drop track from pre-snap alignment */}
+                          {/* Drop track from pre-snap alignment - Teal dashed, NO arrow */}
                           <line
                             x1={coords.x}
                             y1={coords.y}
@@ -1403,7 +2269,6 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                             stroke={themeColor}
                             strokeWidth={isSelected ? '3.5' : '2.4'}
                             strokeDasharray="5 3"
-                            markerEnd={markerEnd}
                           />
                           {/* Roamer Patrol Sweep Arc across middle third */}
                           <path
@@ -1425,37 +2290,77 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                             strokeWidth="2.5"
                           />
                           <circle cx={target.x} cy={target.y} r="3.5" fill={themeColor} />
-                          {/* Badge */}
-                          <g transform={`translate(${target.x}, ${target.y - 18})`}>
-                            <rect
-                              x="-112"
-                              y="-10"
-                              width="224"
-                              height="20"
-                              rx="4"
-                              fill="#050E14"
-                              fillOpacity="0.95"
-                              stroke={themeColor}
-                              strokeWidth={isSelected ? '1.8' : '1'}
-                            />
-                            <text
-                              x="0"
-                              y="3.5"
-                              fill="#FEF08A"
-                              fontSize="8.5"
-                              fontFamily="monospace"
-                              fontWeight="bold"
-                              textAnchor="middle"
-                            >
-                              ★ FS: Single-High Roamer (12-14 yds)
-                            </text>
-                          </g>
                         </g>
                       );
                     }
 
+                    // MIKE: Shared Black Responsibility or Threat Matching in Heavy 2TE
                     if (assign.playerId === 'MIKE') {
-                      // Mike: Rat in the Hole / QB Spy
+                      if (isBlitzing) return null;
+                      const isMikeInSpy = backfieldFlow === 'weak' && offenseFormation !== 'heavy_2te';
+                      if (isMikeInSpy) {
+                        return (
+                          <g
+                            key={`cov-${assign.playerId}`}
+                            onClick={() => setSelectedPlayerId(p.id)}
+                            className="cursor-pointer group"
+                          >
+                            <line
+                              x1={coords.x}
+                              y1={coords.y}
+                              x2={target.x}
+                              y2={target.y}
+                              stroke={themeColor}
+                              strokeWidth={isSelected ? '3.5' : '2.4'}
+                              strokeDasharray="5 3"
+                            />
+                            <ellipse
+                              cx={target.x}
+                              cy={target.y}
+                              rx="35"
+                              ry="18"
+                              fill={themeColor}
+                              fillOpacity="0.12"
+                              stroke={themeColor}
+                              strokeWidth="1.5"
+                              strokeDasharray="3 3"
+                            />
+                            <circle
+                              cx={target.x}
+                              cy={target.y}
+                              r={isSelected ? '8' : '6'}
+                              fill="#0A1820"
+                              stroke={themeColor}
+                              strokeWidth="2"
+                            />
+                            <circle cx={target.x} cy={target.y} r="3" fill={themeColor} />
+                          </g>
+                        );
+                      } else {
+                        return (
+                          <g
+                            key={`cov-${assign.playerId}`}
+                            onClick={() => setSelectedPlayerId(p.id)}
+                            className="cursor-pointer group"
+                          >
+                            <line
+                              x1={coords.x}
+                              y1={coords.y}
+                              x2={target.x}
+                              y2={target.y}
+                              stroke={themeColor}
+                              strokeWidth={isSelected ? '3.5' : '2.4'}
+                              strokeDasharray="5 3"
+                            />
+                            <circle cx={target.x} cy={target.y} r="7" fill="none" stroke={themeColor} strokeWidth="2" />
+                            <circle cx={target.x} cy={target.y} r="3" fill={themeColor} />
+                          </g>
+                        );
+                      }
+                    }
+
+                    // WILL: Attached to Fullback (FB) in Base I-Formation / Threat Matching (Weak flow = #3 FB, Strong flow = #4 FB)
+                    if (assign.playerId === 'WILL') {
                       if (isBlitzing) return null;
                       return (
                         <g
@@ -1470,15 +2375,134 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                             y2={target.y}
                             stroke={themeColor}
                             strokeWidth={isSelected ? '3.5' : '2.4'}
-                            strokeDasharray="4 2"
-                            markerEnd={markerEnd}
+                            strokeDasharray="5 3"
                           />
-                          {/* Rat zone patrol ring */}
+                          <circle cx={target.x} cy={target.y} r="7" fill="none" stroke={themeColor} strokeWidth="2" />
+                          <circle cx={target.x} cy={target.y} r="3" fill={themeColor} />
+                        </g>
+                      );
+                    }
+
+                    // CORNERBACKS: Normal Black (7 Yds Off Inside Leverage) vs Jam (On LOS Hand Fight)
+                    if (assign.playerId === 'LCB' || assign.playerId === 'RCB') {
+                      if (isBlitzing) return null;
+
+                      if (isJamCall) {
+                        return (
+                          <g
+                            key={`cov-${assign.playerId}`}
+                            onClick={() => setSelectedPlayerId(p.id)}
+                            className="cursor-pointer group"
+                          >
+                            <line
+                              x1={coords.x}
+                              y1={coords.y}
+                              x2={target.x}
+                              y2={target.y}
+                              stroke={themeColor}
+                              strokeWidth={isSelected ? '4' : '3'}
+                              strokeDasharray="5 3"
+                            />
+                            {/* Jam Hand-Fight Reticle at LOS */}
+                            <circle cx={target.x} cy={target.y} r="8" fill="#EF4444" fillOpacity="0.25" stroke="#F87171" strokeWidth="2" />
+                            <circle cx={target.x} cy={target.y} r="3" fill="#FFFFFF" />
+                          </g>
+                        );
+                      } else {
+                        return (
+                          <g
+                            key={`cov-${assign.playerId}`}
+                            onClick={() => setSelectedPlayerId(p.id)}
+                            className="cursor-pointer group"
+                          >
+                            <line
+                              x1={coords.x}
+                              y1={coords.y}
+                              x2={target.x}
+                              y2={target.y}
+                              stroke={themeColor}
+                              strokeWidth={isSelected ? '3.5' : '2.4'}
+                              strokeDasharray="5 3"
+                            />
+                            <circle cx={target.x} cy={target.y} r="7" fill="none" stroke={themeColor} strokeWidth="2" />
+                            <circle cx={target.x} cy={target.y} r="3" fill={themeColor} />
+                          </g>
+                        );
+                      }
+                    }
+
+                    // SAM: "Sam does not have Strong Hook, he has Y."
+                    if (assign.playerId === 'SAM') {
+                      if (isBlitzing) return null;
+                      return (
+                        <g
+                          key={`cov-${assign.playerId}`}
+                          onClick={() => setSelectedPlayerId(p.id)}
+                          className="cursor-pointer group"
+                        >
+                          <line
+                            x1={coords.x}
+                            y1={coords.y}
+                            x2={target.x}
+                            y2={target.y}
+                            stroke={themeColor}
+                            strokeWidth={isSelected ? '3.5' : '2.4'}
+                            strokeDasharray="5 3"
+                          />
+                          <circle cx={target.x} cy={target.y} r="7" fill="none" stroke={themeColor} strokeWidth="2" />
+                          <circle cx={target.x} cy={target.y} r="3" fill={themeColor} />
+                        </g>
+                      );
+                    }
+
+                    // ROVER: "Rov will have the 2nd threat, which would be the TB if the TB goes to the weak side."
+                    if (assign.playerId === 'ROV') {
+                      if (isBlitzing) return null;
+                      return (
+                        <g
+                          key={`cov-${assign.playerId}`}
+                          onClick={() => setSelectedPlayerId(p.id)}
+                          className="cursor-pointer group"
+                        >
+                          <line
+                            x1={coords.x}
+                            y1={coords.y}
+                            x2={target.x}
+                            y2={target.y}
+                            stroke={themeColor}
+                            strokeWidth={isSelected ? '3.5' : '2.4'}
+                            strokeDasharray="5 3"
+                          />
+                          <circle cx={target.x} cy={target.y} r="7" fill="none" stroke={themeColor} strokeWidth="2" />
+                          <circle cx={target.x} cy={target.y} r="3" fill={themeColor} />
+                        </g>
+                      );
+                    }
+
+                    // STRONG SAFETY: "SS will have Hole/Robber/Spy"
+                    if (assign.playerId === 'SS') {
+                      if (isBlitzing) return null;
+                      return (
+                        <g
+                          key={`cov-${assign.playerId}`}
+                          onClick={() => setSelectedPlayerId(p.id)}
+                          className="cursor-pointer group"
+                        >
+                          <line
+                            x1={coords.x}
+                            y1={coords.y}
+                            x2={target.x}
+                            y2={target.y}
+                            stroke={themeColor}
+                            strokeWidth={isSelected ? '3.5' : '2.4'}
+                            strokeDasharray="5 3"
+                          />
+                          {/* Low Hole Robber Patrol Ellipse */}
                           <ellipse
                             cx={target.x}
                             cy={target.y}
-                            rx="42"
-                            ry="22"
+                            rx="28"
+                            ry="16"
                             fill={themeColor}
                             fillOpacity="0.12"
                             stroke={themeColor}
@@ -1494,85 +2518,12 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                             strokeWidth="2"
                           />
                           <circle cx={target.x} cy={target.y} r="3" fill={themeColor} />
-                          <g transform={`translate(${target.x}, ${target.y + 26})`}>
-                            <rect
-                              x="-95"
-                              y="-9"
-                              width="190"
-                              height="18"
-                              rx="4"
-                              fill="#050E14"
-                              fillOpacity="0.95"
-                              stroke={themeColor}
-                              strokeWidth={isSelected ? '1.8' : '1'}
-                            />
-                            <text
-                              x="0"
-                              y="3.5"
-                              fill="#FEF08A"
-                              fontSize="8"
-                              fontFamily="monospace"
-                              fontWeight="bold"
-                              textAnchor="middle"
-                            >
-                              🐀 MIKE: Rat in Hole / Spy (5-7 yds)
-                            </text>
-                          </g>
                         </g>
                       );
                     }
 
-                    if (assign.playerId === 'SAM') {
-                      // Sam: Jam Tight End on LOS / Edge Contain
-                      if (isBlitzing) return null;
-                      return (
-                        <g
-                          key={`cov-${assign.playerId}`}
-                          onClick={() => setSelectedPlayerId(p.id)}
-                          className="cursor-pointer group"
-                        >
-                          <line
-                            x1={coords.x}
-                            y1={coords.y}
-                            x2={target.x}
-                            y2={target.y}
-                            stroke={themeColor}
-                            strokeWidth={isSelected ? '3.5' : '2.4'}
-                            markerEnd={markerEnd}
-                          />
-                          <circle cx={target.x} cy={target.y} r="6" fill="#DC2626" stroke="#FFFFFF" strokeWidth="1.5" />
-                          <g transform={`translate(${target.x}, ${target.y - 16})`}>
-                            <rect
-                              x="-80"
-                              y="-9"
-                              width="160"
-                              height="18"
-                              rx="4"
-                              fill="#050E14"
-                              fillOpacity="0.95"
-                              stroke={themeColor}
-                              strokeWidth={isSelected ? '1.8' : '1'}
-                            />
-                            <text
-                              x="0"
-                              y="3.5"
-                              fill="#FEF08A"
-                              fontSize="8"
-                              fontFamily="monospace"
-                              fontWeight="bold"
-                              textAnchor="middle"
-                            >
-                              💥 SAM: Jam TE on LOS / Edge
-                            </text>
-                          </g>
-                        </g>
-                      );
-                    }
-
-                    // Man-to-Man Locks: LCB, RCB, SS, WILL, ROV
+                    // Default Man-to-Man Lock
                     if (isBlitzing) return null;
-                    const midX = (coords.x + target.x) / 2;
-                    const midY = (coords.y + target.y) / 2;
 
                     return (
                       <g
@@ -1587,10 +2538,8 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                           y2={target.y}
                           stroke={themeColor}
                           strokeWidth={isSelected ? '3.5' : '2.4'}
-                          strokeDasharray="5 2.5"
-                          markerEnd={markerEnd}
+                          strokeDasharray="5 3"
                         />
-                        {/* Target lock ring */}
                         <circle
                           cx={target.x}
                           cy={target.y}
@@ -1600,39 +2549,12 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                           strokeWidth="2"
                         />
                         <circle cx={target.x} cy={target.y} r="3" fill={themeColor} />
-                        {/* Midpoint Lock Badge */}
-                        <g transform={`translate(${midX}, ${midY})`}>
-                          <rect
-                            x="-75"
-                            y="-9"
-                            width="150"
-                            height="18"
-                            rx="4"
-                            fill="#050E14"
-                            fillOpacity="0.95"
-                            stroke={themeColor}
-                            strokeWidth={isSelected ? '1.8' : '1'}
-                          />
-                          <text
-                            x="0"
-                            y="3.5"
-                            fill="#FEF08A"
-                            fontSize="7.5"
-                            fontFamily="monospace"
-                            fontWeight="bold"
-                            textAnchor="middle"
-                          >
-                            🔒 {assign.playerId} ➔ {target.label}
-                          </text>
-                        </g>
                       </g>
                     );
                   }
-
-                  // 2. GREEN (Cover 3 Sky) & BLUE (Cover 2 Zone) DROPS
+                  // 2. GREEN (Cover 3 Sky) & BLUE (Cover 2 Zone) DROPS - Teal dashed lines with NO arrow
                   if (isBlitzing) return null;
-                  const themeColor = coverageScheme === 'blue' ? '#38BDF8' : '#34D399';
-                  const markerEnd = coverageScheme === 'blue' ? 'url(#covArrowBlue)' : 'url(#covArrowGreen)';
+                  const themeColor = '#2DD4BF'; // Teal for pass assignments
                   const dropTarget = assign.dropTarget;
                   const controlPoint = assign.controlPoint || {
                     x: (coords.x + dropTarget.x) / 2,
@@ -1647,14 +2569,13 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                       onClick={() => setSelectedPlayerId(p.id)}
                       className="cursor-pointer group"
                     >
-                      {/* Curved drop trajectory path from pre-snap alignment to landmark */}
+                      {/* Curved drop trajectory path from pre-snap alignment to landmark - Teal dashed, NO arrow */}
                       <path
                         d={`M ${coords.x} ${coords.y} Q ${controlPoint.x} ${controlPoint.y} ${dropTarget.x} ${dropTarget.y}`}
                         fill="none"
                         stroke={themeColor}
                         strokeWidth={isSelected ? '3.6' : '2.4'}
                         strokeDasharray="5 3"
-                        markerEnd={markerEnd}
                         filter={isSelected ? 'url(#covDropGlow)' : undefined}
                       />
 
@@ -1674,82 +2595,85 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                         fill={themeColor}
                       />
 
-                      {/* Tactical Landmark Label Badge */}
-                      <g transform={`translate(${dropTarget.x}, ${badgeY})`}>
-                        <rect
-                          x="-72"
-                          y="-9"
-                          width="144"
-                          height="18"
-                          rx="4"
-                          fill="#040F16"
-                          fillOpacity="0.95"
-                          stroke={themeColor}
-                          strokeWidth={isSelected ? '1.8' : '1'}
-                        />
-                        <text
-                          x="0"
-                          y="3.5"
-                          fill="#FFFFFF"
-                          fontSize="7.8"
-                          fontFamily="monospace"
-                          fontWeight="bold"
-                          textAnchor="middle"
-                        >
-                          {assign.playerId}: {assign.landmarkLabel.split('(')[0].trim()} ({assign.depthYards})
-                        </text>
-                      </g>
+                      {/* Tactical Landmark Label Badge (only for Secondary DBs, hidden for LBs and DL) */}
+                      {assign.group === 'DB' && (
+                        <g transform={`translate(${dropTarget.x}, ${badgeY})`}>
+                          <rect
+                            x="-72"
+                            y="-9"
+                            width="144"
+                            height="18"
+                            rx="4"
+                            fill="#040F16"
+                            fillOpacity="0.95"
+                            stroke={themeColor}
+                            strokeWidth={isSelected ? '1.8' : '1'}
+                          />
+                          <text
+                            x="0"
+                            y="3.5"
+                            fill="#FFFFFF"
+                            fontSize="7.8"
+                            fontFamily="monospace"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                          >
+                            {assign.playerId}: {assign.landmarkLabel.split('(')[0].trim()} ({assign.depthYards})
+                          </text>
+                        </g>
+                      )}
                     </g>
                   );
                 })}
               </g>
             )}
 
-            {/* D-Line & Front Arrows (Base Front Gaps, Slant, Pinch, Wide) */}
+            {/* Front 7 Gap Assignment Arrows (DL + Linebackers: Sam, Rover, Will, Mike) - Orange lines with arrow and target circle at heel depth */}
             {showPressureArrows &&
-              activeLinemenArrows.map((arrow, idx) => {
+              activeFrontGapArrows.map((arrow, idx) => {
                 const p = DEFENSE_PLAYERS.find((d) => d.id === arrow.playerId);
                 if (!p) return null;
+                // If this player is blitzing, let the dedicated blitz arrow render instead
+                if (blitzCall === arrow.playerId) return null;
                 const coords = getPlayerCoords(p);
+                const isSelected = selectedPlayerId === p.id;
                 return (
-                  <g key={`front-arrow-${idx}`}>
+                  <g
+                    key={`front-gap-arrow-${idx}`}
+                    className="cursor-pointer group"
+                    onClick={() => setSelectedPlayerId(p.id)}
+                  >
+                    {/* Orange run responsibility line with arrow */}
                     <line
                       x1={coords.x}
                       y1={coords.y}
                       x2={arrow.arrowEnd.x}
                       y2={arrow.arrowEnd.y}
-                      stroke="#F59E0B"
-                      strokeWidth="2.8"
-                      strokeDasharray="4 2"
-                      markerEnd="url(#slantArrow)"
+                      stroke={arrow.stroke}
+                      strokeWidth={isSelected ? '3.4' : '2.6'}
+                      strokeDasharray={arrow.type === 'dl' ? '4 2' : '5 2.5'}
+                      markerEnd={arrow.markerEnd}
                     />
-                    <rect
-                      x={(coords.x + arrow.arrowEnd.x) / 2 - 28}
-                      y={(coords.y + arrow.arrowEnd.y) / 2 - 12}
-                      width="56"
-                      height="13.5"
-                      rx="3"
-                      fill="#04121A"
-                      fillOpacity="0.95"
+                    {/* Target circle just behind the OL at "heel depth" of the LOS (y=418) */}
+                    <circle
+                      cx={arrow.arrowEnd.x}
+                      cy={arrow.arrowEnd.y}
+                      r={isSelected ? '6.5' : '5'}
+                      fill="#061219"
                       stroke="#F59E0B"
-                      strokeWidth="0.8"
+                      strokeWidth={isSelected ? '2.4' : '1.8'}
                     />
-                    <text
-                      x={(coords.x + arrow.arrowEnd.x) / 2}
-                      y={(coords.y + arrow.arrowEnd.y) / 2 - 2.5}
-                      fill="#FDE68A"
-                      fontSize="8.5"
-                      fontFamily="monospace"
-                      fontWeight="bold"
-                      textAnchor="middle"
-                    >
-                      {arrow.label}
-                    </text>
+                    <circle
+                      cx={arrow.arrowEnd.x}
+                      cy={arrow.arrowEnd.y}
+                      r="2"
+                      fill="#F59E0B"
+                    />
                   </g>
                 );
               })}
 
-            {/* Linebacker Blitz Arrow (Mike, Will, Sam, Rover) */}
+            {/* Linebacker Blitz Arrow (Mike, Will, Sam, Rover) - Clean arrow without text label */}
             {showPressureArrows && blitzCall && (
               (() => {
                 const p = DEFENSE_PLAYERS.find((d) => d.id === blitzCall);
@@ -1767,17 +2691,6 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                       strokeWidth="3.2"
                       markerEnd="url(#pressureArrow)"
                     />
-                    <text
-                      x={(coords.x + pressure.arrowEnd.x) / 2}
-                      y={(coords.y + pressure.arrowEnd.y) / 2 - 6}
-                      fill="#F3E8FF"
-                      fontSize="9"
-                      fontFamily="monospace"
-                      fontWeight="bold"
-                      textAnchor="middle"
-                    >
-                      {pressure.callName} Blitz
-                    </text>
                   </g>
                 );
               })()
@@ -1874,105 +2787,71 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                     {player.id}
                   </text>
 
-                  {/* Base Def Line & Front Gap Assignment Badge */}
-                  {(showGaps || player.isDefensiveLine) && (
+                  {/* Pass Assignment Badge on Playart - ONLY for Secondary DBs (removed for LB & DL) */}
+                  {showSecondaryBadges && !player.isDefensiveLine && !isSamOrRover && !isMikeOrWill && (
+                    <g>
+                      {(() => {
+                        const passText = getPassAssignmentLabel(player);
+                        const badgeWidth = Math.max(68, passText.length * 5.6 + 12);
+                        return (
+                          <>
+                            <rect
+                              x={coords.x - badgeWidth / 2}
+                              y={coords.y - 31}
+                              width={badgeWidth}
+                              height="13.5"
+                              rx="3.5"
+                              fill="#05131C"
+                              fillOpacity="0.95"
+                              stroke="#0D9488"
+                              strokeWidth="1"
+                            />
+                            <text
+                              x={coords.x}
+                              y={coords.y - 21.5}
+                              fill="#5EEAD4"
+                              fontSize="7.5"
+                              fontFamily="monospace"
+                              fontWeight="bold"
+                              textAnchor="middle"
+                            >
+                              {passText}
+                            </text>
+                          </>
+                        );
+                      })()}
+                    </g>
+                  )}
+
+                  {/* Sequential Tech / Depth Tag indicator - ONLY for Secondary DBs when enabled (removed for LB & DL) */}
+                  {showTechniqueOverlay && !player.isDefensiveLine && !isSamOrRover && !isMikeOrWill && (
                     <g>
                       <rect
                         x={coords.x - 30}
-                        y={coords.y - 31}
+                        y={coords.y + 19}
                         width="60"
-                        height="13.5"
-                        rx="3.5"
-                        fill="#05131C"
-                        fillOpacity="0.95"
-                        stroke={
-                          player.isDefensiveLine
-                            ? '#F59E0B' // Amber for Defensive Line
-                            : isSamOrRover
-                            ? '#2DD4BF' // Teal for Edge Contain
-                            : isMikeOrWill
-                            ? '#60A5FA' // Blue for Inside Linebackers
-                            : '#0D9488'
-                        }
-                        strokeWidth="1"
-                      />
-                      <text
-                        x={coords.x}
-                        y={coords.y - 21.5}
-                        fill={
-                          player.isDefensiveLine
-                            ? '#FDE68A'
-                            : isSamOrRover
-                            ? '#99F6E4'
-                            : isMikeOrWill
-                            ? '#BFDBFE'
-                            : '#5EEAD4'
-                        }
-                        fontSize="8"
-                        fontFamily="monospace"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                      >
-                        {`GAP: ${getAssignedGap(player, coords).toUpperCase()}`}
-                      </text>
-                    </g>
-                  )}
-
-                  {/* Sequential Tech / Depth Tag indicator */}
-                  <g>
-                    <rect
-                      x={coords.x - 30}
-                      y={coords.y + 19}
-                      width="60"
-                      height="12"
-                      rx="3"
-                      fill="#0A1C24"
-                      stroke={alignmentMode === 'offense_adjust' ? '#14B8A6' : '#1E3A8A'}
-                      strokeWidth="0.8"
-                    />
-                    <text
-                      x={coords.x}
-                      y={coords.y + 28}
-                      fill={alignmentMode === 'offense_adjust' ? '#5EEAD4' : '#93C5FD'}
-                      fontSize="7.5"
-                      fontFamily="monospace"
-                      fontWeight="bold"
-                      textAnchor="middle"
-                    >
-                      {coords.sequentialTech
-                        ? coords.sequentialTech.split('(')[0].trim()
-                        : isSamOrRover && (formation === 'shield' || formation === 'vanguard')
-                        ? '2x0 LOS'
-                        : player.sequentialTechCode || `${coords.depthYards} yd`}
-                    </text>
-                  </g>
-
-                  {/* Selected Player Tooltip */}
-                  {isSelected && (
-                    <g>
-                      <rect
-                        x={coords.x - 70}
-                        y={coords.y - 53}
-                        width="140"
-                        height="19"
-                        rx="4"
+                        height="12"
+                        rx="3"
                         fill="#0A1C24"
-                        stroke="#38BDF8"
-                        strokeWidth="1.2"
+                        stroke={alignmentMode === 'offense_adjust' ? '#14B8A6' : '#1E3A8A'}
+                        strokeWidth="0.8"
                       />
                       <text
                         x={coords.x}
-                        y={coords.y - 39.5}
-                        fill="#E0F2FE"
-                        fontSize="9"
+                        y={coords.y + 28}
+                        fill={alignmentMode === 'offense_adjust' ? '#5EEAD4' : '#93C5FD'}
+                        fontSize="7.5"
                         fontFamily="monospace"
                         fontWeight="bold"
                         textAnchor="middle"
                       >
-                        {player.name} · {getAssignedGap(player, coords)}
+                        {coords.sequentialTech
+                          ? coords.sequentialTech.split('(')[0].trim()
+                          : player.sequentialTechCode || `${coords.depthYards} yd`}
                       </text>
                     </g>
                   )}
+
                 </g>
               );
             })}
@@ -2001,9 +2880,7 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
             <p className="text-xs text-slate-300 font-mono flex flex-wrap items-center gap-2 pt-0.5">
               <span>Active Call: <strong className="text-white uppercase">{activeCoverage.name}</strong></span>
               <span>·</span>
-              <span className="text-amber-300 font-bold">Signal: {activeCoverage.handSignal}</span>
-              <span>·</span>
-              <span className="text-slate-400">{activeCoverage.philosophy}</span>
+              <span className="text-amber-300 font-bold">Signal: {coverageScheme === 'black' && isJamCall ? '🙌 Two hands up palms out, pushing motion ("JAM" Call)' : activeCoverage.handSignal}</span>
             </p>
           </div>
 
@@ -2080,9 +2957,9 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
             </button>
           </div>
 
-          <div className="text-slate-400 font-mono text-[11px] hidden sm:block">
+          <span className="text-slate-400 font-mono text-[11px] hidden sm:block">
             Click any defender to highlight drop & landmark on the chalkboard
-          </div>
+          </span>
         </div>
 
         {/* 8 Defender Assignment Cards */}
@@ -2140,42 +3017,180 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                       </span>
                     </div>
 
-                    {/* Role / Assignment Name */}
-                    <div className="p-2 rounded-lg bg-[#050C10] border border-[#162A33] space-y-1">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-slate-200">
-                          {assign.roleName}
-                        </span>
-                        {isBlitzing && (
-                          <span className="px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-700 text-[9px] font-mono font-bold">
-                            BLITZ CALL
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[10px] font-mono text-teal-300 flex items-center justify-between">
-                        <span>Landmark: <strong className="text-white">{assign.landmarkLabel}</strong></span>
-                        <span className="text-amber-300 font-bold">{assign.depthYards}</span>
-                      </div>
-                    </div>
+                    {/* Dynamic Role / Assignment Name for Black Coverage */}
+                    {(() => {
+                      let displayRole = assign.roleName;
+                      let displayLandmark = assign.landmarkLabel;
+                      let displayDepth = assign.depthYards;
+                      let displayTech = assign.technique;
+                      let displayCoaching = assign.coachingPoint;
 
-                    {/* Technique & Leverage */}
-                    <div className="space-y-1 text-[11px] leading-relaxed">
-                      <div className="text-slate-300">
-                        <strong className="text-slate-400 font-mono text-[10px] uppercase block">Technique:</strong>
-                        {assign.technique}
-                      </div>
-                      <div className="text-slate-300">
-                        <strong className="text-slate-400 font-mono text-[10px] uppercase block">Key Read:</strong>
-                        <span className="text-teal-300 font-mono text-[10px]">{assign.keyRead}</span>
-                      </div>
-                    </div>
+                      if (coverageScheme === 'black') {
+                        if (offenseFormation === 'heavy_2te') {
+                          // Double Tight End Heavy Outside-In Threat Matching
+                          if (assign.playerId === 'LCB') {
+                            displayRole = 'Man on #1 Threat to Left (X)';
+                            displayLandmark = '🔒 #1 Threat: X (Boundary WR)';
+                            displayDepth = isJamCall ? 'LOS (Jam)' : '7 Yds Off';
+                            displayTech = isJamCall ? 'Jam Press-Man @ LOS' : 'Off-Man (Inside Leverage)';
+                            displayCoaching = 'Threat Matching vs Heavy 2-TE: LCB has #1 threat (X) to his side.';
+                          } else if (assign.playerId === 'ROV') {
+                            displayRole = 'Man on #2 Threat to Left (Y1)';
+                            displayLandmark = '🔒 #2 Threat: Y1 (Left TE)';
+                            displayDepth = '2 Yds (LOS Edge)';
+                            displayTech = 'Threat-Based Man: Rover locks #2 threat (Y1 TE)';
+                            displayCoaching = 'Threat Matching vs Heavy 2-TE: Rover has #2 threat (Y1) to his side.';
+                          } else if (assign.playerId === 'WILL') {
+                            displayRole = 'Man on #3 Threat (TB)';
+                            displayLandmark = '🔒 #3 Threat: TB (Tailback)';
+                            displayDepth = '4 Yds (Flow)';
+                            displayTech = 'Threat-Based Man: Will covers #3 threat (TB)';
+                            displayCoaching = 'Threat Matching vs Heavy 2-TE: Will has #3 threat (TB).';
+                          } else if (assign.playerId === 'RCB') {
+                            displayRole = 'Man on #1 Threat to Right (Y2)';
+                            displayLandmark = '🔒 #1 Threat: Y2 (Right TE)';
+                            displayDepth = isJamCall ? 'LOS (Jam)' : '7 Yds Off';
+                            displayTech = isJamCall ? 'Jam Press-Man @ LOS' : 'Off-Man (Inside Leverage)';
+                            displayCoaching = 'Threat Matching vs Heavy 2-TE: RCB has #1 threat to his side (Y2).';
+                          } else if (assign.playerId === 'SAM') {
+                            displayRole = 'Man on #2 Threat to Right (TB)';
+                            displayLandmark = '🔒 #2 Threat: TB (Tailback)';
+                            displayDepth = '2 Yds (Contain)';
+                            displayTech = 'Threat-Based Man: Sam covers #2 threat (TB) to his side';
+                            displayCoaching = 'Threat Matching vs Heavy 2-TE: Sam has #2 threat (TB) to his side.';
+                          } else if (assign.playerId === 'MIKE') {
+                            if (backfieldFlow === 'strong') {
+                              displayRole = 'Man on #3 Threat to Right (FB)';
+                              displayLandmark = '🔒 #3 Threat: FB (to his side)';
+                              displayDepth = '4.5 Yds';
+                              displayTech = 'Threat-Based Man: Mike has #3 threat (TB/FB) to his side';
+                              displayCoaching = 'Threat Matching vs Heavy 2-TE: Mike has #3 threat (TB) to his side.';
+                            } else {
+                              displayRole = 'Man on #4 Threat to Left (FB)';
+                              displayLandmark = '🔒 #4 Threat: FB (to Will\'s side)';
+                              displayDepth = '4.5 Yds';
+                              displayTech = 'Threat-Based Man: Mike has #4 threat (FB) to Will\'s side';
+                              displayCoaching = 'Threat Matching vs Heavy 2-TE: Mike has #4 threat (FB) to Will\'s side.';
+                            }
+                          }
+                        } else {
+                          if (assign.playerId === 'LCB' || assign.playerId === 'RCB') {
+                            if (isJamCall) {
+                              displayRole = 'Jam / Press-Man on #1 WR (LOS)';
+                              displayLandmark = '💥 Jam on LOS (0-1 Yd)';
+                              displayDepth = 'LOS (0-1 Yd)';
+                              displayTech = 'Jam Press-Man · Two hands up palms out, pushing motion at snap ➔ Inside hip lock';
+                              displayCoaching = 'Jam Call: Align on the LOS. Hand fight with receiver at snap to disrupt timing, then cover inside hip tightly.';
+                            } else {
+                              displayRole = 'Off-Man on #1 WR (7 Yds Inside Leverage)';
+                              displayLandmark = '🔒 7 Yds Off (Inside Leverage)';
+                              displayDepth = '7 Yds Off';
+                              displayTech = 'Off-Man Technique · 7 Yds Cushion · Inside Leverage';
+                              displayCoaching = 'Normal Black: Not automatic press! Play 7 yards off with inside leverage. Do not give up slant/inside release; match vertical with cushion.';
+                            }
+                          } else if (assign.playerId === 'WILL') {
+                            if (backfieldFlow === 'weak') {
+                              displayRole = 'Man-to-Man on Weak RB (Shared Black)';
+                              displayLandmark = '🔒 Weak Release RB';
+                              displayDepth = '4 Yds (Flow Lock)';
+                              displayTech = 'Shared Black: Back went weak ➔ Will covers in man-to-man';
+                              displayCoaching = 'Will and Mike share Black responsibility. Back released to weak side ➔ Will covers stride-for-stride on swing/wheel/flare.';
+                            } else {
+                              displayRole = 'Underneath QB Spy / Rat in Hole';
+                              displayLandmark = '🐀 QB Spy (Non-Cover LB)';
+                              displayDepth = '5-7 Yds';
+                              displayTech = 'Shared Black: Back went strong ➔ Will is in Spy (Non-Cover LB)';
+                              displayCoaching = 'Will and Mike share Black responsibility. Back released to strong side ➔ Will is non-cover LB in Spy, robbing crossers and spying scrambles.';
+                            }
+                          } else if (assign.playerId === 'MIKE') {
+                            if (backfieldFlow === 'strong') {
+                              displayRole = 'Man-to-Man on Strong RB (Shared Black)';
+                              displayLandmark = '🔒 Strong Release RB';
+                              displayDepth = '4 Yds (Flow Lock)';
+                              displayTech = 'Shared Black: Back went strong ➔ Mike covers in man-to-man';
+                              displayCoaching = 'Will and Mike share Black responsibility. Back released to strong side ➔ Mike covers stride-for-stride on swing/wheel/flare.';
+                            } else {
+                              displayRole = 'Underneath QB Spy / Rat in Hole';
+                              displayLandmark = '🐀 QB Spy (Non-Cover LB)';
+                              displayDepth = '5-7 Yds';
+                              displayTech = 'Shared Black: Back went weak ➔ Mike is in Spy (Non-Cover LB)';
+                              displayCoaching = 'Will and Mike share Black responsibility. Back released to weak side ➔ Mike is non-cover LB in Spy, robbing crossers and spying scrambles.';
+                            }
+                          }
+                        }
+                      } else if (coverageScheme === 'blue') {
+                        if (assign.playerId === 'LCB' || assign.playerId === 'RCB') {
+                          displayRole = 'Flat Squat / Cloud (Outside Leverage)';
+                          displayLandmark = '🔒 Outside Leverage · Flat (2-5 Yds)';
+                          displayDepth = '5 Yds Off';
+                          displayTech = 'Outside Leverage · Re-route #1 WR Inside · Flat Squat';
+                          displayCoaching = 'In Cover 2 (Blue), align with OUTSIDE LEVERAGE on #1 WR. Re-route receiver inside to safety help, then squat at 2-5 yards in flat to attack perimeter throws.';
+                        }
+                      } else if (coverageScheme === 'green') {
+                        if (assign.playerId === 'LCB' || assign.playerId === 'RCB') {
+                          displayRole = 'Deep Outside 1/3 (Outside-In Leverage)';
+                          displayLandmark = '🔒 Outside Leverage · Deep 1/3 Bail';
+                          displayDepth = '7 Yds Off';
+                          displayTech = 'Outside Leverage · 3-Step Bail · Outside-In Funnel';
+                          displayCoaching = 'In Cover 3 (Green), align 7 yards off with OUTSIDE LEVERAGE. Protect the sideline, funnel routes inside to Free Safety, and bail 3 steps at snap to cap deep third.';
+                        }
+                      }
 
-                    {/* Coaching Point Quote */}
-                    <div className="p-2 rounded bg-black/40 border border-[#142630] text-[10.5px] text-slate-400 italic">
-                      “{assign.coachingPoint}”
-                    </div>
+                      return (
+                        <>
+                          {/* Dual Accountability: Run Fit (Open Gap Rule) vs Pass Coverage */}
+                          <div className="grid grid-cols-2 gap-1.5 p-2 rounded-lg bg-[#050C10] border border-[#162A33] text-[10px] font-mono">
+                            <div className="space-y-0.5 min-w-0">
+                              <span className="text-teal-400 block text-[9px] uppercase font-bold truncate">Run Fit (Open Gap)</span>
+                              <span className="font-bold text-teal-200 block truncate">
+                                {getAssignedGap(p, getPlayerCoords(p))}
+                              </span>
+                            </div>
+                            <div className="space-y-0.5 min-w-0">
+                              <span className="text-amber-400 block text-[9px] uppercase font-bold truncate">Pass Coverage</span>
+                              <span className="font-bold text-amber-200 block truncate">
+                                {coverageScheme === 'black' && offenseFormation === 'heavy_2te'
+                                  ? displayLandmark.replace('🔒 ', '').replace('💥 ', '')
+                                  : displayRole.split('(')[0].trim()}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="p-2 rounded-lg bg-[#050C10] border border-[#162A33] space-y-1">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="font-bold text-slate-200">
+                                {displayRole}
+                              </span>
+                              {isBlitzing && (
+                                <span className="px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-700 text-[9px] font-mono font-bold">
+                                  BLITZ CALL
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] font-mono text-teal-300 flex items-center justify-between">
+                              <span>Landmark: <strong className="text-white">{displayLandmark}</strong></span>
+                              <span className="text-amber-300 font-bold">{displayDepth}</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 text-[11px] leading-relaxed">
+                            <div className="text-slate-300">
+                              <strong className="text-slate-400 font-mono text-[10px] uppercase block">Technique:</strong>
+                              {displayTech}
+                            </div>
+                            <div className="text-slate-300">
+                              <strong className="text-slate-400 font-mono text-[10px] uppercase block">Key Read:</strong>
+                              <span className="text-teal-300 font-mono text-[10px]">{assign.keyRead}</span>
+                            </div>
+                          </div>
+
+                          <div className="p-2 rounded bg-black/40 border border-[#142630] text-[10.5px] text-slate-400 italic">
+                            &ldquo;{displayCoaching}&rdquo;
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
-
                   {/* Highlight on Chalkboard action */}
                   <div className="pt-2 border-t border-[#162A33]/60 flex items-center justify-between">
                     <span className="text-[10px] font-mono text-slate-400">
@@ -2200,242 +3215,279 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
       </div>
 
       {/* LOWER SECTION: Player Inspector & Sequential Tech Blueprint */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Selected Player Inspector (Left) */}
-        <div className="lg:col-span-7 rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#162A33] pb-3">
+      <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#162A33] pb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center font-mono font-extrabold text-teal-300">
+              {selectedPlayer.id}
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-base font-display">
+                {selectedPlayer.name} ({selectedPlayer.id})
+              </h3>
+              <p className="text-xs text-slate-400 font-mono">{selectedPlayer.role}</p>
+            </div>
+          </div>
+
+          {selectedPlayer.canBlitz && (
+            <button
+              onClick={() => setBlitzCall(blitzCall === selectedPlayer.id ? null : (selectedPlayer.id as any))}
+              className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                blitzCall === selectedPlayer.id
+                  ? 'bg-purple-500 text-slate-950 shadow-md shadow-purple-900/50'
+                  : 'bg-[#0B1A22] border border-purple-500/30 text-purple-300 hover:bg-purple-950/40'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              {blitzCall === selectedPlayer.id ? 'Blitz Active' : `Call ${selectedPlayer.id} Blitz`}
+            </button>
+          )}
+        </div>
+
+        {/* Sequential Tech & Assignment Grid (4 Pillars: Tech, Depth, Run Fit, Pass Coverage) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] space-y-1">
+            <div className="text-[10px] font-mono text-slate-400 uppercase">Sequential Tech</div>
+            <div className="text-xs font-bold text-teal-300 font-mono">
+              {selectedPlayer.sequentialTechCode}
+            </div>
+            <div className="text-[11px] text-slate-300">
+              {selectedPlayer.sequentialTechBase}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] space-y-1">
+            <div className="text-[10px] font-mono text-slate-400 uppercase">Technique & Depth</div>
+            <div className="text-xs font-bold text-amber-300 font-mono">
+              {getPlayerCoords(selectedPlayer).technique}
+            </div>
+            <div className="text-[11px] text-slate-300">
+              Depth: {getPlayerCoords(selectedPlayer).depthYards} yds off ball
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#091318] border border-teal-500/30 space-y-1">
+            <div className="text-[10px] font-mono text-teal-400 uppercase font-bold">★ Run Fit (Open Gap)</div>
+            <div className="text-xs font-bold text-teal-200 font-mono">
+              {getAssignedGap(selectedPlayer, getPlayerCoords(selectedPlayer))}
+            </div>
+            <div className="text-[10.5px] text-slate-400">
+              {selectedPlayer.id === 'MIKE' || selectedPlayer.id === 'WILL'
+                ? 'Open Gap Principle via front 3 slants'
+                : selectedPlayer.isDefensiveLine
+                ? 'Interior penetration / gap control'
+                : 'Perimeter edge contain & alley force'}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#091318] border border-amber-500/30 space-y-1">
+            <div className="text-[10px] font-mono text-amber-400 uppercase font-bold">★ Pass Coverage</div>
+            <div className="text-xs font-bold text-amber-200 font-mono truncate">
+              {getPassCoverageResponsibility(selectedPlayer).title}
+            </div>
+            <div className="text-[10.5px] text-slate-400 line-clamp-1">
+              {getPassCoverageResponsibility(selectedPlayer).detail}
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Formations Breakdown for this Player */}
+        <div className="p-3.5 rounded-xl bg-[#09151E] border border-teal-500/20 text-xs space-y-2">
+          <span className="font-bold text-teal-300 font-mono uppercase tracking-wider block">
+            ★ 4-Formation Assignment Rules for {selectedPlayer.name}:
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-[11px] text-slate-300">
+            <div className="p-2 rounded bg-black/40 border border-[#162A33]">
+              <strong className="text-teal-400">Base (3-4):</strong> {selectedPlayer.baseAssignment}
+            </div>
+            <div className="p-2 rounded bg-black/40 border border-[#162A33]">
+              <strong className="text-teal-400">Shield (5-2):</strong> {selectedPlayer.shieldAssignment}
+            </div>
+            <div className="p-2 rounded bg-black/40 border border-[#162A33]">
+              <strong className="text-yellow-400">Vanguard (Goal Line):</strong> {selectedPlayer.vanguardAssignment}
+            </div>
+            <div className="p-2 rounded bg-black/40 border border-[#162A33]">
+              <strong className="text-blue-400">Shell (Deep Pass):</strong> {selectedPlayer.shellAssignment}
+            </div>
+          </div>
+        </div>
+      </div>
+
+          {/* Quick Access to Defensive Signals & Communication */}
+          <div className="rounded-2xl border border-teal-500/30 bg-[#070E13] p-5 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center font-mono font-extrabold text-teal-300">
-                {selectedPlayer.id}
+              <div className="p-2.5 rounded-xl bg-teal-500/15 border border-teal-500/40 text-teal-300">
+                <Radio className="w-6 h-6" />
               </div>
               <div>
                 <h3 className="font-bold text-white text-base font-display">
-                  {selectedPlayer.name} ({selectedPlayer.id})
+                  Defensive Signals & Communication
                 </h3>
-                <p className="text-xs text-slate-400 font-mono">{selectedPlayer.role}</p>
+                <p className="text-xs text-slate-400 font-mono">
+                  Physical hand gestures, verbal strength calls (Rip/Liz), emergency reset (Reload!), and sideline dial cadence.
+                </p>
               </div>
             </div>
 
-            {selectedPlayer.canBlitz && (
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setBlitzCall(blitzCall === selectedPlayer.id ? null : (selectedPlayer.id as any))}
-                className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  blitzCall === selectedPlayer.id
-                    ? 'bg-purple-500 text-slate-950 shadow-md shadow-purple-900/50'
-                    : 'bg-[#0B1A22] border border-purple-500/30 text-purple-300 hover:bg-purple-950/40'
-                }`}
+                onClick={() => setDefenseSubTab('signals')}
+                className="px-4 py-2 bg-teal-400 text-slate-950 font-mono font-bold text-xs rounded-xl hover:bg-teal-300 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
               >
-                <Zap className="w-3.5 h-3.5" />
-                {blitzCall === selectedPlayer.id ? 'Blitz Active' : `Call ${selectedPlayer.id} Blitz`}
+                <span>View Signals Tab</span>
+                <ChevronRight className="w-4 h-4" />
               </button>
-            )}
-          </div>
-
-          {/* Sequential Tech & Assignment Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] space-y-1">
-              <div className="text-[10px] font-mono text-slate-400 uppercase">Sequential Tech</div>
-              <div className="text-xs font-bold text-teal-300 font-mono">
-                {selectedPlayer.sequentialTechCode}
-              </div>
-              <div className="text-[11px] text-slate-300">
-                {selectedPlayer.sequentialTechBase}
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] space-y-1">
-              <div className="text-[10px] font-mono text-slate-400 uppercase">Technique & Depth</div>
-              <div className="text-xs font-bold text-amber-300 font-mono">
-                {getPlayerCoords(selectedPlayer).technique}
-              </div>
-              <div className="text-[11px] text-slate-300">
-                Depth: {getPlayerCoords(selectedPlayer).depthYards} yds off ball
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-[#091318] border border-[#162A33] space-y-1">
-              <div className="text-[10px] font-mono text-slate-400 uppercase">Assigned Gap / Role</div>
-              <div className="text-xs font-bold text-teal-300 font-mono">
-                {getPlayerCoords(selectedPlayer).gap}
-              </div>
-              <div className="text-[11px] text-slate-400">
-                Coverage: {activeCoverage.responsibilities[selectedPlayer.id] || 'Pass rush / Spy'}
-              </div>
             </div>
           </div>
+        </>
+      ) : (
+        /* DEFENSIVE SIGNALS & COMMUNICATION DEDICATED TAB */
+        <div className="space-y-6">
+          {/* Signals Workspace Header */}
+          <div className="rounded-2xl border border-teal-500/30 bg-[#070E13] p-6 shadow-2xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#162A33] pb-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 text-teal-400 font-mono text-xs font-semibold uppercase">
+                  <Radio className="w-4 h-4" />
+                  Sideline Communication Matrix
+                </div>
+                <h2 className="text-2xl font-bold text-white font-display">
+                  Defensive Signals & Communication
+                </h2>
+                <p className="text-xs text-slate-400 font-mono">
+                  Physical gestures, verbal calls, and tempo reset protocols keeping all 11 defenders coordinated at high speed.
+                </p>
+              </div>
 
-          {/* 4 Formations Breakdown for this Player */}
-          <div className="p-3.5 rounded-xl bg-[#09151E] border border-teal-500/20 text-xs space-y-2">
-            <span className="font-bold text-teal-300 font-mono uppercase tracking-wider block">
-              ★ 4-Formation Assignment Rules for {selectedPlayer.name}:
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onOpenPrintModal}
+                  className="px-3.5 py-1.5 rounded-lg bg-teal-500/20 text-teal-300 border border-teal-500/40 text-xs font-mono font-bold hover:bg-teal-500/30 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Print Signals Call Sheet
+                </button>
+              </div>
+            </div>
+
+            {/* Category Filter Pills */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {[
+                { id: 'ALL', label: 'All Signals (14)' },
+                { id: 'formations', label: 'Formations (4)' },
+                { id: 'coverages', label: 'Coverages (4)' },
+                { id: 'fronts', label: 'Fronts & Slants (2)' },
+                { id: 'blitzes', label: 'LB Blitzes (1)' },
+                { id: 'verbal', label: 'Verbal Calls & Resets (3)' },
+              ].map((cat) => {
+                const isSelected = signalsCategoryFilter === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSignalsCategoryFilter(cat.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-teal-400 text-slate-950 shadow-md font-extrabold'
+                        : 'bg-[#09151D] text-slate-400 border border-[#162A33] hover:text-white hover:border-slate-700'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Signals Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {DEFENSIVE_SIGNALS_LIST
+              .filter(
+                (item) => signalsCategoryFilter === 'ALL' || item.category === signalsCategoryFilter
+              )
+              .map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-3.5 flex flex-col justify-between hover:border-teal-500/40 transition-colors"
+                >
+                  <div className="space-y-3">
+                    {/* Header: Emoji Badge + Name + Category Tag */}
+                    <div className="flex items-start justify-between gap-2 border-b border-[#162A33] pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-9 h-9 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-xl shrink-0">
+                          {item.iconEmoji}
+                        </span>
+                        <div>
+                          <h4 className="font-bold text-white text-sm font-display tracking-wide">
+                            {item.name}
+                          </h4>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {item.whoSignals}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-teal-950/80 border border-teal-700/50 text-teal-300 shrink-0">
+                        {item.categoryLabel}
+                      </span>
+                    </div>
+
+                    {/* Physical Signal / Action Box */}
+                    <div className="p-3 rounded-xl bg-[#0A1822] border border-amber-500/30 space-y-1">
+                      <div className="text-[10.5px] font-mono font-bold text-amber-300 flex items-center gap-1.5 uppercase tracking-wide">
+                        <span>✋ Signal Gesture / Movement:</span>
+                      </div>
+                      <p className="text-xs text-amber-100 font-sans leading-relaxed">
+                        {item.signalMotion}
+                      </p>
+                    </div>
+
+                    {/* On-Field Meaning & Rules */}
+                    <div className="space-y-1 text-xs">
+                      <span className="text-[10.5px] font-mono text-slate-400 uppercase font-bold block">
+                        On-Field Execution:
+                      </span>
+                      <p className="text-slate-300 text-[11.5px] leading-relaxed">
+                        {item.onFieldMeaning}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Coaching Rule Footer */}
+                  <div className="p-2.5 rounded-lg bg-black/40 border border-[#162A33] text-[11px] text-slate-400">
+                    <strong className="text-teal-300">Coaching Rule: </strong>
+                    <span className="text-slate-300">{item.coachingRule}</span>
+                  </div>
+                </div>
+              ))}
+          </div>
+
+          {/* Sideline Cadence & Operational Protocol Card */}
+          <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-3 font-mono text-xs">
+            <span className="text-teal-400 font-bold uppercase tracking-wider block text-xs">
+              ★ Sideline Communication Architecture & Dial Matrix:
             </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
-              <div className="p-2 rounded bg-black/40 border border-[#162A33]">
-                <strong className="text-teal-400">Base (3-4):</strong> {selectedPlayer.baseAssignment}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-slate-300 text-[11.5px]">
+              <div className="p-3 rounded-xl bg-[#09151D] border border-[#162A33] space-y-1">
+                <strong className="text-amber-300 block">1. Three-Part Signal Call:</strong>
+                <p className="text-slate-400 font-sans">
+                  The sideline signals in sequence: <strong className="text-white">Formation</strong> (fist) ➔ <strong className="text-white">Front</strong> (slant) ➔ <strong className="text-white">Coverage</strong> (sky/ground/jersey).
+                </p>
               </div>
-              <div className="p-2 rounded bg-black/40 border border-[#162A33]">
-                <strong className="text-teal-400">Shield (5-2):</strong> {selectedPlayer.shieldAssignment}
+              <div className="p-3 rounded-xl bg-[#09151D] border border-[#162A33] space-y-1">
+                <strong className="text-teal-300 block">2. Verbal Echo & Strength:</strong>
+                <p className="text-slate-400 font-sans">
+                  Mike LB shouts the call to the box and immediately calls the defensive strength: <strong className="text-white">“RIP!”</strong> (Right) or <strong className="text-white">“LIZ!”</strong> (Left).
+                </p>
               </div>
-              <div className="p-2 rounded bg-black/40 border border-[#162A33]">
-                <strong className="text-yellow-400">Vanguard (Goal Line):</strong> {selectedPlayer.vanguardAssignment}
-              </div>
-              <div className="p-2 rounded bg-black/40 border border-[#162A33]">
-                <strong className="text-blue-400">Shell (Deep Pass):</strong> {selectedPlayer.shellAssignment}
+              <div className="p-3 rounded-xl bg-[#09151D] border border-[#162A33] space-y-1">
+                <strong className="text-rose-300 block">3. Emergency Reset Tempo:</strong>
+                <p className="text-slate-400 font-sans">
+                  If the opponent goes muddle or fast hurry-up, safeties shout <strong className="text-white">“RELOAD!”</strong> to cancel all exotic checks and snap into base alignments.
+                </p>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Active Call Coaching Doctrine & Primer Summary (Right) */}
-        <div className="lg:col-span-5 rounded-2xl border border-[#162A33] bg-[#070E13] p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between border-b border-[#162A33] pb-3">
-            <span className="font-bold text-white text-sm font-display flex items-center gap-2">
-              <Info className="w-4 h-4 text-teal-400" />
-              Active Call Doctrine & Rules
-            </span>
-            <span className="text-[11px] font-mono text-teal-300 bg-teal-950/60 px-2 py-0.5 rounded border border-teal-800/40">
-              {liveCallFormatted}
-            </span>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            {/* Formation Doctrine */}
-            <div className="p-3 rounded-xl bg-[#09151D] border border-teal-500/20 space-y-1">
-              <div className="font-bold text-teal-300 flex items-center justify-between">
-                <span>Formation: {activeFormationInfo.name}</span>
-                <span className="text-amber-300 font-mono text-[11px]">{activeFormationInfo.handSignal}</span>
-              </div>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
-                {activeFormationInfo.doctrine}
-              </p>
-            </div>
-
-            {/* Front Rule */}
-            <div className="p-3 rounded-xl bg-[#09151D] border border-amber-500/20 space-y-1">
-              <div className="font-bold text-amber-300 flex items-center justify-between">
-                <span>Front: {activeFront ? activeFront.name : 'Base Gap Integrity (Default)'}</span>
-                <span className="text-slate-400 font-mono text-[11px]">
-                  {activeFront ? activeFront.signal : 'No Call Needed'}
-                </span>
-              </div>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
-                {activeFront
-                  ? activeFront.linemenRule
-                  : 'Primer Gap Rule: If you don’t hear a slant call, either pick the gap in front of you or default pick the strong direction gap.'}
-              </p>
-            </div>
-
-            {/* Coverage Scheme */}
-            <div className="p-3 rounded-xl bg-[#09151D] border border-sky-500/20 space-y-1">
-              <div className="font-bold text-sky-300 flex items-center justify-between">
-                <span>Coverage: {activeCoverage.name}</span>
-                <span className="text-amber-300 font-mono text-[11px]">{activeCoverage.handSignal}</span>
-              </div>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
-                {activeCoverage.philosophy}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Defensive Primer Manual Interactive Reader */}
-      <div className="rounded-2xl border border-teal-500/30 bg-[#070E13] p-6 lg:p-8 shadow-2xl space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#162A33] pb-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 text-teal-400 font-mono text-xs font-semibold uppercase">
-              <BookOpen className="w-4 h-4" />
-              Official Defensive Primer
-            </div>
-            <h2 className="text-2xl font-bold text-white font-display">
-              Defensive Playbook & Doctrine Manual
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onOpenPrintModal}
-              className="px-3 py-1.5 rounded-lg bg-teal-500/20 text-teal-300 border border-teal-500/40 text-xs font-mono font-bold hover:bg-teal-500/30 transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              Print Primer Call Card
-            </button>
-          </div>
-        </div>
-
-        {/* Chapter Navigation Tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          {DEFENSIVE_PRIMER_CHAPTERS.map((chap) => {
-            const isSelected = activePrimerChapter === chap.id;
-            return (
-              <button
-                key={chap.id}
-                onClick={() => setActivePrimerChapter(chap.id)}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                  isSelected
-                    ? 'border-teal-400 bg-teal-950/60 text-white shadow-lg'
-                    : 'border-[#162A33] bg-[#09151D] text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                }`}
-              >
-                <div className="text-[10px] font-mono text-teal-400 uppercase font-bold">
-                  {chap.category}
-                </div>
-                <div className="text-xs font-bold truncate mt-1 text-slate-200">{chap.title}</div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Active Chapter Details */}
-        {(() => {
-          const chap =
-            DEFENSIVE_PRIMER_CHAPTERS.find((c) => c.id === activePrimerChapter) ||
-            DEFENSIVE_PRIMER_CHAPTERS[0];
-          return (
-            <div className="p-5 rounded-2xl bg-[#09151D] border border-[#162A33] space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#18323F] pb-3">
-                <div>
-                  <h3 className="text-lg font-bold text-white font-display">{chap.title}</h3>
-                  <p className="text-xs text-slate-400 font-mono mt-0.5">{chap.summary}</p>
-                </div>
-                <span className="px-2.5 py-1 rounded bg-teal-950 border border-teal-700/50 text-teal-300 text-xs font-mono font-bold self-start sm:self-auto">
-                  {chap.category.toUpperCase()}
-                </span>
-              </div>
-
-              {chap.coachingQuote && (
-                <div className="p-3 rounded-xl bg-teal-950/30 border border-teal-500/30 text-xs italic text-teal-200 font-serif">
-                  {chap.coachingQuote}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <span className="text-xs font-mono font-bold text-slate-300 uppercase block">
-                  Key Doctrine Points:
-                </span>
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-300">
-                  {chap.keyPoints.map((pt, idx) => (
-                    <li
-                      key={idx}
-                      className="p-2.5 rounded-lg bg-black/40 border border-[#162A33] flex items-start gap-2"
-                    >
-                      <span className="text-teal-400 font-mono font-bold text-xs">#{idx + 1}</span>
-                      <span className="leading-relaxed">{pt}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {chap.diagramNotes && (
-                <div className="p-3 rounded-xl bg-[#050C10] border border-[#162A33] text-[11px] text-slate-400 font-mono">
-                  <strong className="text-slate-300">Coaching Diagram Notes: </strong>
-                  {chap.diagramNotes}
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </div>
+      )}
     </div>
   );
 }

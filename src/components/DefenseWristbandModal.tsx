@@ -98,10 +98,10 @@ export function DefenseWristbandModal({ isOpen, onClose }: DefenseWristbandModal
 
             <div className="grid grid-cols-3 gap-2 text-xs font-mono">
               {[
-                { num: '01', call: 'Base 3-4 Green', desc: '✊ Fist up · 👇 Point ground · Cover 3 Sky · SS roll to strong curl' },
+                { num: '01', call: 'Base 3-4 Green', desc: '✊ Fist up · 👇 Point ground · Cover 3 Sky · CBs outside lev (7 yds) · SS roll to strong curl' },
                 { num: '02', call: 'Shield 5-2 Green', desc: '👊 Fist in front · 👇 Point ground · Sam & Rover 2x0 on LOS' },
-                { num: '03', call: 'Base 3-4 Blue', desc: '✊ Fist up · 👆 Point sky · Cover 2 Zone · Corners squat flat' },
-                { num: '04', call: 'Base 3-4 Black', desc: '✊ Fist up · 👕 Jersey tug · Cover 1 Man-Free · Press-man' },
+                { num: '03', call: 'Base 3-4 Blue', desc: '✊ Fist up · 👆 Point sky · Cover 2 Zone · CBs outside lev (5 yds) & squat flat' },
+                { num: '04', call: 'Base 3-4 Black', desc: '✊ Fist up · 👕 Jersey tug · 7 yds off inside lev (🙌 "JAM" = press @ LOS) · Will/Mike share RB' },
                 { num: '05', call: 'Vanguard Goal Line', desc: '⚔️ Vanguard · MLBs @ 2 yds, Safeties @ 5 yds · MLB pick open gap' },
                 { num: '06', call: 'Base + Slant Call', desc: 'DL slants weak side (no slant strong; default is strong)' },
                 { num: '07', call: 'Shield + Sam Blitz', desc: '5-2 Front · Blitz: Sam shoots assigned strong edge gap' },
