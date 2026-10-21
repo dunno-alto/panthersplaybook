@@ -568,8 +568,29 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
               </marker>
             </defs>
 
-            {/* Field Background */}
-            <rect width="1000" height="620" fill="#04090D" />
+            {/* Night Turf Field Base */}
+            <rect width="1000" height="620" fill="#060D12" />
+
+            {/* Night Turf Direct Solid Alternating Yard Bands */}
+            {[0, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600].map((yVal, i) => (
+              <rect
+                key={`st-band-${yVal}`}
+                x="0"
+                y={yVal}
+                width="1000"
+                height="60"
+                fill={i % 2 === 0 ? '#060E13' : '#09161F'}
+              />
+            ))}
+
+            {/* Hash Marks across field */}
+            {[90, 150, 210, 270, 330, 390, 450, 510, 570].map((yVal) => (
+              <g key={`st-hash-${yVal}`} opacity="0.35">
+                <line x1="330" y1={yVal - 6} x2="330" y2={yVal + 6} stroke="#94A3B8" strokeWidth="1.8" />
+                <line x1="670" y1={yVal - 6} x2="670" y2={yVal + 6} stroke="#94A3B8" strokeWidth="1.8" />
+              </g>
+            ))}
+
             {showGrid && <rect width="1000" height="620" fill="url(#stFieldGrid)" opacity="0.6" />}
 
             {/* Yard Lines & Field Markings based on Unit POV */}

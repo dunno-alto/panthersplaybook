@@ -14,11 +14,14 @@ import {
   getBaseOffensiveAlignment,
 } from '../data/veerPlaybookData';
 
-interface CustomArrow {
+export interface CoachNotation {
   id: string;
-  start: Point;
-  end: Point;
+  type?: 'arrow' | 'freehand';
+  start?: Point;
+  end?: Point;
+  points?: Point[];
   color: string;
+  width?: number;
 }
 
 interface TacticalFieldCanvasProps {
@@ -38,8 +41,10 @@ interface TacticalFieldCanvasProps {
   chalkboardMode: boolean;
   customOffsets: Record<string, Point>;
   onUpdateCustomOffset: (id: string, offset: Point) => void;
-  customArrows: CustomArrow[];
-  onAddCustomArrow: (arrow: CustomArrow) => void;
+  customArrows: CoachNotation[];
+  onAddCustomArrow: (arrow: CoachNotation) => void;
+  penMode?: 'freehand' | 'arrow';
+  penColor?: string;
   fieldTheme?: 'night_turf' | 'chalkboard' | 'high_contrast';
   onChangeFieldTheme?: (theme: 'night_turf' | 'chalkboard' | 'high_contrast') => void;
   powerPassReceiver?: PowerPassReceiverOption;
@@ -87,6 +92,8 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   onUpdateCustomOffset,
   customArrows,
   onAddCustomArrow,
+  penMode = 'freehand',
+  penColor = '#FACC15',
   fieldTheme = 'night_turf',
   onChangeFieldTheme,
   powerPassReceiver = 'whip',
@@ -102,6 +109,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
   const [drawingStart, setDrawingStart] = useState<Point | null>(null);
   const [drawingCurrent, setDrawingCurrent] = useState<Point | null>(null);
+  const [currentStrokePoints, setCurrentStrokePoints] = useState<Point[] | null>(null);
 
   const baseOffense = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
   const frontConfig = DEFENSIVE_FRONTS[frontId];
@@ -115,26 +123,31 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   const isPowerPass = play.concept === 'flood' || play.id.includes('power-pass') || play.id.includes('flood');
   const isOptionPlay = isInsideVeer || isOutsideVeer || play.playType === 'Triple Option';
 
-  const getSvgCoords = (e: React.MouseEvent<SVGSVGElement>): Point => {
+  const getSvgCoords = (e: React.PointerEvent<SVGSVGElement> | React.MouseEvent<SVGSVGElement>): Point => {
     const svg = svgRef.current;
     if (!svg) return { x: 500, y: 390 };
     const rect = svg.getBoundingClientRect();
     const scaleX = 1000 / rect.width;
     const scaleY = 620 / rect.height;
     return {
-      x: Math.max(30, Math.min(970, (e.clientX - rect.left) * scaleX)),
-      y: Math.max(30, Math.min(590, (e.clientY - rect.top) * scaleY)),
+      x: Math.max(10, Math.min(990, (e.clientX - rect.left) * scaleX)),
+      y: Math.max(10, Math.min(610, (e.clientY - rect.top) * scaleY)),
     };
   };
 
-  const handleMouseDownSvg = (e: React.MouseEvent<SVGSVGElement>) => {
+  const handlePointerDownSvg = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!chalkboardMode || draggingPlayerId) return;
+    e.preventDefault();
+    try {
+      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    } catch {}
     const pt = getSvgCoords(e);
     setDrawingStart(pt);
     setDrawingCurrent(pt);
+    setCurrentStrokePoints([pt]);
   };
 
-  const handleMouseMoveSvg = (e: React.MouseEvent<SVGSVGElement>) => {
+  const handlePointerMoveSvg = (e: React.PointerEvent<SVGSVGElement>) => {
     const pt = getSvgCoords(e);
     if (draggingPlayerId) {
       const basePt = baseOffense[draggingPlayerId];
@@ -146,29 +159,60 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
       }
       return;
     }
-    if (chalkboardMode && drawingStart) {
+    if (chalkboardMode && currentStrokePoints) {
+      e.preventDefault();
       setDrawingCurrent(pt);
+      if (penMode === 'arrow') {
+        setCurrentStrokePoints([currentStrokePoints[0], pt]);
+      } else {
+        const lastPt = currentStrokePoints[currentStrokePoints.length - 1];
+        if (Math.hypot(pt.x - lastPt.x, pt.y - lastPt.y) >= 2) {
+          setCurrentStrokePoints((prev) => (prev ? [...prev, pt] : [pt]));
+        }
+      }
     }
   };
 
-  const handleMouseUpSvg = () => {
+  const handlePointerUpSvg = (e: React.PointerEvent<SVGSVGElement>) => {
     if (draggingPlayerId) {
       setDraggingPlayerId(null);
       return;
     }
-    if (chalkboardMode && drawingStart && drawingCurrent) {
-      const dist = Math.hypot(drawingCurrent.x - drawingStart.x, drawingCurrent.y - drawingStart.y);
-      if (dist > 24) {
+    if (chalkboardMode && currentStrokePoints) {
+      try {
+        (e.currentTarget as Element).releasePointerCapture?.(e.pointerId);
+      } catch {}
+      if (penMode === 'arrow' && drawingStart && drawingCurrent) {
+        const dist = Math.hypot(drawingCurrent.x - drawingStart.x, drawingCurrent.y - drawingStart.y);
+        if (dist > 8) {
+          onAddCustomArrow({
+            id: `arrow-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            type: 'arrow',
+            start: drawingStart,
+            end: drawingCurrent,
+            color: penColor,
+            width: 3.5,
+          });
+        }
+      } else if (currentStrokePoints.length >= 2) {
         onAddCustomArrow({
-          id: `arrow-${Date.now()}`,
-          start: drawingStart,
-          end: drawingCurrent,
-          color: '#14B8A6',
+          id: `stroke-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          type: 'freehand',
+          points: currentStrokePoints,
+          color: penColor,
+          width: 3.5,
         });
       }
     }
     setDrawingStart(null);
     setDrawingCurrent(null);
+    setCurrentStrokePoints(null);
+  };
+
+  const handlePointerCancelSvg = () => {
+    setDrawingStart(null);
+    setDrawingCurrent(null);
+    setCurrentStrokePoints(null);
   };
 
   // Normalize speed of playart respective to position:
@@ -1062,41 +1106,9 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
 
         {/* Tactical Field Visual Contrast Switcher */}
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">Field Contrast:</span>
-          <div className="flex items-center gap-1 p-0.5 bg-[#091217] border border-[#162A33] rounded-lg text-[11px]">
-            <button
-              type="button"
-              onClick={() => handleThemeChange('night_turf')}
-              className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
-                activeTheme === 'night_turf'
-                  ? 'bg-teal-400 text-slate-950 font-bold'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Night Turf
-            </button>
-            <button
-              type="button"
-              onClick={() => handleThemeChange('chalkboard')}
-              className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
-                activeTheme === 'chalkboard'
-                  ? 'bg-teal-400 text-slate-950 font-bold'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Chalkboard
-            </button>
-            <button
-              type="button"
-              onClick={() => handleThemeChange('high_contrast')}
-              className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
-                activeTheme === 'high_contrast'
-                  ? 'bg-teal-400 text-slate-950 font-bold'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              High Contrast
-            </button>
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#091217] border border-teal-500/30 rounded-lg text-[11px] font-mono">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span className="text-teal-300 font-bold">Night Turf</span>
           </div>
 
           <div className="flex items-center gap-2 font-mono-tabular pl-2 border-l border-[#162A33]">
@@ -1111,11 +1123,17 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
       <svg
         ref={svgRef}
         viewBox="0 0 1000 620"
-        style={{ backgroundColor: themeBg }}
-        className={`w-full h-auto block ${chalkboardMode ? 'cursor-crosshair' : 'cursor-default'}`}
-        onMouseDown={handleMouseDownSvg}
-        onMouseMove={handleMouseMoveSvg}
-        onMouseUp={handleMouseUpSvg}
+        style={{
+          backgroundColor: themeBg,
+          touchAction: chalkboardMode ? 'none' : 'auto',
+          cursor: chalkboardMode ? 'crosshair' : 'default',
+        }}
+        className="w-full h-auto block"
+        onPointerDown={handlePointerDownSvg}
+        onPointerMove={handlePointerMoveSvg}
+        onPointerUp={handlePointerUpSvg}
+        onPointerCancel={handlePointerCancelSvg}
+        onPointerLeave={handlePointerCancelSvg}
       >
         <defs>
           {/* Arrowhead markers */}
@@ -1133,6 +1151,19 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
           </marker>
           <marker id="arrow-custom" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
             <path d="M 0 1 L 9 5 L 0 9 z" fill="#2DD4BF" />
+          </marker>
+          {/* Coach Chalk Palette Arrowhead Markers */}
+          <marker id="arrow-FACC15" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#FACC15" />
+          </marker>
+          <marker id="arrow-2DD4BF" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#2DD4BF" />
+          </marker>
+          <marker id="arrow-F87171" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#F87171" />
+          </marker>
+          <marker id="arrow-FFFFFF" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#FFFFFF" />
           </marker>
           <marker id="block-tee" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <line x1="5" y1="0" x2="5" y2="10" stroke="#CBD5E1" strokeWidth="3" />
@@ -1348,31 +1379,73 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
           </g>
         )}
 
-        {/* Custom Coach Chalkboard Arrows in Vibrant Teal */}
-        {customArrows.map((arrow) => (
-          <line
-            key={arrow.id}
-            x1={arrow.start.x}
-            y1={arrow.start.y}
-            x2={arrow.end.x}
-            y2={arrow.end.y}
-            stroke={arrow.color}
-            strokeWidth="3.2"
-            markerEnd="url(#arrow-custom)"
-          />
-        ))}
-        {drawingStart && drawingCurrent && (
-          <line
-            x1={drawingStart.x}
-            y1={drawingStart.y}
-            x2={drawingCurrent.x}
-            y2={drawingCurrent.y}
-            stroke="#2DD4BF"
-            strokeWidth="2.8"
-            strokeDasharray="4 4"
-            markerEnd="url(#arrow-custom)"
-          />
-        )}
+        {/* Custom Coach Chalkboard Notations (Freehand Paths & Arrows) */}
+        <g id="offense-coach-chalk-layer" style={{ pointerEvents: 'none' }}>
+          {customArrows.map((item) => {
+            if (item.type === 'freehand' && item.points && item.points.length >= 2) {
+              return (
+                <path
+                  key={item.id}
+                  d={pointsToSvgPath(item.points)}
+                  fill="none"
+                  stroke={item.color || '#FACC15'}
+                  strokeWidth={item.width || 3.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              );
+            }
+            // Arrow notation
+            const start = item.start || (item.points ? item.points[0] : null);
+            const end = item.end || (item.points ? item.points[item.points.length - 1] : null);
+            if (!start || !end) return null;
+            const markerColor = (item.color || '#2DD4BF').replace('#', '');
+            const markerId = `arrow-${markerColor}`;
+            return (
+              <g key={item.id}>
+                <line
+                  x1={start.x}
+                  y1={start.y}
+                  x2={end.x}
+                  y2={end.y}
+                  stroke={item.color || '#2DD4BF'}
+                  strokeWidth={item.width || 3.2}
+                  strokeLinecap="round"
+                  markerEnd={`url(#${markerId})`}
+                />
+                <circle cx={start.x} cy={start.y} r={item.width ? item.width - 0.5 : 2.5} fill={item.color || '#2DD4BF'} />
+              </g>
+            );
+          })}
+
+          {/* In-Progress Stroke Preview */}
+          {currentStrokePoints && currentStrokePoints.length >= 1 && (
+            penMode === 'arrow' && drawingStart && drawingCurrent ? (
+              <g>
+                <line
+                  x1={drawingStart.x}
+                  y1={drawingStart.y}
+                  x2={drawingCurrent.x}
+                  y2={drawingCurrent.y}
+                  stroke={penColor || '#FACC15'}
+                  strokeWidth={3.5}
+                  strokeLinecap="round"
+                  markerEnd={`url(#arrow-${(penColor || '#FACC15').replace('#', '')})`}
+                />
+                <circle cx={drawingStart.x} cy={drawingStart.y} r={3} fill={penColor || '#FACC15'} />
+              </g>
+            ) : (
+              <path
+                d={pointsToSvgPath(currentStrokePoints)}
+                fill="none"
+                stroke={penColor || '#FACC15'}
+                strokeWidth={3.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )
+          )}
+        </g>
 
         {/* Defensive Players (11 Defenders) with Adaptive Key Halos */}
         {frontConfig.players.map((def) => {

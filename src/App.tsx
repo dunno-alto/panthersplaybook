@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   AlertTriangle,
   BookOpen,
@@ -9,6 +9,7 @@ import {
   Eye,
   Info,
   Maximize2,
+  Minimize2,
   Pause,
   PenTool,
   Play,
@@ -18,6 +19,8 @@ import {
   Sparkles,
   StepForward,
   Zap,
+  Undo2,
+  Trash2,
 } from 'lucide-react';
 import {
   DEFENSIVE_FRONTS,
@@ -36,7 +39,7 @@ import {
   getActivePlayDefinition,
   getBaseOffensiveAlignment,
 } from './data/veerPlaybookData';
-import { TacticalFieldCanvas } from './components/TacticalFieldCanvas';
+import { TacticalFieldCanvas, CoachNotation } from './components/TacticalFieldCanvas';
 import { PlaySetupConsole } from './components/PlaySetupConsole';
 import { WristbandModal } from './components/WristbandModal';
 import { DrillsSection } from './components/DrillsSection';
@@ -44,6 +47,13 @@ import { DefenseCoordinatorSection } from './components/DefenseCoordinatorSectio
 import { SpecialTeamsSection } from './components/SpecialTeamsSection';
 import { DefenseWristbandModal } from './components/DefenseWristbandModal';
 import { SpecialTeamsPrintModal } from './components/SpecialTeamsPrintModal';
+
+const OFFENSE_PEN_COLORS = [
+  { label: 'Chalk Yellow', value: '#FACC15', bgClass: 'bg-yellow-400', ringColor: 'ring-yellow-400' },
+  { label: 'Neon Teal', value: '#2DD4BF', bgClass: 'bg-teal-400', ringColor: 'ring-teal-400' },
+  { label: 'Coral Red', value: '#F87171', bgClass: 'bg-red-400', ringColor: 'ring-red-400' },
+  { label: 'Chalk White', value: '#FFFFFF', bgClass: 'bg-white', ringColor: 'ring-white' },
+];
 
 export type AppActiveTab = 'offense' | 'defense' | 'special_teams';
 
@@ -75,10 +85,70 @@ export default function App() {
   const [showGapLabels, setShowGapLabels] = useState<boolean>(true);
   const [showBlockingAngles, setShowBlockingAngles] = useState<boolean>(true);
   const [chalkboardMode, setChalkboardMode] = useState<boolean>(false);
+  const [isOffenseFullscreen, setIsOffenseFullscreen] = useState<boolean>(false);
+  const offenseCanvasContainerRef = useRef<HTMLDivElement | null>(null);
   const [customOffsets, setCustomOffsets] = useState<Record<string, Point>>({});
-  const [customArrows, setCustomArrows] = useState<
-    { id: string; start: Point; end: Point; color: string }[]
-  >([]);
+  const [customArrows, setCustomArrows] = useState<CoachNotation[]>([]);
+  const [offensePenColor, setOffensePenColor] = useState<string>('#FACC15');
+  const [offensePenMode, setOffensePenMode] = useState<'freehand' | 'arrow'>('freehand');
+
+  // Sync fullscreen change & Escape key listener for offense
+  useEffect(() => {
+    const handleFsChange = () => {
+      if (!document.fullscreenElement && isOffenseFullscreen) {
+        setIsOffenseFullscreen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOffenseFullscreen) {
+        setIsOffenseFullscreen(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOffenseFullscreen]);
+
+  const handleToggleOffenseFullscreen = () => {
+    if (!isOffenseFullscreen) {
+      setIsOffenseFullscreen(true);
+      try {
+        offenseCanvasContainerRef.current?.requestFullscreen?.();
+      } catch {}
+    } else {
+      setIsOffenseFullscreen(false);
+      try {
+        if (document.fullscreenElement) {
+          document.exitFullscreen?.();
+        }
+      } catch {}
+    }
+  };
+
+  const handleToggleOffenseCoachPen = () => {
+    setChalkboardMode((p) => {
+      const next = !p;
+      if (next) {
+        setIsOffenseFullscreen(true);
+        try {
+          offenseCanvasContainerRef.current?.requestFullscreen?.();
+        } catch {}
+      } else {
+        if (isOffenseFullscreen) {
+          setIsOffenseFullscreen(false);
+          try {
+            if (document.fullscreenElement) {
+              document.exitFullscreen?.();
+            }
+          } catch {}
+        }
+      }
+      return next;
+    });
+  };
 
   // Print Modals
   const [isWristbandOpen, setIsWristbandOpen] = useState<boolean>(false);
@@ -528,14 +598,34 @@ export default function App() {
                   </button>
 
                   <button
-                    onClick={() => setChalkboardMode((p) => !p)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border cursor-pointer ${
+                    onClick={handleToggleOffenseCoachPen}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border cursor-pointer flex items-center gap-1.5 ${
                       chalkboardMode
-                        ? 'border-amber-400 bg-amber-950/60 text-amber-300'
+                        ? 'border-amber-400 bg-amber-950/60 text-amber-300 ring-1 ring-amber-400 shadow-sm'
                         : 'border-[#162A33] bg-[#0A1318] text-slate-400 hover:text-slate-200'
                     }`}
+                    title="Activate Coach Pen to draw adjustments (opens Fullscreen on tablet)"
                   >
-                    Coach Pen {chalkboardMode ? 'ACTIVE' : 'OFF'}
+                    <PenTool className="w-3.5 h-3.5" />
+                    <span>Coach Pen {chalkboardMode ? 'ACTIVE' : 'OFF'}</span>
+                    {customArrows.length > 0 && (
+                      <span className="px-1.5 py-0.2 rounded bg-amber-900/80 text-amber-200 text-[10px] border border-amber-600/50">
+                        {customArrows.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleToggleOffenseFullscreen}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border cursor-pointer flex items-center gap-1.5 ${
+                      isOffenseFullscreen
+                        ? 'border-teal-400 bg-teal-950 text-teal-300 ring-1 ring-teal-400 shadow-sm'
+                        : 'border-[#162A33] bg-[#0A1318] text-slate-400 hover:text-slate-200'
+                    }`}
+                    title={isOffenseFullscreen ? 'Exit Fullscreen' : 'Expand to Fullscreen Tablet Chalkboard'}
+                  >
+                    {isOffenseFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-teal-300" /> : <Maximize2 className="w-3.5 h-3.5 text-teal-400" />}
+                    <span>{isOffenseFullscreen ? 'Exit' : 'Tablet Fullscreen'}</span>
                   </button>
 
                   <button
@@ -551,47 +641,269 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 2D Canvas Component */}
-              <div className="relative w-full aspect-[16/10] bg-[#050C10] rounded-xl border border-[#162A33] overflow-hidden">
-                <TacticalFieldCanvas
-                  play={activePlay}
-                  frontId={frontId}
-                  diveBehavior={diveBehavior}
-                  pitchBehavior={pitchBehavior}
-                  eleventhMode={eleventhMode}
-                  xMode={xMode}
-                  zSide={zSide}
-                  targetSide={targetSide}
-                  progress={progress}
-                  fieldTheme={fieldTheme}
-                  onChangeFieldTheme={setFieldTheme}
-                  selectedPlayerId={selectedPlayerId}
-                  onSelectPlayer={setSelectedPlayerId}
-                  showGapLabels={showGapLabels}
-                  showBlockingAngles={showBlockingAngles}
-                  chalkboardMode={chalkboardMode}
-                  customOffsets={customOffsets}
-                  onUpdateCustomOffset={(pid: string, pt: Point) =>
-                    setCustomOffsets((prev) => ({ ...prev, [pid]: pt }))
-                  }
-                  customArrows={customArrows}
-                  onAddCustomArrow={(arr) => setCustomArrows((prev) => [...prev, arr])}
-                  powerPassReceiver={powerPassReceiver}
-                />
+              {/* Docked Coach Pen Toolbar Bar when active in regular view */}
+              {chalkboardMode && !isOffenseFullscreen && (
+                <div className="p-2.5 rounded-xl bg-gradient-to-r from-[#0d212d] via-[#081822] to-[#0d212d] border border-amber-500/50 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs font-mono animate-fadeIn">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+                      <PenTool className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Coach Pen:</span>
+                    </span>
 
-                {/* Big Center Overlay Play Prompt if Stopped at Pre-Snap */}
-                {!isPlaying && progress === 0 && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    {/* Mode: Freehand vs Arrow */}
+                    <div className="inline-flex rounded-lg border border-[#162A33] bg-[#050C10] p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setOffensePenMode('freehand')}
+                        className={`px-2.5 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                          offensePenMode === 'freehand' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Freehand drawing: Draw routes, blocks, stunts or circles"
+                      >
+                        <span>〰️ Freehand</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOffensePenMode('arrow')}
+                        className={`px-2.5 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                          offensePenMode === 'arrow' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Straight Arrow: Drag from point A to B with directional arrow"
+                      >
+                        <span>➔ Arrow</span>
+                      </button>
+                    </div>
+
+                    {/* Chalk Colors */}
+                    <div className="flex items-center gap-1.5 pl-2 border-l border-[#162A33]">
+                      <span className="text-[10px] text-slate-400 uppercase">Chalk:</span>
+                      {OFFENSE_PEN_COLORS.map((c) => {
+                        const isSelected = offensePenColor === c.value;
+                        return (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() => setOffensePenColor(c.value)}
+                            className={`w-5 h-5 rounded-full transition-all cursor-pointer flex items-center justify-center ${c.bgClass} ${
+                              isSelected ? `ring-2 ${c.ringColor} ring-offset-2 ring-offset-[#070E13] scale-110 shadow` : 'opacity-65 hover:opacity-100'
+                            }`}
+                            title={c.label}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Step Undo, Clear, and Fullscreen Shortcut */}
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={handleTogglePlay}
-                      className="pointer-events-auto px-5 py-2.5 rounded-xl bg-teal-400 text-slate-950 font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-2 hover:bg-teal-300 transition-all transform hover:scale-105 cursor-pointer border border-teal-200"
+                      onClick={() => setCustomArrows((prev) => prev.slice(0, -1))}
+                      disabled={customArrows.length === 0}
+                      className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 text-xs font-bold transition-colors ${
+                        customArrows.length > 0
+                          ? 'border-[#162A33] bg-[#050C10] text-slate-300 hover:text-white hover:border-slate-600 cursor-pointer'
+                          : 'border-[#162A33]/50 bg-transparent text-slate-600 cursor-not-allowed'
+                      }`}
+                      title="Undo last stroke"
                     >
-                      <Play className="w-4 h-4 fill-slate-950" />
-                      <span>Start 60fps Play Simulation</span>
+                      <Undo2 className="w-3.5 h-3.5" />
+                      <span>Undo</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomArrows([]);
+                        setCustomOffsets({});
+                      }}
+                      disabled={customArrows.length === 0 && Object.keys(customOffsets).length === 0}
+                      className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 text-xs font-bold transition-colors ${
+                        customArrows.length > 0 || Object.keys(customOffsets).length > 0
+                          ? 'border-red-500/40 bg-red-950/30 text-red-300 hover:bg-red-950/60 cursor-pointer'
+                          : 'border-[#162A33]/50 bg-transparent text-slate-600 cursor-not-allowed'
+                      }`}
+                      title="Clear all coach chalk marks & player shifts"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Clear</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleToggleOffenseFullscreen}
+                      className="px-2.5 py-1 rounded-lg border border-teal-500/40 bg-teal-950/60 text-teal-300 hover:bg-teal-900/60 flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-colors"
+                      title="Expand to Fullscreen Tablet Chalkboard"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>Fullscreen</span>
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* 2D Canvas Component with Fullscreen Tablet Mode */}
+              <div
+                ref={offenseCanvasContainerRef}
+                className={
+                  isOffenseFullscreen
+                    ? 'fixed inset-0 z-50 bg-[#04090D] flex flex-col p-3 sm:p-5 w-screen h-screen overflow-hidden select-none shadow-2xl'
+                    : 'relative w-full aspect-[16/10] bg-[#050C10] rounded-xl border border-[#162A33] overflow-hidden'
+                }
+              >
+                {/* Fullscreen Offense Tablet Header & Sideline Drawing Toolbar */}
+                {isOffenseFullscreen && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-2 border-b border-[#162A33] bg-[#07131B]/95 px-4 py-2.5 rounded-xl text-xs font-mono shrink-0 shadow-lg">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <span className="font-bold text-teal-400 flex items-center gap-1.5 uppercase text-xs sm:text-sm">
+                        <Play className="w-4 h-4 fill-teal-400 text-teal-400" />
+                        <span>Sideline Tablet:</span>
+                      </span>
+                      <span className="px-3 py-1 rounded-lg bg-teal-500/20 text-teal-300 font-extrabold border border-teal-500/50 text-xs sm:text-sm tracking-wide">
+                        {activePlay.name}
+                      </span>
+                      <span className="text-slate-400 text-xs hidden md:inline">
+                        vs {DEFENSIVE_FRONTS[frontId].name} · Night Turf
+                      </span>
+                    </div>
+
+                    {/* Tablet Coach Pen Toolbar when Fullscreen */}
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      {/* Freehand vs Arrow Switcher */}
+                      <div className="inline-flex rounded-lg border border-[#162A33] bg-[#050C10] p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setOffensePenMode('freehand')}
+                          className={`px-2.5 sm:px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                            offensePenMode === 'freehand' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                          }`}
+                          title="Freehand drawing: Draw routes, blocks, adjustments or circles"
+                        >
+                          <span>〰️ Freehand</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOffensePenMode('arrow')}
+                          className={`px-2.5 sm:px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                            offensePenMode === 'arrow' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                          }`}
+                          title="Straight Arrow: Drag from point A to B with directional arrow"
+                        >
+                          <span>➔ Arrow</span>
+                        </button>
+                      </div>
+
+                      {/* Chalk Color Swatches */}
+                      <div className="flex items-center gap-1.5 pl-2 border-l border-[#162A33]">
+                        {OFFENSE_PEN_COLORS.map((c) => (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() => setOffensePenColor(c.value)}
+                            className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full transition-all cursor-pointer ${c.bgClass} ${
+                              offensePenColor === c.value ? `ring-2 ${c.ringColor} ring-offset-2 ring-offset-[#070E13] scale-110 shadow` : 'opacity-65 hover:opacity-100'
+                            }`}
+                            title={c.label}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Step Undo Button */}
+                      <button
+                        type="button"
+                        onClick={() => setCustomArrows((prev) => prev.slice(0, -1))}
+                        disabled={customArrows.length === 0}
+                        className={`px-2 sm:px-2.5 py-1 rounded-lg border flex items-center gap-1 text-xs font-bold transition-colors ${
+                          customArrows.length > 0
+                            ? 'border-[#162A33] bg-[#050C10] text-slate-300 hover:text-white cursor-pointer'
+                            : 'border-[#162A33]/50 text-slate-600 cursor-not-allowed'
+                        }`}
+                        title="Undo last stroke"
+                      >
+                        <Undo2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Undo</span>
+                        {customArrows.length > 0 && (
+                          <span className="ml-1 px-1 rounded bg-slate-800 text-slate-300 text-[10px]">
+                            {customArrows.length}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Clear Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomArrows([]);
+                          setCustomOffsets({});
+                        }}
+                        disabled={customArrows.length === 0 && Object.keys(customOffsets).length === 0}
+                        className={`px-2 sm:px-2.5 py-1 rounded-lg border flex items-center gap-1 text-xs font-bold transition-colors ${
+                          customArrows.length > 0 || Object.keys(customOffsets).length > 0
+                            ? 'border-red-500/40 bg-red-950/30 text-red-300 hover:bg-red-950/60 cursor-pointer'
+                            : 'border-[#162A33]/50 text-slate-600 cursor-not-allowed'
+                        }`}
+                        title="Clear all chalk marks & player shifts"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Clear</span>
+                      </button>
+
+                      {/* Exit Fullscreen */}
+                      <button
+                        type="button"
+                        onClick={handleToggleOffenseFullscreen}
+                        className="px-3 py-1.5 rounded-lg border border-teal-500/50 bg-teal-950/80 text-teal-300 hover:bg-teal-900 font-bold flex items-center gap-1.5 cursor-pointer shadow-md"
+                        title="Exit Fullscreen Mode (Esc)"
+                      >
+                        <Minimize2 className="w-3.5 h-3.5" />
+                        <span>Exit Fullscreen</span>
+                      </button>
+                    </div>
+                  </div>
                 )}
+
+                <div className={isOffenseFullscreen ? 'flex-1 w-full h-full min-h-0 flex items-center justify-center p-1 relative' : 'w-full h-full relative'}>
+                  <TacticalFieldCanvas
+                    play={activePlay}
+                    frontId={frontId}
+                    diveBehavior={diveBehavior}
+                    pitchBehavior={pitchBehavior}
+                    eleventhMode={eleventhMode}
+                    xMode={xMode}
+                    zSide={zSide}
+                    targetSide={targetSide}
+                    progress={progress}
+                    fieldTheme="night_turf"
+                    selectedPlayerId={selectedPlayerId}
+                    onSelectPlayer={setSelectedPlayerId}
+                    showGapLabels={showGapLabels}
+                    showBlockingAngles={showBlockingAngles}
+                    chalkboardMode={chalkboardMode || isOffenseFullscreen}
+                    customOffsets={customOffsets}
+                    onUpdateCustomOffset={(pid: string, pt: Point) =>
+                      setCustomOffsets((prev) => ({ ...prev, [pid]: pt }))
+                    }
+                    customArrows={customArrows}
+                    onAddCustomArrow={(arr) => setCustomArrows((prev) => [...prev, arr])}
+                    penMode={offensePenMode}
+                    penColor={offensePenColor}
+                    powerPassReceiver={powerPassReceiver}
+                  />
+
+                  {/* Big Center Overlay Play Prompt if Stopped at Pre-Snap (Hidden in Fullscreen and when Coach Pen is active) */}
+                  {!isOffenseFullscreen && !chalkboardMode && !isPlaying && progress === 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <button
+                        type="button"
+                        onClick={handleTogglePlay}
+                        className="pointer-events-auto px-5 py-2.5 rounded-xl bg-teal-400 text-slate-950 font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-2 hover:bg-teal-300 transition-all transform hover:scale-105 cursor-pointer border border-teal-200"
+                      >
+                        <Play className="w-4 h-4 fill-slate-950" />
+                        <span>Start 60fps Play Simulation</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Interactive Tactical Playback Console Bar */}

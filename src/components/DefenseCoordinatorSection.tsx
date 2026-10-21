@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Shield,
   Zap,
@@ -17,6 +17,11 @@ import {
   Target,
   Lock,
   Volume2,
+  PenTool,
+  Undo2,
+  Trash2,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import {
   COVERAGE_SCHEMES,
@@ -213,12 +218,101 @@ const DEFENSIVE_SIGNALS_LIST: DefensiveSignalItem[] = [
   },
 ];
 
+interface CoachChalkStroke {
+  id: string;
+  type: 'freehand' | 'arrow';
+  color: string;
+  width: number;
+  points: { x: number; y: number }[];
+}
+
+const COACH_PEN_COLORS = [
+  { label: 'Chalk Yellow', value: '#FACC15', bgClass: 'bg-yellow-400', ringColor: 'ring-yellow-400' },
+  { label: 'Neon Teal', value: '#2DD4BF', bgClass: 'bg-teal-400', ringColor: 'ring-teal-400' },
+  { label: 'Coral Red', value: '#F87171', bgClass: 'bg-red-400', ringColor: 'ring-red-400' },
+  { label: 'Chalk White', value: '#FFFFFF', bgClass: 'bg-white', ringColor: 'ring-white' },
+];
+
+function pointsToSvgPath(points: { x: number; y: number }[]): string {
+  if (!points || points.length === 0) return '';
+  return points.map((pt, idx) => `${idx === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(' ');
+}
+
 export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinatorProps) {
   // 4 Core Live Call Components: <Formation-Front-Coverage-Blitz>
   const [formation, setFormation] = useState<DefenseFormation>('base');
   const [frontCall, setFrontCall] = useState<SelectableFront | null>(null); // null = Base gap integrity (default)
   const [coverageScheme, setCoverageScheme] = useState<CoverageScheme>('green');
   const [blitzCall, setBlitzCall] = useState<'MIKE' | 'WILL' | 'SAM' | 'ROV' | null>(null);
+
+  // Coach Chalk Pen State & Fullscreen Tablet Mode for Defense Playart Canvas
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [coachPenActive, setCoachPenActive] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [penColor, setPenColor] = useState<string>('#FACC15');
+  const [penMode, setPenMode] = useState<'freehand' | 'arrow'>('freehand');
+  const [penStrokes, setPenStrokes] = useState<CoachChalkStroke[]>([]);
+  const [currentStroke, setCurrentStroke] = useState<{ x: number; y: number }[] | null>(null);
+
+  // Sync fullscreen change & Escape key listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreen]);
+
+  const handleToggleFullscreen = () => {
+    if (!isFullscreen) {
+      setIsFullscreen(true);
+      try {
+        canvasContainerRef.current?.requestFullscreen?.();
+      } catch {}
+    } else {
+      setIsFullscreen(false);
+      try {
+        if (document.fullscreenElement) {
+          document.exitFullscreen?.();
+        }
+      } catch {}
+    }
+  };
+
+  const handleToggleCoachPen = () => {
+    setCoachPenActive((prev) => {
+      const next = !prev;
+      if (next) {
+        // Automatically enter tablet fullscreen when activating Coach Pen so coach has maximum canvas on field!
+        setIsFullscreen(true);
+        try {
+          canvasContainerRef.current?.requestFullscreen?.();
+        } catch {}
+      } else {
+        if (isFullscreen) {
+          setIsFullscreen(false);
+          try {
+            if (document.fullscreenElement) {
+              document.exitFullscreen?.();
+            }
+          } catch {}
+        }
+      }
+      return next;
+    });
+  };
 
   // Cover Black Specific Rules: Normal (7 yds off) vs "Jam" (Press on LOS) & Will/Mike shared backfield flow
   const [isJamCall, setIsJamCall] = useState<boolean>(false);
@@ -1170,6 +1264,71 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
     }
     return { x: assign.dropTarget.x, y: assign.dropTarget.y, label: assign.landmarkLabel };
   };
+
+  const getSvgCoords = (e: React.PointerEvent<SVGSVGElement>): { x: number; y: number } => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 500, y: 390 };
+    const rect = svg.getBoundingClientRect();
+    const scaleX = 1000 / rect.width;
+    const scaleY = 620 / rect.height;
+    return {
+      x: Math.max(10, Math.min(990, (e.clientX - rect.left) * scaleX)),
+      y: Math.max(10, Math.min(610, (e.clientY - rect.top) * scaleY)),
+    };
+  };
+
+  const handleSvgPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!coachPenActive) return;
+    e.preventDefault();
+    try {
+      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    } catch {}
+    const pt = getSvgCoords(e);
+    setCurrentStroke([pt]);
+  };
+
+  const handleSvgPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!coachPenActive || !currentStroke) return;
+    e.preventDefault();
+    const pt = getSvgCoords(e);
+    if (penMode === 'arrow') {
+      setCurrentStroke([currentStroke[0], pt]);
+    } else {
+      const last = currentStroke[currentStroke.length - 1];
+      if (Math.hypot(pt.x - last.x, pt.y - last.y) >= 2) {
+        setCurrentStroke((prev) => (prev ? [...prev, pt] : [pt]));
+      }
+    }
+  };
+
+  const handleSvgPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!coachPenActive || !currentStroke) return;
+    try {
+      (e.currentTarget as Element).releasePointerCapture?.(e.pointerId);
+    } catch {}
+    if (currentStroke.length >= 2) {
+      const start = currentStroke[0];
+      const end = currentStroke[currentStroke.length - 1];
+      if (Math.hypot(end.x - start.x, end.y - start.y) > 5) {
+        setPenStrokes((prev) => [
+          ...prev,
+          {
+            id: `stroke-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            type: penMode,
+            color: penColor,
+            width: 3.5,
+            points: currentStroke,
+          },
+        ]);
+      }
+    }
+    setCurrentStroke(null);
+  };
+
+  const handleSvgPointerCancel = () => {
+    setCurrentStroke(null);
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Defensive Sub-Navigation Header */}
@@ -1801,8 +1960,141 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
               />
               <span>Sequential Tech</span>
             </label>
+
+            {/* Coach Pen Toggle Button - Auto Fullscreen on Tablet */}
+            <button
+              type="button"
+              onClick={handleToggleCoachPen}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                coachPenActive
+                  ? 'border-amber-400 bg-amber-950/70 text-amber-300 ring-1 ring-amber-400 shadow-md'
+                  : 'border-[#162A33] bg-[#0A1318] text-slate-300 hover:text-white hover:border-slate-700'
+              }`}
+              title="Activate Coach Pen to draw freehand routes, coverage tweaks, stunts or arrows (opens Fullscreen on tablet)"
+            >
+              <PenTool className="w-3.5 h-3.5" />
+              <span>Coach Pen {coachPenActive ? 'ACTIVE' : 'OFF'}</span>
+              {penStrokes.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded bg-amber-900/80 text-amber-200 text-[10px] border border-amber-600/50">
+                  {penStrokes.length}
+                </span>
+              )}
+            </button>
+
+            {/* Direct Fullscreen Tablet Mode Toggle Button */}
+            <button
+              type="button"
+              onClick={handleToggleFullscreen}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                isFullscreen
+                  ? 'border-teal-400 bg-teal-950 text-teal-300 ring-1 ring-teal-400 shadow-md'
+                  : 'border-[#162A33] bg-[#0A1318] text-slate-300 hover:text-white hover:border-teal-500/50'
+              }`}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Expand to Fullscreen Tablet Chalkboard for Sideline Coaching'}
+            >
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-teal-300" /> : <Maximize2 className="w-3.5 h-3.5 text-teal-400" />}
+              <span>{isFullscreen ? 'Exit Fullscreen' : 'Tablet Fullscreen'}</span>
+            </button>
           </div>
         </div>
+
+        {/* Coach Pen Interactive Control Bar */}
+        {coachPenActive && !isFullscreen && (
+          <div className="p-2.5 rounded-xl bg-gradient-to-r from-[#0d212d] via-[#081822] to-[#0d212d] border border-amber-500/50 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs font-mono animate-fadeIn">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <span className="text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+                <PenTool className="w-3.5 h-3.5 text-amber-400" />
+                <span>Coach Pen:</span>
+              </span>
+
+              {/* Mode: Freehand vs Arrow */}
+              <div className="inline-flex rounded-lg border border-[#162A33] bg-[#050C10] p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setPenMode('freehand')}
+                  className={`px-2.5 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                    penMode === 'freehand' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Freehand drawing: Draw routes, zone drops, blitz paths, circles"
+                >
+                  <span>〰️ Freehand</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPenMode('arrow')}
+                  className={`px-2.5 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                    penMode === 'arrow' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Straight Arrow: Drag from point A to B with directional arrow"
+                >
+                  <span>➔ Arrow</span>
+                </button>
+              </div>
+
+              {/* Chalk Colors */}
+              <div className="flex items-center gap-1.5 pl-2 border-l border-[#162A33]">
+                <span className="text-[10px] text-slate-400 uppercase">Chalk:</span>
+                {COACH_PEN_COLORS.map((c) => {
+                  const isSelected = penColor === c.value;
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setPenColor(c.value)}
+                      className={`w-5 h-5 rounded-full transition-all cursor-pointer flex items-center justify-center ${c.bgClass} ${
+                        isSelected ? `ring-2 ${c.ringColor} ring-offset-2 ring-offset-[#070E13] scale-110 shadow` : 'opacity-65 hover:opacity-100'
+                      }`}
+                      title={c.label}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Undo, Clear, Fullscreen Shortcut */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPenStrokes((prev) => prev.slice(0, -1))}
+                disabled={penStrokes.length === 0}
+                className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 text-xs font-bold transition-colors ${
+                  penStrokes.length > 0
+                    ? 'border-[#162A33] bg-[#050C10] text-slate-300 hover:text-white hover:border-slate-600 cursor-pointer'
+                    : 'border-[#162A33]/50 bg-transparent text-slate-600 cursor-not-allowed'
+                }`}
+                title="Undo last stroke"
+              >
+                <Undo2 className="w-3.5 h-3.5" />
+                <span>Undo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPenStrokes([])}
+                disabled={penStrokes.length === 0}
+                className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 text-xs font-bold transition-colors ${
+                  penStrokes.length > 0
+                    ? 'border-red-500/40 bg-red-950/30 text-red-300 hover:bg-red-950/60 cursor-pointer'
+                    : 'border-[#162A33]/50 bg-transparent text-slate-600 cursor-not-allowed'
+                }`}
+                title="Clear all coach chalk marks"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleFullscreen}
+                className="px-2.5 py-1 rounded-lg border border-teal-500/40 bg-teal-950/60 text-teal-300 hover:bg-teal-900/60 flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-colors"
+                title="Expand to Fullscreen Tablet Chalkboard"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>Fullscreen</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Sequential Tech Reference Strip */}
         {showTechniqueOverlay && (
@@ -1837,99 +2129,251 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
           </span>
         </div>
 
-        {/* Interactive SVG Chalkboard Canvas */}
-        <div className="relative w-full aspect-[16/10] bg-[#050C10] rounded-xl border border-[#162A33] overflow-hidden select-none">
-          <svg viewBox="0 0 1000 620" className="w-full h-full">
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#102531" strokeWidth="0.6" />
-              </pattern>
-              <marker
-                id="slantArrow"
-                viewBox="0 0 10 10"
-                refX="8"
-                refY="5"
-                markerWidth="6"
-                markerHeight="6"
-                orient="auto-start-reverse"
-              >
-                <path d="M 0 1 L 10 5 L 0 9 z" fill="#F59E0B" />
-              </marker>
-              <marker
-                id="pressureArrow"
-                viewBox="0 0 10 10"
-                refX="8"
-                refY="5"
-                markerWidth="6"
-                markerHeight="6"
-                orient="auto-start-reverse"
-              >
-                <path d="M 0 1 L 10 5 L 0 9 z" fill="#C084FC" />
-              </marker>
-              <marker
-                id="lbGapArrowBlue"
-                viewBox="0 0 10 10"
-                refX="8"
-                refY="5"
-                markerWidth="6"
-                markerHeight="6"
-                orient="auto-start-reverse"
-              >
-                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#60A5FA" />
-              </marker>
-              <marker
-                id="lbEdgeArrowTeal"
-                viewBox="0 0 10 10"
-                refX="8"
-                refY="5"
-                markerWidth="6"
-                markerHeight="6"
-                orient="auto-start-reverse"
-              >
-                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#2DD4BF" />
-              </marker>
-              <marker
-                id="covArrowBlue"
-                viewBox="0 0 10 10"
-                refX="8"
-                refY="5"
-                markerWidth="7"
-                markerHeight="7"
-                orient="auto-start-reverse"
-              >
-                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#38BDF8" />
-              </marker>
-              <marker
-                id="covArrowGreen"
-                viewBox="0 0 10 10"
-                refX="8"
-                refY="5"
-                markerWidth="7"
-                markerHeight="7"
-                orient="auto-start-reverse"
-              >
-                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#34D399" />
-              </marker>
-              <marker
-                id="covArrowBlack"
-                viewBox="0 0 10 10"
-                refX="8"
-                refY="5"
-                markerWidth="7"
-                markerHeight="7"
-                orient="auto-start-reverse"
-              >
-                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#F59E0B" />
-              </marker>
-              <filter id="covDropGlow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="2.5" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-              </filter>
-            </defs>
+        {/* Interactive SVG Chalkboard Canvas (with Tablet Fullscreen mode) */}
+        <div
+          ref={canvasContainerRef}
+          className={
+            isFullscreen
+              ? 'fixed inset-0 z-50 bg-[#04090D] flex flex-col p-3 sm:p-5 w-screen h-screen overflow-hidden select-none'
+              : 'relative w-full aspect-[16/10] bg-[#050C10] rounded-xl border border-[#162A33] overflow-hidden select-none shadow-2xl'
+          }
+        >
+          {/* Tablet Fullscreen Header Controls */}
+          {isFullscreen && (
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-2 border-b border-[#162A33] bg-[#07131B]/95 px-4 py-2.5 rounded-xl text-xs font-mono shrink-0 shadow-lg">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <span className="font-bold text-teal-400 flex items-center gap-1.5 uppercase text-xs sm:text-sm">
+                  <Shield className="w-4 h-4 text-teal-400" />
+                  <span>Sideline Chalkboard:</span>
+                </span>
+                <span className="px-3 py-1 rounded-lg bg-teal-500/20 text-teal-300 font-extrabold border border-teal-500/50 text-xs sm:text-sm tracking-wide">
+                  {liveCallFormatted}
+                </span>
+                <span className="text-slate-400 text-xs hidden md:inline">
+                  Night Turf · {strengthCall === 'liz' ? 'Strong Left (LIZ)' : 'Strong Right (RIP)'}
+                </span>
+              </div>
 
-            {/* Field Grid */}
-            <rect width="1000" height="620" fill="#04090D" />
-            {showGrid && <rect width="1000" height="620" fill="url(#grid)" />}
+              {/* Tablet Coach Pen Toolbar when Fullscreen */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className="inline-flex rounded-lg border border-[#162A33] bg-[#050C10] p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setPenMode('freehand')}
+                    className={`px-2.5 sm:px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                      penMode === 'freehand' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>〰️ Freehand</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPenMode('arrow')}
+                    className={`px-2.5 sm:px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                      penMode === 'arrow' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>➔ Arrow</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5 pl-2 border-l border-[#162A33]">
+                  {COACH_PEN_COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setPenColor(c.value)}
+                      className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full transition-all cursor-pointer ${c.bgClass} ${
+                        penColor === c.value ? `ring-2 ${c.ringColor} ring-offset-2 ring-offset-[#070E13] scale-110 shadow` : 'opacity-65 hover:opacity-100'
+                      }`}
+                      title={c.label}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPenStrokes((prev) => prev.slice(0, -1))}
+                  disabled={penStrokes.length === 0}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg border flex items-center gap-1 text-xs font-bold transition-colors ${
+                    penStrokes.length > 0
+                      ? 'border-[#162A33] bg-[#050C10] text-slate-300 hover:text-white cursor-pointer'
+                      : 'border-[#162A33]/50 text-slate-600 cursor-not-allowed'
+                  }`}
+                  title="Undo last stroke"
+                >
+                  <Undo2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Undo</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPenStrokes([])}
+                  disabled={penStrokes.length === 0}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg border flex items-center gap-1 text-xs font-bold transition-colors ${
+                    penStrokes.length > 0
+                      ? 'border-red-500/40 bg-red-950/30 text-red-300 hover:bg-red-950/60 cursor-pointer'
+                      : 'border-[#162A33]/50 text-slate-600 cursor-not-allowed'
+                  }`}
+                  title="Clear all chalk marks"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Clear</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleToggleFullscreen}
+                  className="px-3 py-1.5 rounded-lg border border-teal-500/50 bg-teal-950/80 text-teal-300 hover:bg-teal-900 font-bold flex items-center gap-1.5 cursor-pointer shadow-md"
+                  title="Exit Fullscreen Mode (Esc)"
+                >
+                  <Minimize2 className="w-3.5 h-3.5" />
+                  <span>Exit Fullscreen</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className={isFullscreen ? 'flex-1 w-full h-full min-h-0 flex items-center justify-center p-1' : 'w-full h-full'}>
+            <svg
+              ref={svgRef}
+              viewBox="0 0 1000 620"
+              className={isFullscreen ? 'max-w-full max-h-full aspect-[16/10] drop-shadow-2xl' : 'w-full h-full'}
+              style={{
+                touchAction: coachPenActive ? 'none' : 'auto',
+                cursor: coachPenActive ? 'crosshair' : 'default',
+              }}
+              onPointerDown={handleSvgPointerDown}
+              onPointerMove={handleSvgPointerMove}
+              onPointerUp={handleSvgPointerUp}
+              onPointerCancel={handleSvgPointerCancel}
+              onPointerLeave={handleSvgPointerCancel}
+            >
+              <defs>
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#102531" strokeWidth="0.6" />
+                </pattern>
+                {/* Coach Chalk Pen Arrowhead Markers */}
+                <marker id="coachArrow-FACC15" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#FACC15" />
+                </marker>
+                <marker id="coachArrow-2DD4BF" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#2DD4BF" />
+                </marker>
+                <marker id="coachArrow-F87171" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#F87171" />
+                </marker>
+                <marker id="coachArrow-FFFFFF" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#FFFFFF" />
+                </marker>
+                <marker
+                  id="slantArrow"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="#F59E0B" />
+                </marker>
+                <marker
+                  id="pressureArrow"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="#C084FC" />
+                </marker>
+                <marker
+                  id="lbGapArrowBlue"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#60A5FA" />
+                </marker>
+                <marker
+                  id="lbEdgeArrowTeal"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#2DD4BF" />
+                </marker>
+                <marker
+                  id="covArrowBlue"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#38BDF8" />
+                </marker>
+                <marker
+                  id="covArrowGreen"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#34D399" />
+                </marker>
+                <marker
+                  id="covArrowBlack"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#F59E0B" />
+                </marker>
+                <filter id="covDropGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="2.5" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+              </defs>
+
+              {/* Field Contents & Interactive Entities */}
+              <g id="playart-tactical-entities" style={{ pointerEvents: coachPenActive ? 'none' : 'auto' }}>
+                {/* Night Turf Solid Base (Guarantees NEVER white!) */}
+                <rect width="1000" height="620" fill="#060D12" />
+
+                {/* Night Turf Alternating 5-Yard Bands */}
+                {[0, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600].map((yVal, i) => (
+                  <rect
+                    key={`band-${yVal}`}
+                    x="0"
+                    y={yVal}
+                    width="1000"
+                    height="60"
+                    fill={i % 2 === 0 ? '#060E13' : '#09161F'}
+                  />
+                ))}
+
+                {/* Field Hash Marks */}
+                {[90, 150, 210, 270, 330, 390, 450, 510, 570].map((yVal) => (
+                  <g key={`hash-${yVal}`} opacity="0.35">
+                    <line x1="330" y1={yVal - 6} x2="330" y2={yVal + 6} stroke="#94A3B8" strokeWidth="1.8" />
+                    <line x1="670" y1={yVal - 6} x2="670" y2={yVal + 6} stroke="#94A3B8" strokeWidth="1.8" />
+                  </g>
+                ))}
+              {showGrid && <rect width="1000" height="620" fill="url(#grid)" />}
 
             {/* Yard lines: LOS is at y=390 (Defense is above y=390, Offense below) */}
             <line x1="60" y1="210" x2="940" y2="210" stroke="#162D38" strokeWidth="1" strokeDasharray="3 3" />
@@ -2855,7 +3299,74 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
                 </g>
               );
             })}
+            </g>
+
+            {/* COACH CHALK PEN DRAWING LAYER (Rendered on top of field & players) */}
+            <g id="coach-pen-chalk-layer" style={{ pointerEvents: 'none' }}>
+              {penStrokes.map((s) => {
+                if (s.type === 'arrow' && s.points.length >= 2) {
+                  const start = s.points[0];
+                  const end = s.points[s.points.length - 1];
+                  const markerId = `coachArrow-${s.color.replace('#', '')}`;
+                  return (
+                    <g key={s.id}>
+                      <line
+                        x1={start.x}
+                        y1={start.y}
+                        x2={end.x}
+                        y2={end.y}
+                        stroke={s.color}
+                        strokeWidth={s.width}
+                        strokeLinecap="round"
+                        markerEnd={`url(#${markerId})`}
+                      />
+                      <circle cx={start.x} cy={start.y} r={s.width} fill={s.color} />
+                    </g>
+                  );
+                }
+                return (
+                  <path
+                    key={s.id}
+                    d={pointsToSvgPath(s.points)}
+                    fill="none"
+                    stroke={s.color}
+                    strokeWidth={s.width}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                );
+              })}
+
+              {/* In-Progress Stroke Preview */}
+              {currentStroke && currentStroke.length >= 1 && (
+                penMode === 'arrow' && currentStroke.length >= 2 ? (
+                  <g>
+                    <line
+                      x1={currentStroke[0].x}
+                      y1={currentStroke[0].y}
+                      x2={currentStroke[currentStroke.length - 1].x}
+                      y2={currentStroke[currentStroke.length - 1].y}
+                      stroke={penColor}
+                      strokeWidth={3.5}
+                      strokeLinecap="round"
+                      markerEnd={`url(#coachArrow-${penColor.replace('#', '')})`}
+                    />
+                    <circle cx={currentStroke[0].x} cy={currentStroke[0].y} r={3.5} fill={penColor} />
+                  </g>
+                ) : (
+                  <path
+                    d={pointsToSvgPath(currentStroke)}
+                    fill="none"
+                    stroke={penColor}
+                    strokeWidth={3.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                )
+              )}
+            </g>
           </svg>
+          </div>
         </div>
       </div>
 
