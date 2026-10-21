@@ -170,17 +170,91 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
     setDrawingCurrent(null);
   };
 
-  // Calculate animated offensive player coordinates
+  // Normalize speed of playart respective to position:
+  // RB = 1, QB = .85, Recivers = 1, OL = .75, TE = .9
+  const getOffenseSpeedMultiplier = (pid: string): number => {
+    if (pid === 'RH' || pid === 'LH' || pid === 'FB' || pid === 'RB') return 1.0;
+    if (pid === 'QB') return 0.85;
+    if (pid === 'C' || pid === 'LG' || pid === 'RG' || pid === 'LT' || pid === 'RT' || pid.includes('OL')) return 0.75;
+    if (pid === 'YTE' || pid === 'TE' || (pid === 'XTE' && xMode === 'tight_x')) return 0.9;
+    if (pid === 'W' || pid === 'Z' || pid === 'WR' || (pid === 'XTE' && xMode === 'wide_x')) return 1.0;
+    return 1.0;
+  };
+
+  // DL = .8, inside lb = .85, DBs and Safeties = 1, outside lb = .9
+  const getDefenseSpeedMultiplier = (def: (typeof frontConfig.players)[number]): number => {
+    const id = def.id;
+    // DL = .8
+    if (
+      id === 'NT' ||
+      id === 'LDT' ||
+      id === 'RDT' ||
+      id === 'SDT' ||
+      id === 'WDT' ||
+      id === 'SNG' ||
+      id === 'WNG' ||
+      id === 'DT' ||
+      id === 'NG' ||
+      id === 'LDE' ||
+      id === 'RDE' ||
+      id === 'SDE' ||
+      id === 'WDE' ||
+      id === 'DE'
+    ) {
+      return 0.8;
+    }
+    // Inside lb = .85
+    if (
+      id === 'MLB' ||
+      id === 'SILB' ||
+      id === 'WILB' ||
+      id === 'MIKE' ||
+      id === 'WILL' ||
+      id === 'ILB'
+    ) {
+      return 0.85;
+    }
+    // Outside lb = .9
+    if (
+      id === 'SLB' ||
+      id === 'WLB' ||
+      id === 'SOLB' ||
+      id === 'WOLB' ||
+      id === 'SAM' ||
+      id === 'ROV' ||
+      id === 'ROVER' ||
+      id === 'OLB'
+    ) {
+      return 0.9;
+    }
+    // DBs and Safeties = 1
+    if (
+      id === 'LCB' ||
+      id === 'RCB' ||
+      id === 'FS' ||
+      id === 'SS' ||
+      id === 'CB' ||
+      id === 'DB' ||
+      id === 'SAF'
+    ) {
+      return 1.0;
+    }
+    return 0.85;
+  };
+
+  // Calculate animated offensive player coordinates with position-normalized speeds
   const currentOffensivePositions: Record<string, Point> = {};
   Object.keys(baseOffense).forEach((pid) => {
     const offset = customOffsets[pid] || { x: 0, y: 0 };
     const pathDef = simResult.paths[pid];
+    const speed = getOffenseSpeedMultiplier(pid);
+    const playerProgress = Math.min(1, progress * speed);
     if (pathDef && pathDef.points.length > 0) {
       const shiftedPoints = pathDef.points.map((p) => ({
         x: p.x + offset.x,
         y: p.y + offset.y,
       }));
-      currentOffensivePositions[pid] = interpolatePoints(shiftedPoints, progress);
+      currentOffensivePositions[pid] = interpolatePoints(shiftedPoints, playerProgress);
     } else {
       currentOffensivePositions[pid] = {
         x: baseOffense[pid].x + offset.x,
@@ -189,152 +263,254 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
     }
   });
 
-  // Calculate animated defensive positions based on play context
+  // Calculate animated defensive positions based on play context, assignments, and block reactions
   const getAnimatedDefenderPoint = (def: (typeof frontConfig.players)[number]): Point => {
     if (progress <= 0) return { x: def.x, y: def.y };
 
-    const isActDive =
-      isInsideVeer
-        ? (targetSide === 'left' ? !!def.weakDiveKey : !!def.isDiveKey)
-        : isOutsideVeer
-        ? (targetSide === 'left' ? (!!def.weakPitchKey || def.id === 'WDE') : (!!def.isPitchKey || def.id === 'SDE'))
-        : false;
+    const defSpeed = getDefenseSpeedMultiplier(def);
+    const t = Math.min(1, progress * defSpeed);
 
-    const isActPitch =
-      isInsideVeer
-        ? (targetSide === 'left' ? !!def.weakPitchKey : !!def.isPitchKey)
-        : isOutsideVeer
-        ? (targetSide === 'left'
-          ? (def.id === 'LCB' || def.id === 'WOLB' || !!def.weakPitchKey)
-          : (def.id === 'RCB' || def.id === 'SOLB' || def.id === 'SLB' || !!def.isPitchKey))
-        : false;
+    const isDL =
+      def.id === 'NT' ||
+      def.id === 'LDT' ||
+      def.id === 'RDT' ||
+      def.id === 'SDT' ||
+      def.id === 'WDT' ||
+      def.id === 'SNG' ||
+      def.id === 'WNG' ||
+      def.id === 'DT' ||
+      def.id === 'NG' ||
+      def.id === 'LDE' ||
+      def.id === 'RDE' ||
+      def.id === 'SDE' ||
+      def.id === 'WDE' ||
+      def.id === 'DE' ||
+      (def.y >= 335 && def.y <= 360);
 
+    const isInsideLB =
+      def.id === 'MLB' ||
+      def.id === 'SILB' ||
+      def.id === 'WILB' ||
+      def.id === 'MIKE' ||
+      def.id === 'WILL' ||
+      def.id === 'ILB';
+
+    const isOutsideLB =
+      def.id === 'SLB' ||
+      def.id === 'WLB' ||
+      def.id === 'SOLB' ||
+      def.id === 'WOLB' ||
+      def.id === 'SAM' ||
+      def.id === 'ROV' ||
+      def.id === 'ROVER' ||
+      def.id === 'OLB';
+
+    const isDB =
+      def.id === 'LCB' ||
+      def.id === 'RCB' ||
+      def.id === 'FS' ||
+      def.id === 'SS' ||
+      def.id === 'CB' ||
+      def.id === 'DB' ||
+      def.id === 'SAF' ||
+      def.y < 280;
+
+    // Check if this defender is an active Unblocked Read Key in the option
+    const isActDive = isInsideVeer
+      ? (targetSide === 'left' ? !!def.weakDiveKey : !!def.isDiveKey)
+      : isOutsideVeer
+      ? (targetSide === 'left'
+        ? (def.id === 'WDE' || (def.weakPitchKey && isDL))
+        : (def.id === 'SDE' || (def.isPitchKey && isDL)))
+      : false;
+
+    const isActPitch = !isActDive && (isInsideVeer
+      ? (targetSide === 'left' ? !!def.weakPitchKey : !!def.isPitchKey)
+      : isOutsideVeer
+      ? (targetSide === 'left'
+        ? (def.id === 'LCB' || def.id === 'WOLB' || def.id === 'WLB' || (!!def.weakPitchKey && !isDL))
+        : (def.id === 'RCB' || def.id === 'SOLB' || def.id === 'SLB' || def.id === 'SS' || (!!def.isPitchKey && !isDL)))
+      : false);
+
+    // 1. UNBLOCKED OPTION READ KEYS: React to QB/Mesh assignments
     if (isActDive) {
       if (diveBehavior === 'crash') {
-        // Full commit directly into the dive back in the backfield at the mesh
+        // Crashes with full commit into the dive back in the backfield at the mesh
         const targetX = targetSide === 'left'
           ? (isOutsideVeer ? 426 : 456)
           : (isOutsideVeer ? 574 : 544);
-        const targetY = isOutsideVeer ? 410 : 412; // deep backfield full commit into dive back
+        const targetY = isOutsideVeer ? 410 : 412;
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
             { x: targetX, y: targetY },
           ],
-          Math.min(1, progress * 2.2)
+          Math.min(1, t * 1.8)
         );
       } else if (diveBehavior === 'squeeze') {
-        const targetX = targetSide === 'left' ? def.x - 16 : def.x + 16;
-        const targetY = 388;
+        // Squeezes square on LOS, refusing to commit to dive, forcing give
+        const targetX = targetSide === 'left' ? def.x - 14 : def.x + 14;
+        const targetY = 372;
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
             { x: targetX, y: targetY },
           ],
-          Math.min(1, progress * 1.3)
+          Math.min(1, t * 1.2)
         );
       } else {
-        // Bull Rush / upfield
-        const targetX = targetSide === 'left' ? def.x - 20 : def.x + 20;
-        const targetY = 412;
+        // Bull Rush upfield
+        const targetX = targetSide === 'left' ? def.x - 16 : def.x + 16;
+        const targetY = 396;
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
             { x: targetX, y: targetY },
           ],
-          Math.min(1, progress * 1.3)
+          Math.min(1, t * 1.2)
         );
       }
     }
 
     if (isActPitch) {
       if (pitchBehavior === 'commit_qb') {
-        // Number 2 read commits to the 1-back in the backfield, forcing backfield pitch
+        // Number 2 read commits to the 1-back (QB) in the backfield, forcing backfield pitch
         const targetX = targetSide === 'left'
           ? (isOutsideVeer ? 350 : 370)
           : (isOutsideVeer ? 650 : 630);
-        const targetY = 404; // drives into the backfield directly at the 1-back
+        const targetY = 404;
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
             { x: targetX, y: targetY },
           ],
-          Math.min(1, progress * 1.65)
+          Math.min(1, t * 1.5)
         );
       } else {
-        // Number 2 read commits to the 3-back (pitch back), feathering wide to cover pitch
+        // Number 2 read feathers wide toward sideline to cover pitch back
         const targetX = targetSide === 'left'
-          ? (isOutsideVeer ? 260 : 290)
-          : (isOutsideVeer ? 740 : 710);
-        const targetY = 380; // wide perimeter leverage to cover pitch back
+          ? (isOutsideVeer ? 260 : 285)
+          : (isOutsideVeer ? 740 : 715);
+        const targetY = 376;
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
             { x: targetX, y: targetY },
           ],
-          Math.min(1, progress * 1.4)
+          Math.min(1, t * 1.3)
         );
       }
     }
 
-    // Power Pass: Linebackers bite hard forward on run fake; Free Safety steps down
+    // 2. POWER PASS (Play-Action Flood)
     if (isPowerPass) {
-      if (def.id === 'MLB' || def.id === 'SLB' || def.id === 'SILB' || def.id === 'WILB' || def.id === 'WLB') {
+      // Linebackers bite hard forward on run fake toward line of scrimmage
+      if (isInsideLB || isOutsideLB) {
+        const biteX = targetSide === 'left' ? def.x - 10 : def.x + 10;
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
-            { x: def.x + 12, y: def.y + 45 },
+            { x: biteX, y: def.y + 42 },
           ],
-          Math.min(1, progress * 1.4)
+          Math.min(1, t * 1.4)
         );
       }
+      // Safeties step down on the run-action fake
       if (def.id === 'FS' || def.id === 'SS') {
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
-            { x: def.x + 10, y: def.y + 35 },
+            { x: def.x + (targetSide === 'left' ? -8 : 8), y: def.y + 32 },
           ],
-          Math.min(1, progress * 1.1)
+          Math.min(1, t * 1.1)
+        );
+      }
+      // Defensive Linemen rush passer but are stopped by offensive line pocket at LOS
+      if (isDL) {
+        return interpolatePoints(
+          [
+            { x: def.x, y: def.y },
+            { x: def.x, y: 370 }, // held at bay by pass protection pocket
+          ],
+          Math.min(1, t * 1.1)
+        );
+      }
+      // Corners bail/squat in coverage
+      if (def.id === 'LCB' || def.id === 'RCB') {
+        return interpolatePoints(
+          [
+            { x: def.x, y: def.y },
+            { x: def.x + (def.id === 'LCB' ? -12 : 12), y: def.y - 10 },
+          ],
+          Math.min(1, t * 0.9)
         );
       }
     }
 
-    // Power: Edge defender gets kicked out wide by pulling guard
-    const isEdgeDefender = targetSide === 'left'
-      ? (def.id === 'WDE' || !!def.weakPitchKey)
-      : (def.id === 'SDE' || !!def.isPitchKey);
+    // 3. POWER (34 / 23 Power): Pulling Guard Kickout & Lead Back ISO Block
+    if (isPower) {
+      const isEdgeDefender = targetSide === 'left'
+        ? (def.id === 'WDE' || !!def.weakPitchKey || def.id === 'WOLB')
+        : (def.id === 'SDE' || !!def.isPitchKey || def.id === 'SOLB');
 
-    if (isPower && isEdgeDefender) {
-      const kickX = targetSide === 'left' ? -28 : 28;
-      return interpolatePoints(
-        [
-          { x: def.x, y: def.y },
-          { x: def.x + kickX, y: def.y + 12 },
-        ],
-        Math.min(1, progress * 1.2)
-      );
+      if (isEdgeDefender) {
+        // Edge defender gets kicked out wide by pulling guard
+        const kickX = targetSide === 'left' ? -38 : 38;
+        return interpolatePoints(
+          [
+            { x: def.x, y: def.y },
+            { x: def.x + kickX * 0.25, y: def.y + 8 },
+            { x: def.x + kickX, y: def.y + 14 },
+          ],
+          Math.min(1, t * 1.4)
+        );
+      }
+
+      // Playside Inside Linebacker meets Lead Back (LH/RH) ISO block in hole
+      const isPlaysideILB = isInsideLB && (targetSide === 'left' ? def.x <= 500 : def.x >= 500);
+      if (isPlaysideILB) {
+        // Lead back collides with LB in B/C gap, sealing him inside away from runner
+        const sealInsideX = targetSide === 'left' ? 26 : -26;
+        return interpolatePoints(
+          [
+            { x: def.x, y: def.y },
+            { x: def.x, y: def.y + 16 },
+            { x: def.x + sealInsideX, y: def.y + 14 }, // sealed inside by Lead ISO block
+          ],
+          Math.min(1, t * 1.3)
+        );
+      }
+
+      // Defensive Linemen are double-teamed / washed down by OL, held at LOS
+      if (isDL) {
+        const washX = targetSide === 'left' ? 24 : -24;
+        return interpolatePoints(
+          [
+            { x: def.x, y: def.y },
+            { x: def.x + washX * 0.4, y: 350 },
+            { x: def.x + washX, y: 352 }, // held at line of scrimmage, washed inside
+          ],
+          Math.min(1, t * 1.2)
+        );
+      }
     }
 
-    // Trap:
-    // 1. Center seals the NT or DT right in front of him to the backside
-    // 2. Playside interior DL penetrates upfield into the trap and is kicked out by the pulling guard
-    // 3. Linebackers flow with fake sweep & pitch fake; fake runner climbs to backer through B-gap off Strong OT hip
+    // 4. COUNTER TRAP (30 / 39 Trap): Pulling Guard Trap Block & Center Back-Block
     if (isTrap) {
-      const isDL = def.y >= 330 && def.y <= 360;
       const isCenterFrontDefender =
         def.id === 'NT' ||
         (isDL && Math.abs(def.x - 500) <= 28);
 
       if (isCenterFrontDefender) {
-        // Center seals defender to the backside (left for right target, right for left target)
-        const backsideX = targetSide === 'left' ? 24 : -24;
+        // Center seals defender to backside, pinned on backside of center
+        const backsideX = targetSide === 'left' ? 28 : -28;
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
             { x: def.x + backsideX * 0.4, y: def.y + 4 },
-            { x: def.x + backsideX, y: def.y + 2 }, // sealed into backside gap by Center
+            { x: def.x + backsideX, y: 350 }, // sealed on backside
           ],
-          Math.min(1, progress * 1.5)
+          Math.min(1, t * 1.5)
         );
       }
 
@@ -343,32 +519,158 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
         : (def.id === 'RDT' || def.id === 'SDT' || (isDL && def.x > 520 && def.x < 620 && !isCenterFrontDefender));
 
       if (isTrapTarget) {
-        const kickX = targetSide === 'left' ? -26 : 26;
+        // Penetrates 1 step, then trapped & kicked out wide by pulling guard
+        const kickX = targetSide === 'left' ? -36 : 36;
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
-            { x: def.x, y: def.y + 22 }, // penetrates into backfield
-            { x: def.x + kickX, y: def.y + 26 }, // trapped & kicked out wide by pulling guard
+            { x: def.x, y: def.y + 18 }, // penetrates into backfield
+            { x: def.x + kickX, y: def.y + 22 }, // trapped & kicked out wide by pulling guard
           ],
-          Math.min(1, progress * 1.5)
+          Math.min(1, t * 1.4)
         );
       }
 
-      if (def.id === 'MLB' || def.id === 'SLB' || def.id === 'WLB' || def.id === 'SILB' || def.id === 'WILB') {
-        const flowX = targetSide === 'left' ? -18 : 18;
+      // Linebackers false-step with fake sweep toward perimeter
+      if (isInsideLB || isOutsideLB) {
+        const flowX = targetSide === 'left' ? -24 : 24;
         return interpolatePoints(
           [
             { x: def.x, y: def.y },
-            { x: def.x + flowX, y: def.y + 6 }, // flows with fake sweep towards B-gap
+            { x: def.x + flowX, y: def.y + 6 }, // flowed out of position
           ],
-          Math.min(1, progress * 1.2)
+          Math.min(1, t * 1.2)
         );
       }
     }
 
-    const driftX = targetSide === 'left' ? -14 * progress : 14 * progress;
-    const driftY = 12 * progress;
-    return { x: def.x + driftX, y: def.y + driftY };
+    // 5. VEER PLAYS (Inside Veer 22/31 & Outside Veer 18/19): Blocking Reactions & Gap Integrity
+    if (isDL) {
+      // Nose Tackle / Head-up Center: Center & Backside Guard Ace Scoop block
+      // Sealed to backside, NEVER crosses LOS into backfield!
+      const isHeadUpOrBackside = targetSide === 'left' ? def.x >= 490 : def.x <= 510;
+      if (def.id === 'NT' || isHeadUpOrBackside) {
+        const sealBacksideX = targetSide === 'left' ? 26 : -26;
+        return interpolatePoints(
+          [
+            { x: def.x, y: def.y },
+            { x: def.x + sealBacksideX * 0.5, y: def.y + 4 },
+            { x: def.x + sealBacksideX, y: 352 }, // sealed to backside at line
+          ],
+          Math.min(1, t * 1.3)
+        );
+      }
+
+      // Playside Interior DL (if not unblocked read key): Down-blocked by playside Guard/Tackle
+      // Sealed inside toward center, opening B-gap / C-gap!
+      const sealInsideX = targetSide === 'left' ? 32 : -32;
+      return interpolatePoints(
+        [
+          { x: def.x, y: def.y },
+          { x: def.x + sealInsideX * 0.4, y: def.y + 6 },
+          { x: def.x + sealInsideX, y: 352 }, // sealed inside, held at line
+        ],
+        Math.min(1, t * 1.3)
+      );
+    }
+
+    if (isInsideLB) {
+      // Playside Inside LB (Mike/SILB): Met at second level by climbing Tackle veer-block!
+      // Sealed inside away from dive track, establishing the running lane
+      const isPlaysideILB = targetSide === 'left' ? def.x <= 510 : def.x >= 490;
+      if (isPlaysideILB) {
+        const washInsideX = targetSide === 'left' ? 28 : -28;
+        return interpolatePoints(
+          [
+            { x: def.x, y: def.y },
+            { x: def.x, y: def.y + 16 }, // steps to fill
+            { x: def.x + washInsideX, y: def.y + 12 }, // met and sealed inside by climbing Tackle!
+          ],
+          Math.min(1, t * 1.3)
+        );
+      }
+
+      // Backside Inside LB: Scrapes across formation over top of center scoop
+      const flowX = targetSide === 'left' ? -22 : 22;
+      return interpolatePoints(
+        [
+          { x: def.x, y: def.y },
+          { x: def.x + flowX * 0.5, y: def.y + 6 },
+          { x: def.x + flowX, y: def.y + 10 },
+        ],
+        Math.min(1, t * 1.1)
+      );
+    }
+
+    if (isOutsideLB) {
+      // Outside LB: forced wide by tight end / slot block, or flowing to perimeter pitch
+      const flowOutX = targetSide === 'left' ? -26 : 26;
+      return interpolatePoints(
+        [
+          { x: def.x, y: def.y },
+          { x: def.x + flowOutX * 0.4, y: def.y + 4 },
+          { x: def.x + flowOutX, y: def.y + 8 },
+        ],
+        Math.min(1, t * 1.2)
+      );
+    }
+
+    if (isDB) {
+      // Defensive Backs: Run support / contain assignments
+      // Playside Corner: steps up to contain pitch along sideline
+      const isPlaysideCB = (targetSide === 'left' && def.id === 'LCB') || (targetSide !== 'left' && def.id === 'RCB');
+      if (isPlaysideCB) {
+        return interpolatePoints(
+          [
+            { x: def.x, y: def.y },
+            { x: def.x, y: def.y + 35 }, // steps up to perimeter contain
+          ],
+          Math.min(1, t * 1.1)
+        );
+      }
+
+      // Backside Corner: bails deep or stalks backside receiver
+      const isBacksideCB = (targetSide === 'left' && def.id === 'RCB') || (targetSide !== 'left' && def.id === 'LCB');
+      if (isBacksideCB) {
+        return interpolatePoints(
+          [
+            { x: def.x, y: def.y },
+            { x: def.x, y: def.y - 12 }, // bails deep with backside receiver
+          ],
+          Math.min(1, t * 0.8)
+        );
+      }
+
+      // Free Safety (FS): Reads mesh from deep centerfield, fills downhill into alley
+      if (def.id === 'FS') {
+        const fillX = targetSide === 'left' ? 440 : 560;
+        return interpolatePoints(
+          [
+            { x: def.x, y: def.y },
+            { x: def.x, y: def.y + 8 }, // read steps at snap
+            { x: fillX, y: 240 }, // fills downhill into alley
+          ],
+          Math.min(1, t * 1.0)
+        );
+      }
+
+      // Strong Safety (SS): Steps down into alley to support perimeter option
+      if (def.id === 'SS') {
+        const fillX = targetSide === 'left' ? 380 : 660;
+        return interpolatePoints(
+          [
+            { x: def.x, y: def.y },
+            { x: fillX, y: 255 }, // rolls into alley
+          ],
+          Math.min(1, t * 1.0)
+        );
+      }
+    }
+
+    // Default defensive assignment: step up into assigned gap and hold leverage
+    const driftX = targetSide === 'left' ? -8 * t : 8 * t;
+    const driftY = 6 * t;
+    return { x: def.x + driftX, y: Math.min(360, def.y + driftY) };
   };
 
   // Compute live football position

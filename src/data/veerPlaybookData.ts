@@ -1526,18 +1526,30 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
             ? [
                 base.LH,
                 { x: 520, y: 476 }, // crossover step across backfield
-                { x: 610, y: 448 }, // tracks outside hip of playside tackle in backfield
-                { x: 680, y: 420 }, // receives pitch in backfield (deeper and wider than QB at 630, 404)!
-                { x: 710, y: 300 }, // turns upfield across LOS along sideline
-                { x: 730, y: 155 }, // accelerates downfield
+                { x: 610, y: 450 }, // tracks outside hip of playside tackle in backfield
+                { x: 675, y: 432 }, // maintaining 4x4 pitch relationship in backfield
+                { x: 700, y: 426 }, // receives pitch in backfield (deeper and wider than QB at 630, 404)!
+                { x: 722, y: 295 }, // ONLY ONCE PITCHED THE BALL, cuts sharply upfield across LOS!
+                { x: 742, y: 150 }, // accelerates downfield
+              ]
+            : qbKeep
+            ? [
+                base.LH,
+                { x: 520, y: 476 }, // crossover step across backfield
+                { x: 610, y: 450 }, // tracks outside hip of playside tackle in backfield
+                { x: 675, y: 432 }, // maintaining 4x4 pitch spacing in backfield
+                { x: 695, y: 426 }, // QB commits point: QB commits inside, pitch back holds pitch track until commit
+                { x: 730, y: 330 }, // ONLY ONCE QB COMMITS, turns upfield to stalk block/escort downfield!
+                { x: 750, y: 200 }, // downfield perimeter block
               ]
             : [
                 base.LH,
-                { x: 520, y: 476 },
-                { x: 610, y: 448 },
-                { x: 680, y: 420 }, // maintains 4x4 pitch relationship in backfield
-                { x: 700, y: 380 },
-                { x: 715, y: 340 },
+                { x: 520, y: 476 }, // crossover step across backfield
+                { x: 605, y: 455 }, // pitch track across backfield
+                { x: 668, y: 442 }, // carries out option fake
+                { x: 725, y: 435 }, // maintains depth in backfield
+                { x: 775, y: 430 }, // wide perimeter fake (never cuts upfield into line)
+                { x: 815, y: 425 }, // stretches boundary defense
               ],
         },
       };
@@ -1698,19 +1710,31 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
           points: pitchTriggered
             ? [
                 base.LH,
-                { x: 535, y: 476 },
-                { x: 630, y: 450 },
-                { x: 710, y: 420 }, // receives pitch in backfield (deeper and wider than QB at 650, 404)!
-                { x: 745, y: 295 }, // turns upfield across LOS along sideline
-                { x: 775, y: 155 },
+                { x: 535, y: 476 }, // crossover step across backfield
+                { x: 630, y: 452 }, // tracks outside hip of tackle in backfield
+                { x: 700, y: 432 }, // maintaining pitch spacing in backfield
+                { x: 725, y: 426 }, // receives pitch in backfield!
+                { x: 755, y: 295 }, // ONLY ONCE PITCHED THE BALL, cuts vertically upfield along sideline!
+                { x: 780, y: 150 }, // explodes downfield
+              ]
+            : qbKeep
+            ? [
+                base.LH,
+                { x: 535, y: 476 }, // crossover step across backfield
+                { x: 630, y: 452 }, // tracks outside hip of tackle in backfield
+                { x: 700, y: 432 }, // maintaining pitch spacing in backfield
+                { x: 720, y: 426 }, // QB commits point (QB cuts upfield inside #2)
+                { x: 755, y: 330 }, // ONLY ONCE QB COMMITS, turns upfield on perimeter to stalk block
+                { x: 780, y: 200 }, // downfield perimeter block
               ]
             : [
                 base.LH,
-                { x: 535, y: 476 },
-                { x: 630, y: 450 },
-                { x: 710, y: 420 },
-                { x: 735, y: 380 },
-                { x: 755, y: 335 },
+                { x: 535, y: 476 }, // crossover step across backfield
+                { x: 625, y: 456 }, // pitch track across backfield
+                { x: 695, y: 442 }, // carries out option fake
+                { x: 755, y: 435 }, // maintains depth in backfield
+                { x: 800, y: 430 }, // wide perimeter fake (never cuts upfield into line)
+                { x: 835, y: 425 }, // stretches boundary defense
               ],
         },
       };
