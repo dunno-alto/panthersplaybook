@@ -20,6 +20,11 @@ import {
   Sliders,
   Users,
   Compass,
+  Maximize2,
+  Minimize2,
+  PenTool,
+  Undo2,
+  Trash2,
 } from 'lucide-react';
 import {
   SPECIAL_TEAMS_PLAYBOOK,
@@ -45,6 +50,26 @@ interface SpecialTeamsSectionProps {
 
 export type STBallHash = 'left_hash' | 'middle' | 'right_hash';
 
+export interface STCoachStroke {
+  id: string;
+  type: 'freehand' | 'arrow';
+  color: string;
+  width: number;
+  points: { x: number; y: number }[];
+}
+
+export const ST_COACH_PEN_COLORS = [
+  { label: 'Chalk Yellow', value: '#FACC15', bgClass: 'bg-yellow-400', ringColor: 'ring-yellow-400' },
+  { label: 'Neon Teal', value: '#2DD4BF', bgClass: 'bg-teal-400', ringColor: 'ring-teal-400' },
+  { label: 'Coral Red', value: '#F87171', bgClass: 'bg-red-400', ringColor: 'ring-red-400' },
+  { label: 'Chalk White', value: '#FFFFFF', bgClass: 'bg-white', ringColor: 'ring-white' },
+];
+
+function stPointsToSvgPath(points: { x: number; y: number }[]): string {
+  if (!points || points.length === 0) return '';
+  return points.map((pt, idx) => `${idx === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(' ');
+}
+
 export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionProps) {
   const [selectedUnitId, setSelectedUnitId] = useState<SpecialTeamsUnitId>('kick_return');
   const [selectedSchemeId, setSelectedSchemeId] = useState<string>('wheel_left');
@@ -64,6 +89,129 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
   const [progress, setProgress] = useState<number>(0);
   const [isLooping, setIsLooping] = useState<boolean>(true);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
+
+  // Fullscreen Tablet Mode & Coach Pen State for Special Teams Playart
+  const stCanvasContainerRef = useRef<HTMLDivElement | null>(null);
+  const stSvgRef = useRef<SVGSVGElement | null>(null);
+  const [isSTFullscreen, setIsSTFullscreen] = useState<boolean>(false);
+  const [stCoachPenActive, setSTCoachPenActive] = useState<boolean>(false);
+  const [stPenMode, setSTPenMode] = useState<'freehand' | 'arrow'>('freehand');
+  const [stPenColor, setSTPenColor] = useState<string>('#FACC15');
+  const [stPenStrokes, setSTPenStrokes] = useState<STCoachStroke[]>([]);
+  const [stCurrentStroke, setSTCurrentStroke] = useState<{ x: number; y: number }[] | null>(null);
+
+  // Sync fullscreen change & Escape key listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isSTFullscreen) {
+        setIsSTFullscreen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isSTFullscreen) {
+        setIsSTFullscreen(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSTFullscreen]);
+
+  const handleToggleSTFullscreen = () => {
+    if (!isSTFullscreen) {
+      setIsSTFullscreen(true);
+      try {
+        stCanvasContainerRef.current?.requestFullscreen?.().catch(() => {});
+      } catch {}
+    } else {
+      setIsSTFullscreen(false);
+      try {
+        if (document.fullscreenElement) {
+          document.exitFullscreen?.().catch(() => {});
+        }
+      } catch {}
+    }
+  };
+
+  const handleToggleSTCoachPen = () => {
+    setSTCoachPenActive((prev) => {
+      const next = !prev;
+      if (next) {
+        setIsSTFullscreen(true);
+        try {
+          stCanvasContainerRef.current?.requestFullscreen?.().catch(() => {});
+        } catch {}
+      }
+      return next;
+    });
+  };
+
+  const getSTSvgCoords = (e: React.PointerEvent<SVGSVGElement>): { x: number; y: number } => {
+    const svg = stSvgRef.current;
+    if (!svg) return { x: 500, y: 310 };
+    const rect = svg.getBoundingClientRect();
+    const scaleX = 1000 / rect.width;
+    const scaleY = 620 / rect.height;
+    return {
+      x: Math.max(10, Math.min(990, (e.clientX - rect.left) * scaleX)),
+      y: Math.max(10, Math.min(610, (e.clientY - rect.top) * scaleY)),
+    };
+  };
+
+  const handleSTPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!stCoachPenActive) return;
+    e.preventDefault();
+    try {
+      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    } catch {}
+    const pt = getSTSvgCoords(e);
+    setSTCurrentStroke([pt]);
+  };
+
+  const handleSTPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!stCoachPenActive || !stCurrentStroke) return;
+    e.preventDefault();
+    const pt = getSTSvgCoords(e);
+    if (stPenMode === 'arrow') {
+      setSTCurrentStroke([stCurrentStroke[0], pt]);
+    } else {
+      const last = stCurrentStroke[stCurrentStroke.length - 1];
+      if (Math.hypot(pt.x - last.x, pt.y - last.y) >= 2) {
+        setSTCurrentStroke((prev) => (prev ? [...prev, pt] : [pt]));
+      }
+    }
+  };
+
+  const handleSTPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!stCoachPenActive || !stCurrentStroke) return;
+    try {
+      (e.currentTarget as Element).releasePointerCapture?.(e.pointerId);
+    } catch {}
+    if (stCurrentStroke.length >= 2) {
+      const start = stCurrentStroke[0];
+      const end = stCurrentStroke[stCurrentStroke.length - 1];
+      if (Math.hypot(end.x - start.x, end.y - start.y) > 5) {
+        setSTPenStrokes((prev) => [
+          ...prev,
+          {
+            id: `st-stroke-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            type: stPenMode,
+            color: stPenColor,
+            width: 3.5,
+            points: stCurrentStroke,
+          },
+        ]);
+      }
+    }
+    setSTCurrentStroke(null);
+  };
+
+  const handleSTPointerCancel = () => {
+    setSTCurrentStroke(null);
+  };
 
   const activeUnit: SpecialTeamsUnit = SPECIAL_TEAMS_PLAYBOOK[selectedUnitId];
 
@@ -485,16 +633,16 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {isPlaying ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[11px] font-bold animate-pulse">
                 <Play className="w-3 h-3 fill-emerald-300" />
-                LIVE SIMULATION RUNNING ({Math.round(progress * 100)}%)
+                LIVE ({Math.round(progress * 100)}%)
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#0A1318] border border-[#162A33] text-slate-400 font-mono text-[11px]">
                 <Pause className="w-3 h-3" />
-                {progress === 0 ? 'PRE-SNAP (0%)' : `SIMULATION PAUSED (${Math.round(progress * 100)}%)`}
+                {progress === 0 ? 'PRE-SNAP' : `PAUSED (${Math.round(progress * 100)}%)`}
               </span>
             )}
 
@@ -515,16 +663,295 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                 </>
               )}
             </button>
+
+            {/* Coach Pen Toggle Button */}
+            <button
+              type="button"
+              onClick={handleToggleSTCoachPen}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                stCoachPenActive
+                  ? 'border-amber-400 bg-amber-950/70 text-amber-300 ring-1 ring-amber-400 shadow-md'
+                  : 'border-[#162A33] bg-[#0A1318] text-slate-300 hover:text-white hover:border-slate-700'
+              }`}
+              title="Activate Coach Pen (opens Fullscreen on tablet)"
+            >
+              <PenTool className="w-3.5 h-3.5" />
+              <span>Coach Pen {stCoachPenActive ? 'ACTIVE' : 'OFF'}</span>
+              {stPenStrokes.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded bg-amber-900/80 text-amber-200 text-[10px] border border-amber-600/50">
+                  {stPenStrokes.length}
+                </span>
+              )}
+            </button>
+
+            {/* Direct Fullscreen Tablet Mode Toggle Button */}
+            <button
+              type="button"
+              onClick={handleToggleSTFullscreen}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                isSTFullscreen
+                  ? 'border-teal-400 bg-teal-950 text-teal-300 ring-1 ring-teal-400 shadow-md'
+                  : 'border-[#162A33] bg-[#0A1318] text-slate-300 hover:text-white hover:border-teal-500/50'
+              }`}
+              title={isSTFullscreen ? 'Exit Fullscreen' : 'Expand to Fullscreen Tablet Chalkboard'}
+            >
+              {isSTFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-teal-300" /> : <Maximize2 className="w-3.5 h-3.5 text-teal-400" />}
+              <span>{isSTFullscreen ? 'Exit Fullscreen' : 'Tablet Fullscreen'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSTPenStrokes([])}
+              title="Reset coach chalk notations"
+              className="p-1.5 rounded-lg border border-[#162A33] bg-[#0A1318] text-slate-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 
-        {/* FULL WIDTH SVG CANVAS CONTAINER */}
-        <div className="relative w-full aspect-[16/9] sm:aspect-[16/10] bg-[#050C10] rounded-xl border border-[#162A33] overflow-hidden select-none shadow-inner">
-          <svg
-            viewBox="0 0 1000 620"
-            className="w-full h-full"
-            preserveAspectRatio="xMidYMid meet"
-          >
+        {/* Docked Coach Pen Toolbar Bar when active in regular view */}
+        {stCoachPenActive && !isSTFullscreen && (
+          <div className="p-2.5 rounded-xl bg-gradient-to-r from-[#0d212d] via-[#081822] to-[#0d212d] border border-amber-500/50 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs font-mono animate-fadeIn">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <span className="text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+                <PenTool className="w-3.5 h-3.5 text-amber-400" />
+                <span>Coach Pen:</span>
+              </span>
+
+              {/* Mode: Freehand vs Arrow */}
+              <div className="inline-flex rounded-lg border border-[#162A33] bg-[#050C10] p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setSTPenMode('freehand')}
+                  className={`px-2.5 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                    stPenMode === 'freehand' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Freehand drawing: Draw coverage lanes, return cuts, or circles"
+                >
+                  <span>〰️ Freehand</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSTPenMode('arrow')}
+                  className={`px-2.5 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                    stPenMode === 'arrow' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Straight Arrow: Drag from point A to B with directional arrow"
+                >
+                  <span>➔ Arrow</span>
+                </button>
+              </div>
+
+              {/* Chalk Colors */}
+              <div className="flex items-center gap-1.5 pl-2 border-l border-[#162A33]">
+                <span className="text-[10px] text-slate-400 uppercase">Chalk:</span>
+                {ST_COACH_PEN_COLORS.map((c) => {
+                  const isSelected = stPenColor === c.value;
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setSTPenColor(c.value)}
+                      className={`w-5 h-5 rounded-full transition-all cursor-pointer flex items-center justify-center ${c.bgClass} ${
+                        isSelected ? `ring-2 ${c.ringColor} ring-offset-2 ring-offset-[#070E13] scale-110 shadow` : 'opacity-65 hover:opacity-100'
+                      }`}
+                      title={c.label}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Step Undo, Clear, and Fullscreen Shortcut */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSTPenStrokes((prev) => prev.slice(0, -1))}
+                disabled={stPenStrokes.length === 0}
+                className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 text-xs font-bold transition-colors ${
+                  stPenStrokes.length > 0
+                    ? 'border-[#162A33] bg-[#050C10] text-slate-300 hover:text-white hover:border-slate-600 cursor-pointer'
+                    : 'border-[#162A33]/50 bg-transparent text-slate-600 cursor-not-allowed'
+                }`}
+                title="Undo last stroke"
+              >
+                <Undo2 className="w-3.5 h-3.5" />
+                <span>Undo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSTPenStrokes([])}
+                disabled={stPenStrokes.length === 0}
+                className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 text-xs font-bold transition-colors ${
+                  stPenStrokes.length > 0
+                    ? 'border-red-500/40 bg-red-950/30 text-red-300 hover:bg-red-950/60 cursor-pointer'
+                    : 'border-[#162A33]/50 bg-transparent text-slate-600 cursor-not-allowed'
+                }`}
+                title="Clear all coach chalk marks"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleSTFullscreen}
+                className="px-2.5 py-1 rounded-lg border border-teal-500/40 bg-teal-950/60 text-teal-300 hover:bg-teal-900/60 flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-colors"
+                title="Expand to Fullscreen Tablet Chalkboard"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>Fullscreen</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* FULL WIDTH SVG CANVAS CONTAINER (with Tablet Fullscreen mode) */}
+        <div
+          ref={stCanvasContainerRef}
+          className={
+            isSTFullscreen
+              ? 'fixed inset-0 z-50 bg-[#04090D] flex flex-col p-3 sm:p-5 w-screen h-screen overflow-hidden select-none shadow-2xl'
+              : 'relative w-full aspect-[16/9] sm:aspect-[16/10] bg-[#050C10] rounded-xl border border-[#162A33] overflow-hidden select-none shadow-inner'
+          }
+        >
+          {/* Tablet Fullscreen Header Controls */}
+          {isSTFullscreen && (
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-2 border-b border-[#162A33] bg-[#07131B]/95 px-4 py-2.5 rounded-xl text-xs font-mono shrink-0 shadow-lg">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <span className="font-bold text-teal-400 flex items-center gap-1.5 uppercase text-xs sm:text-sm">
+                  <Flag className="w-4 h-4 text-teal-400" />
+                  <span>Sideline Special Teams:</span>
+                </span>
+                <span className="px-3 py-1 rounded-lg bg-teal-500/20 text-teal-300 font-extrabold border border-teal-500/50 text-xs sm:text-sm tracking-wide">
+                  {activeUnit.name}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-[#09151D] border border-teal-700/50 text-teal-300 text-xs">
+                  {activeScheme.label}
+                </span>
+                <span className="text-slate-400 text-xs hidden md:inline">
+                  Night Turf · 11 vs 11 Execution
+                </span>
+              </div>
+
+              {/* Tablet Coach Pen Toolbar when Fullscreen */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                {/* Freehand vs Arrow Switcher */}
+                <div className="inline-flex rounded-lg border border-[#162A33] bg-[#050C10] p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setSTPenMode('freehand')}
+                    className={`px-2.5 sm:px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                      stPenMode === 'freehand' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>〰️ Freehand</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSTPenMode('arrow')}
+                    className={`px-2.5 sm:px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                      stPenMode === 'arrow' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>➔ Arrow</span>
+                  </button>
+                </div>
+
+                {/* Chalk Colors */}
+                <div className="flex items-center gap-1.5 pl-2 border-l border-[#162A33]">
+                  {ST_COACH_PEN_COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setSTPenColor(c.value)}
+                      className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full transition-all cursor-pointer ${c.bgClass} ${
+                        stPenColor === c.value ? `ring-2 ${c.ringColor} ring-offset-2 ring-offset-[#070E13] scale-110 shadow` : 'opacity-65 hover:opacity-100'
+                      }`}
+                      title={c.label}
+                    />
+                  ))}
+                </div>
+
+                {/* Undo Button */}
+                <button
+                  type="button"
+                  onClick={() => setSTPenStrokes((prev) => prev.slice(0, -1))}
+                  disabled={stPenStrokes.length === 0}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg border flex items-center gap-1 text-xs font-bold transition-colors ${
+                    stPenStrokes.length > 0
+                      ? 'border-[#162A33] bg-[#050C10] text-slate-300 hover:text-white cursor-pointer'
+                      : 'border-[#162A33]/50 text-slate-600 cursor-not-allowed'
+                  }`}
+                  title="Undo last stroke"
+                >
+                  <Undo2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Undo</span>
+                  {stPenStrokes.length > 0 && (
+                    <span className="ml-1 px-1 rounded bg-slate-800 text-slate-300 text-[10px]">
+                      {stPenStrokes.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Clear Button */}
+                <button
+                  type="button"
+                  onClick={() => setSTPenStrokes([])}
+                  disabled={stPenStrokes.length === 0}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg border flex items-center gap-1 text-xs font-bold transition-colors ${
+                    stPenStrokes.length > 0
+                      ? 'border-red-500/40 bg-red-950/30 text-red-300 hover:bg-red-950/60 cursor-pointer'
+                      : 'border-[#162A33]/50 text-slate-600 cursor-not-allowed'
+                  }`}
+                  title="Clear all chalk marks"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Clear</span>
+                </button>
+
+                {/* Play / Pause toggle */}
+                <button
+                  type="button"
+                  onClick={handleTogglePlay}
+                  className="px-2.5 py-1 rounded-lg border border-teal-500/40 bg-teal-950/60 text-teal-300 hover:bg-teal-900/60 flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-colors"
+                >
+                  {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-teal-300" />}
+                  <span>{isPlaying ? 'Pause' : 'Play'}</span>
+                </button>
+
+                {/* Exit Fullscreen */}
+                <button
+                  type="button"
+                  onClick={handleToggleSTFullscreen}
+                  className="px-3 py-1.5 rounded-lg border border-teal-500/50 bg-teal-950/80 text-teal-300 hover:bg-teal-900 font-bold flex items-center gap-1.5 cursor-pointer shadow-md"
+                  title="Exit Fullscreen Mode (Esc)"
+                >
+                  <Minimize2 className="w-3.5 h-3.5" />
+                  <span>Exit Fullscreen</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className={isSTFullscreen ? 'flex-1 w-full h-full min-h-0 flex items-center justify-center p-1' : 'w-full h-full'}>
+            <svg
+              ref={stSvgRef}
+              viewBox="0 0 1000 620"
+              className={isSTFullscreen ? 'max-w-full max-h-full aspect-[16/10] drop-shadow-2xl' : 'w-full h-full'}
+              preserveAspectRatio="xMidYMid meet"
+              style={{
+                touchAction: stCoachPenActive ? 'none' : 'auto',
+                cursor: stCoachPenActive ? 'crosshair' : 'default',
+              }}
+              onPointerDown={handleSTPointerDown}
+              onPointerMove={handleSTPointerMove}
+              onPointerUp={handleSTPointerUp}
+              onPointerCancel={handleSTPointerCancel}
+              onPointerLeave={handleSTPointerCancel}
+            >
             <defs>
               {showGrid && (
                 <pattern id="stFieldGrid" width="100" height="100" patternUnits="userSpaceOnUse">
@@ -565,6 +992,20 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                 orient="auto-start-reverse"
               >
                 <path d="M 0 1 L 8 5 L 0 9 z" fill="#EF4444" />
+              </marker>
+
+              {/* Coach Chalk Palette Arrowhead Markers */}
+              <marker id="st-arrow-FACC15" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#FACC15" />
+              </marker>
+              <marker id="st-arrow-2DD4BF" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#2DD4BF" />
+              </marker>
+              <marker id="st-arrow-F87171" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#F87171" />
+              </marker>
+              <marker id="st-arrow-FFFFFF" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#FFFFFF" />
               </marker>
             </defs>
 
@@ -1199,10 +1640,77 @@ export function SpecialTeamsSection({ onOpenPrintModal }: SpecialTeamsSectionPro
                 <line x1="2" y1="-2" x2="2" y2="2" stroke="#FFFFFF" strokeWidth="0.8" />
               </g>
             </g>
-          </svg>
 
-          {/* Big Center Overlay Button when Stopped at Pre-Snap (Exact match to Offense Tab) */}
-          {!isPlaying && progress === 0 && (
+            {/* Custom Coach Chalk Strokes Layer */}
+            <g id="st-coach-chalk-layer" style={{ pointerEvents: 'none' }}>
+              {stPenStrokes.map((s) => {
+                if (s.type === 'freehand') {
+                  return (
+                    <path
+                      key={s.id}
+                      d={stPointsToSvgPath(s.points)}
+                      fill="none"
+                      stroke={s.color}
+                      strokeWidth={s.width}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  );
+                }
+                const start = s.points[0];
+                const end = s.points[s.points.length - 1];
+                const markerColor = s.color.replace('#', '');
+                return (
+                  <g key={s.id}>
+                    <line
+                      x1={start.x}
+                      y1={start.y}
+                      x2={end.x}
+                      y2={end.y}
+                      stroke={s.color}
+                      strokeWidth={s.width}
+                      strokeLinecap="round"
+                      markerEnd={`url(#st-arrow-${markerColor})`}
+                    />
+                    <circle cx={start.x} cy={start.y} r={s.width - 1} fill={s.color} />
+                  </g>
+                );
+              })}
+
+              {/* Live drawing stroke in progress */}
+              {stCurrentStroke && stCurrentStroke.length >= 1 && (
+                stPenMode === 'freehand' ? (
+                  <path
+                    d={stPointsToSvgPath(stCurrentStroke)}
+                    fill="none"
+                    stroke={stPenColor}
+                    strokeWidth={3.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={0.9}
+                  />
+                ) : stCurrentStroke.length >= 2 ? (
+                  <g opacity={0.9}>
+                    <line
+                      x1={stCurrentStroke[0].x}
+                      y1={stCurrentStroke[0].y}
+                      x2={stCurrentStroke[stCurrentStroke.length - 1].x}
+                      y2={stCurrentStroke[stCurrentStroke.length - 1].y}
+                      stroke={stPenColor}
+                      strokeWidth={3.5}
+                      strokeLinecap="round"
+                      markerEnd={`url(#st-arrow-${stPenColor.replace('#', '')})`}
+                    />
+                    <circle cx={stCurrentStroke[0].x} cy={stCurrentStroke[0].y} r={2.5} fill={stPenColor} />
+                  </g>
+                ) : null
+              )}
+            </g>
+          </svg>
+          </div>
+
+          {/* Big Center Overlay Button when Stopped at Pre-Snap (Exact match to Offense Tab; Hidden in Fullscreen or when Coach Pen active) */}
+          {!isSTFullscreen && !stCoachPenActive && !isPlaying && progress === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <button
                 type="button"

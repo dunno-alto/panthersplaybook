@@ -279,13 +279,13 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
     if (!isFullscreen) {
       setIsFullscreen(true);
       try {
-        canvasContainerRef.current?.requestFullscreen?.();
+        canvasContainerRef.current?.requestFullscreen?.().catch(() => {});
       } catch {}
     } else {
       setIsFullscreen(false);
       try {
         if (document.fullscreenElement) {
-          document.exitFullscreen?.();
+          document.exitFullscreen?.().catch(() => {});
         }
       } catch {}
     }
@@ -298,14 +298,14 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
         // Automatically enter tablet fullscreen when activating Coach Pen so coach has maximum canvas on field!
         setIsFullscreen(true);
         try {
-          canvasContainerRef.current?.requestFullscreen?.();
+          canvasContainerRef.current?.requestFullscreen?.().catch(() => {});
         } catch {}
       } else {
         if (isFullscreen) {
           setIsFullscreen(false);
           try {
             if (document.fullscreenElement) {
-              document.exitFullscreen?.();
+              document.exitFullscreen?.().catch(() => {});
             }
           } catch {}
         }
@@ -1876,22 +1876,70 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
       {/* TACTICAL PLAYART CANVAS (Directly Below User Inputs) */}
       <div className="rounded-2xl border border-[#162A33] bg-[#070E13] p-4 lg:p-5 shadow-2xl space-y-3">
         {/* Playart Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#162A33] pb-3 text-xs">
-          <div className="flex items-center gap-3">
-            <span className="font-mono font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Compass className="w-4 h-4" />
-              Tactical Playart Canvas
-            </span>
-            <span className="text-slate-300 font-mono">
-              Live Call: <strong className="text-teal-300 font-extrabold">{liveCallFormatted}</strong>
-              {alignmentMode === 'offense_adjust' && (
-                <span className="text-emerald-300 ml-2">vs {activeOffenseConfig.name}</span>
-              )}
-            </span>
+        <div className="space-y-2.5 border-b border-[#162A33] pb-3 text-xs">
+          {/* Row 1: Title, Live Call, and Prominent Sideline Tablet / Coach Pen Action Buttons */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="font-mono font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Compass className="w-4 h-4" />
+                Tactical Playart Canvas
+              </span>
+              <span className="text-slate-300 font-mono">
+                Live Call: <strong className="text-teal-300 font-extrabold">{liveCallFormatted}</strong>
+                {alignmentMode === 'offense_adjust' && (
+                  <span className="text-emerald-300 ml-2">vs {activeOffenseConfig.name}</span>
+                )}
+              </span>
+            </div>
+
+            {/* Prominent Action Buttons: Coach Pen, Tablet Fullscreen, Reset */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleToggleCoachPen}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                  coachPenActive
+                    ? 'border-amber-400 bg-amber-950/70 text-amber-300 ring-1 ring-amber-400 shadow-md'
+                    : 'border-[#162A33] bg-[#0A1318] text-slate-300 hover:text-white hover:border-slate-700'
+                }`}
+                title="Activate Coach Pen to draw adjustments (opens Fullscreen on tablet)"
+              >
+                <PenTool className="w-3.5 h-3.5" />
+                <span>Coach Pen {coachPenActive ? 'ACTIVE' : 'OFF'}</span>
+                {penStrokes.length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded bg-amber-900/80 text-amber-200 text-[10px] border border-amber-600/50">
+                    {penStrokes.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleFullscreen}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                  isFullscreen
+                    ? 'border-teal-400 bg-teal-950 text-teal-300 ring-1 ring-teal-400 shadow-md'
+                    : 'border-[#162A33] bg-[#0A1318] text-slate-300 hover:text-white hover:border-teal-500/50'
+                }`}
+                title={isFullscreen ? 'Exit Fullscreen' : 'Expand to Fullscreen Tablet Chalkboard for Sideline Coaching'}
+              >
+                {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-teal-300" /> : <Maximize2 className="w-3.5 h-3.5 text-teal-400" />}
+                <span>{isFullscreen ? 'Exit Fullscreen' : 'Tablet Fullscreen'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPenStrokes([])}
+                title="Reset coach chalk notations"
+                className="p-1.5 rounded-lg border border-[#162A33] bg-[#0A1318] text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
-          {/* Overlay Toggles */}
-          <div className="flex flex-wrap items-center gap-3 text-xs">
+          {/* Row 2: Overlay Toggles */}
+          <div className="flex flex-wrap items-center gap-3 text-xs pt-1 border-t border-[#14232C]">
             <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white">
               <input
                 type="checkbox"
@@ -1960,41 +2008,6 @@ export function DefenseCoordinatorSection({ onOpenPrintModal }: DefenseCoordinat
               />
               <span>Sequential Tech</span>
             </label>
-
-            {/* Coach Pen Toggle Button - Auto Fullscreen on Tablet */}
-            <button
-              type="button"
-              onClick={handleToggleCoachPen}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
-                coachPenActive
-                  ? 'border-amber-400 bg-amber-950/70 text-amber-300 ring-1 ring-amber-400 shadow-md'
-                  : 'border-[#162A33] bg-[#0A1318] text-slate-300 hover:text-white hover:border-slate-700'
-              }`}
-              title="Activate Coach Pen to draw freehand routes, coverage tweaks, stunts or arrows (opens Fullscreen on tablet)"
-            >
-              <PenTool className="w-3.5 h-3.5" />
-              <span>Coach Pen {coachPenActive ? 'ACTIVE' : 'OFF'}</span>
-              {penStrokes.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded bg-amber-900/80 text-amber-200 text-[10px] border border-amber-600/50">
-                  {penStrokes.length}
-                </span>
-              )}
-            </button>
-
-            {/* Direct Fullscreen Tablet Mode Toggle Button */}
-            <button
-              type="button"
-              onClick={handleToggleFullscreen}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
-                isFullscreen
-                  ? 'border-teal-400 bg-teal-950 text-teal-300 ring-1 ring-teal-400 shadow-md'
-                  : 'border-[#162A33] bg-[#0A1318] text-slate-300 hover:text-white hover:border-teal-500/50'
-              }`}
-              title={isFullscreen ? 'Exit Fullscreen' : 'Expand to Fullscreen Tablet Chalkboard for Sideline Coaching'}
-            >
-              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-teal-300" /> : <Maximize2 className="w-3.5 h-3.5 text-teal-400" />}
-              <span>{isFullscreen ? 'Exit Fullscreen' : 'Tablet Fullscreen'}</span>
-            </button>
           </div>
         </div>
 
