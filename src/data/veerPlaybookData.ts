@@ -1205,18 +1205,18 @@ export const FLOOD_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'BACK',
     split: '4 yards deep, inside foot behind Right Guard outside heel',
     stance: '2-point stance facing straight ahead so defense gets no tip.',
-    aimingPoint: 'Outside Shoulder of Backside DE (2 Count) ➔ Release to Flat',
-    footwork: 'Sprint across to outside shoulder of backside DE, engage for 2 count ("One-thousand-one, one-thousand-two"), then release into the flat.',
+    aimingPoint: 'Outside Shoulder of Backside DE (2 Count) ➔ Release to Flat (Checkdown Goes First)',
+    footwork: 'Fire across immediately on snap (checkdown goes first across formation), engage outside shoulder of backside DE for 2 count, then peel out to flat as safety valve.',
     assignmentsByFront: {
-      '5-3': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
-      '4-4': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
-      '4-3': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
-      '3-4': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
-      '6-2': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
-      '5-2': '2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats.',
+      '5-3': '2 back checkdown fires across first to backside DE for 2 count then releases to flats.',
+      '4-4': '2 back checkdown fires across first to backside DE for 2 count then releases to flats.',
+      '4-3': '2 back checkdown fires across first to backside DE for 2 count then releases to flats.',
+      '3-4': '2 back checkdown fires across first to backside DE for 2 count then releases to flats.',
+      '6-2': '2 back checkdown fires across first to backside DE for 2 count then releases to flats.',
+      '5-2': '2 back checkdown fires across first to backside DE for 2 count then releases to flats.',
     },
-    coachingCue: 'Attack outside shoulder of backside DE for 2 count, then release to the flat.',
-    commonErrorsFix: 'Releasing too early allows the backside DE a free rush on the QB. Hold for the full 2 count.',
+    coachingCue: 'Checkdown goes first across on snap — clear before arrow route, chip backside DE, then peel to flat.',
+    commonErrorsFix: 'Hesitating on snap causes traffic with the arrow back. Fire across immediately.',
   },
   RT: {
     id: 'RT',
@@ -1245,18 +1245,18 @@ export const FLOOD_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'BACK',
     split: '4 yards deep, inside foot behind Left Guard outside heel',
     stance: '2-point stance, hands on knees, zero false steps.',
-    aimingPoint: 'Outside Shoulder of SDE ➔ Release Arrow to Flat',
-    footwork: 'Fire at outside shoulder of SDE, deliver two-hand punch, then release to right flat on arrow route.',
+    aimingPoint: 'One Step Back ➔ Outside Shoulder of SDE ➔ Release Arrow to Flat',
+    footwork: 'Take one depth step back on snap to allow checkdown back to clear cleanly across, then burst to playside edge and release on arrow route into flat.',
     assignmentsByFront: {
-      '5-3': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
-      '4-4': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
-      '4-3': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
-      '3-4': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
-      '6-2': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
-      '5-2': '3 back blocking outside shoulder of SDE then releasing arrow to flat.',
+      '5-3': '3 back takes one step back to let checkdown clear, blocks outside shoulder of SDE, then releases arrow to flat.',
+      '4-4': '3 back takes one step back to let checkdown clear, blocks outside shoulder of SDE, then releases arrow to flat.',
+      '4-3': '3 back takes one step back to let checkdown clear, blocks outside shoulder of SDE, then releases arrow to flat.',
+      '3-4': '3 back takes one step back to let checkdown clear, blocks outside shoulder of SDE, then releases arrow to flat.',
+      '6-2': '3 back takes one step back to let checkdown clear, blocks outside shoulder of SDE, then releases arrow to flat.',
+      '5-2': '3 back takes one step back to let checkdown clear, blocks outside shoulder of SDE, then releases arrow to flat.',
     },
-    coachingCue: 'Block outside shoulder of SDE then release on arrow route to the flat.',
-    commonErrorsFix: 'Whiffing on the chip allows immediate edge rush. Fit your hands on his shoulder pads before releasing.',
+    coachingCue: 'Take one step back on snap — give way to checkdown, then accelerate on arrow route to the flat.',
+    commonErrorsFix: 'Rushing forward immediately causes backfield collision. Take one step back in depth first.',
   },
   XTE: {
     id: 'XTE',
@@ -1365,17 +1365,17 @@ export const FLOOD_POSITION_RULES: Record<string, PlayerPositionRule> = {
     group: 'BACK',
     split: 'Under Center',
     stance: 'Knees bent, scanning secondary coverage pre-snap.',
-    aimingPoint: 'Progression: 1) RB Arrow ➔ 2) Y Whip Out ➔ 3) Z Post Corner',
-    footwork: 'Play-action fake to 3-back, 3-step gather drop behind RT inside pass pro.',
+    aimingPoint: 'Rollout to Side of Flood ➔ Progression: 1) RB Arrow ➔ 2) Y Whip Out ➔ 3) Z Post Corner',
+    footwork: 'Play-action fake, roll out to the side of the flood outside the tackle box, set feet and deliver in rhythm.',
     assignmentsByFront: {
-      '5-3': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
-      '4-4': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
-      '4-3': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
-      '3-4': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
-      '6-2': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
-      '5-2': 'Play-action fake to 3, 3-step drop. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
+      '5-3': 'Play-action fake, rollout to side of flood. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
+      '4-4': 'Play-action fake, rollout to side of flood. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
+      '4-3': 'Play-action fake, rollout to side of flood. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
+      '3-4': 'Play-action fake, rollout to side of flood. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
+      '6-2': 'Play-action fake, rollout to side of flood. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
+      '5-2': 'Play-action fake, rollout to side of flood. Progression: 1) RB on Arrow route in flat ➔ 2) Y 7-yd Whip Out ➔ 3) Z Post Corner.',
     },
-    coachingCue: 'Fake run, plant back foot, read 1) RB Arrow in flat, then 2) Y on 7-yd whip out, then 3) Z.',
+    coachingCue: 'Fake run, roll out to side of flood, read 1) RB Arrow in flat, then 2) Y on 7-yd whip out, then 3) Z.',
     commonErrorsFix: 'Rushing the throw before reading RB or Y breaks out causes incompletions. Work inside-out through the progression.',
   },
 };
@@ -1475,7 +1475,7 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
             ? [
                 base.RH,
                 { x: 550, y: 442 }, // aims downhill directly at backside hip of playside OG/OT
-                { x: 544, y: 412 }, // meshes with 1 in backfield off backside hip of playside OG
+                { x: 548, y: 410 }, // meshes with 1 in backfield off backside hip of playside OG
                 { x: 546, y: 348 }, // creases downhill through seam across LOS
                 { x: 550, y: 245 }, // second level acceleration
                 { x: 552, y: 150 }, // secondary breakaway
@@ -1483,10 +1483,10 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
             : [
                 base.RH,
                 { x: 550, y: 442 },
-                { x: 544, y: 412 }, // full commit tackle by crashing #1 DT
-                { x: 544, y: 380 },
-                { x: 544, y: 360 },
-                { x: 544, y: 350 },
+                { x: 548, y: 410 }, // full commit tackle by crashing #1 DT
+                { x: 548, y: 385 },
+                { x: 548, y: 370 },
+                { x: 548, y: 360 },
               ],
         },
         // 1-Back (QB): Meshes at seam off backside hip of playside OG; if pulling, attacks #2 in backfield; pitches in backfield when #2 commits to 1
@@ -1495,28 +1495,30 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
           points: diveGive
             ? [
                 base.QB,
-                { x: 538, y: 426 }, // steps to seam off backside hip of playside OG
-                { x: 542, y: 412 }, // meshes at seam beside Dive Back
-                { x: 620, y: 410 }, // carries out option fake along backfield
+                { x: 524, y: 430 }, // 45° mesh step toward seam off backside hip of playside OG
+                { x: 536, y: 424 }, // quick ride to confirm read
+                { x: 540, y: 418 }, // cleanly seats ball in dive back stomach
+                { x: 610, y: 412 }, // carries out option fake along backfield
                 { x: 660, y: 395 },
-                { x: 685, y: 380 },
               ]
             : qbKeep
             ? [
                 base.QB,
-                { x: 538, y: 426 },
-                { x: 542, y: 412 }, // pulls ball at seam
-                { x: 630, y: 404 }, // attacks #2 along backfield track; #2 commits wide to 3-back
-                { x: 630, y: 280 }, // 1 plants and cuts vertically upfield inside #2
-                { x: 630, y: 155 }, // bursts through seam
+                { x: 524, y: 430 }, // 45° step toward mesh
+                { x: 534, y: 424 }, // quick read of crashing #1 DT (rides just long enough to get read)
+                { x: 565, y: 420 }, // pulls ball immediately, escaping outside before DT contact
+                { x: 625, y: 414 }, // attacks #2 along backfield track
+                { x: 625, y: 280 }, // 1 plants and cuts vertically upfield inside #2
+                { x: 625, y: 155 }, // bursts through seam
               ]
             : [
                 base.QB,
-                { x: 538, y: 426 },
-                { x: 542, y: 412 }, // pulls ball at seam
-                { x: 630, y: 404 }, // attacks #2 along backfield track; #2 commits to 1 in backfield
-                { x: 634, y: 404 }, // pitches ball in backfield and absorbs tackle
-                { x: 636, y: 404 },
+                { x: 524, y: 430 }, // 45° step toward mesh
+                { x: 534, y: 424 }, // quick read of crashing #1 DT (rides just long enough to get read)
+                { x: 565, y: 420 }, // pulls ball immediately, escaping outside before DT contact
+                { x: 625, y: 414 }, // attacks #2 along backfield track
+                { x: 630, y: 414 }, // pitches ball in backfield and absorbs tackle
+                { x: 632, y: 414 },
               ],
         },
         // Pitch Back (Backside): Tracks outside hip of tackle in 4x4 spacing; receives pitch IN THE BACKFIELD (never forward pitch)
@@ -1525,31 +1527,31 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
           points: pitchTriggered
             ? [
                 base.LH,
-                { x: 520, y: 476 }, // crossover step across backfield
-                { x: 610, y: 450 }, // tracks outside hip of playside tackle in backfield
-                { x: 675, y: 432 }, // maintaining 4x4 pitch relationship in backfield
-                { x: 700, y: 426 }, // receives pitch in backfield (deeper and wider than QB at 630, 404)!
-                { x: 722, y: 295 }, // ONLY ONCE PITCHED THE BALL, cuts sharply upfield across LOS!
-                { x: 742, y: 150 }, // accelerates downfield
+                { x: 520, y: 488 }, // crossover step parallel to LOS
+                { x: 605, y: 484 }, // tracks outside hip of playside tackle parallel to LOS
+                { x: 675, y: 480 }, // maintaining 4x4 pitch relationship parallel in backfield
+                { x: 705, y: 478 }, // receives pitch in backfield (parallel to LOS, behind QB at 625, 414)!
+                { x: 725, y: 310 }, // ONLY ONCE PITCHED THE BALL, cuts sharply upfield across LOS!
+                { x: 745, y: 150 }, // accelerates downfield
               ]
             : qbKeep
             ? [
                 base.LH,
-                { x: 520, y: 476 }, // crossover step across backfield
-                { x: 610, y: 450 }, // tracks outside hip of playside tackle in backfield
-                { x: 675, y: 432 }, // maintaining 4x4 pitch spacing in backfield
-                { x: 695, y: 426 }, // QB commits point: QB commits inside, pitch back holds pitch track until commit
-                { x: 730, y: 330 }, // ONLY ONCE QB COMMITS, turns upfield to stalk block/escort downfield!
+                { x: 520, y: 488 }, // crossover step parallel to LOS
+                { x: 605, y: 484 }, // tracks outside hip of playside tackle parallel to LOS
+                { x: 675, y: 480 }, // maintaining 4x4 pitch spacing parallel in backfield
+                { x: 700, y: 478 }, // QB commits point: holds pitch track until QB commits inside
+                { x: 730, y: 340 }, // ONLY ONCE QB COMMITS, turns upfield to stalk block/escort downfield!
                 { x: 750, y: 200 }, // downfield perimeter block
               ]
             : [
                 base.LH,
-                { x: 520, y: 476 }, // crossover step across backfield
-                { x: 605, y: 455 }, // pitch track across backfield
-                { x: 668, y: 442 }, // carries out option fake
-                { x: 725, y: 435 }, // maintains depth in backfield
-                { x: 775, y: 430 }, // wide perimeter fake (never cuts upfield into line)
-                { x: 815, y: 425 }, // stretches boundary defense
+                { x: 520, y: 488 }, // crossover step parallel to LOS
+                { x: 605, y: 484 }, // pitch track across backfield parallel to LOS
+                { x: 680, y: 482 }, // carries out option fake parallel to LOS
+                { x: 745, y: 480 }, // maintains parallel depth in backfield
+                { x: 800, y: 478 }, // wide perimeter fake parallel to LOS (never cuts upfield into line)
+                { x: 840, y: 476 }, // stretches boundary defense
               ],
         },
       };
@@ -1680,28 +1682,31 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
           points: diveGive
             ? [
                 base.QB,
-                { x: 566, y: 430 },
-                { x: 570, y: 410 }, // meshes with dive back
-                { x: 635, y: 410 }, // option fake in backfield
+                { x: 546, y: 430 },
+                { x: 556, y: 424 }, // quick ride to confirm read
+                { x: 566, y: 418 }, // cleanly seats ball in dive back stomach
+                { x: 635, y: 412 }, // option fake in backfield
                 { x: 675, y: 395 },
                 { x: 700, y: 380 },
               ]
             : qbKeep
             ? [
                 base.QB,
-                { x: 566, y: 430 },
-                { x: 570, y: 410 }, // pulls ball
-                { x: 650, y: 404 }, // attacks #2 in backfield; #2 commits wide to 3-back
+                { x: 546, y: 430 }, // 45° step toward B-gap mesh
+                { x: 554, y: 424 }, // quick read of crashing #1 EMLOS (rides just long enough to get read)
+                { x: 585, y: 420 }, // pulls ball immediately, escaping outside before #1 contact
+                { x: 650, y: 414 }, // attacks #2 in backfield; #2 commits wide to 3-back
                 { x: 650, y: 280 }, // 1 plants and cuts vertically upfield inside #2
                 { x: 650, y: 155 },
               ]
             : [
                 base.QB,
-                { x: 566, y: 430 },
-                { x: 570, y: 410 }, // pulls ball
-                { x: 650, y: 404 }, // attacks #2 in backfield; #2 commits to 1 in backfield
-                { x: 654, y: 404 }, // pitches ball in backfield and absorbs tackle
-                { x: 656, y: 404 },
+                { x: 546, y: 430 }, // 45° step toward B-gap mesh
+                { x: 554, y: 424 }, // quick read of crashing #1 EMLOS (rides just long enough to get read)
+                { x: 585, y: 420 }, // pulls ball immediately, escaping outside before #1 contact
+                { x: 650, y: 414 }, // attacks #2 in backfield; #2 commits to 1 in backfield
+                { x: 654, y: 414 }, // pitches ball in backfield and absorbs tackle
+                { x: 656, y: 414 },
               ],
         },
         // LH is backside back on 24 Veer -> PITCH BACK; pitch happens IN THE BACKFIELD (never forward pitch)
@@ -1710,31 +1715,31 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
           points: pitchTriggered
             ? [
                 base.LH,
-                { x: 535, y: 476 }, // crossover step across backfield
-                { x: 630, y: 452 }, // tracks outside hip of tackle in backfield
-                { x: 700, y: 432 }, // maintaining pitch spacing in backfield
-                { x: 725, y: 426 }, // receives pitch in backfield!
+                { x: 535, y: 488 }, // crossover step parallel to LOS
+                { x: 630, y: 484 }, // tracks outside hip of tackle in backfield parallel to LOS
+                { x: 700, y: 480 }, // maintaining pitch spacing parallel in backfield
+                { x: 725, y: 478 }, // receives pitch in backfield (parallel to LOS, behind QB at 650, 414)!
                 { x: 755, y: 295 }, // ONLY ONCE PITCHED THE BALL, cuts vertically upfield along sideline!
                 { x: 780, y: 150 }, // explodes downfield
               ]
             : qbKeep
             ? [
                 base.LH,
-                { x: 535, y: 476 }, // crossover step across backfield
-                { x: 630, y: 452 }, // tracks outside hip of tackle in backfield
-                { x: 700, y: 432 }, // maintaining pitch spacing in backfield
-                { x: 720, y: 426 }, // QB commits point (QB cuts upfield inside #2)
+                { x: 535, y: 488 }, // crossover step parallel to LOS
+                { x: 630, y: 484 }, // tracks outside hip of tackle in backfield parallel to LOS
+                { x: 700, y: 480 }, // maintaining pitch spacing parallel in backfield
+                { x: 720, y: 478 }, // QB commits point (QB cuts upfield inside #2)
                 { x: 755, y: 330 }, // ONLY ONCE QB COMMITS, turns upfield on perimeter to stalk block
                 { x: 780, y: 200 }, // downfield perimeter block
               ]
             : [
                 base.LH,
-                { x: 535, y: 476 }, // crossover step across backfield
-                { x: 625, y: 456 }, // pitch track across backfield
-                { x: 695, y: 442 }, // carries out option fake
-                { x: 755, y: 435 }, // maintains depth in backfield
-                { x: 800, y: 430 }, // wide perimeter fake (never cuts upfield into line)
-                { x: 835, y: 425 }, // stretches boundary defense
+                { x: 535, y: 488 }, // crossover step parallel to LOS
+                { x: 625, y: 484 }, // pitch track across backfield parallel to LOS
+                { x: 695, y: 480 }, // carries out option fake
+                { x: 755, y: 478 }, // maintains depth in backfield
+                { x: 800, y: 476 }, // wide perimeter fake (never cuts upfield into line)
+                { x: 835, y: 475 }, // stretches boundary defense
               ],
         },
       };
@@ -1944,7 +1949,14 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
         YTE: { role: 'block_down', points: [base.YTE, { x: 616, y: 350 }, { x: 602, y: 320 }] },
         LG: {
           role: 'block_pull',
-          points: [base.LG, { x: 508, y: 418 }, { x: 602, y: 412 }, { x: 652, y: 382 }, { x: 668, y: 340 }],
+          points: [
+            base.LG,
+            { x: 476, y: 402 }, // flat pull step right across the back of the LOS
+            { x: 535, y: 402 }, // skims heels of Center straight across back of LOS
+            { x: 595, y: 400 }, // skims heels of RT straight across back of LOS
+            { x: 648, y: 388 }, // turns up into edge contact point
+            { x: 668, y: 350 }, // kicks out edge defender
+          ],
         },
         LT: { role: 'block_scoop', points: [base.LT, { x: 412, y: 354 }, { x: 408, y: 318 }] },
         XTE: {
@@ -2006,18 +2018,18 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
     id: '324-power-pass',
     code: '36 FLOOD',
     name: '36/35 Flood',
-    subtitle: 'Play-Action Flood — Z Post Corner · Y 7-Yd Whip Out · 3 Back Block SDE & Release Arrow · 2 Back Block Backside DE (2 Count) & Release Flat · RG Pull to Backside DE · RT Inside Shift · X Post',
+    subtitle: 'Play-Action Flood — Z Post Corner · Y 7-Yd Whip Out · 3 Back Step Back & Release Arrow · 2 Back Checkdown Goes First · QB Rollout to Flood Side',
     seriesTag: 'Core 05',
     playType: 'Play-Action Pass',
     targetGap: 'Flood Concept (1: RB Arrow Flat / 2: Y 7-Yd Whip Out / 3: Z Post Corner)',
     primaryReadLabel: 'Progression: 1) RB Arrow ➔ 2) Y 7-Yd Whip Out',
     secondaryReadLabel: '3rd Read: Z Post Corner | Checkdown: 2 Flat / Backside: X Post',
     summary:
-      'The 36/35 Flood play-action passing concept (36 Flood to the right, 35 Flood to the left) off the power look. QB progression reads: 1) RB on Arrow route into the flat to challenge edge leverage immediately, 2) Y on 7-yd Whip Out snapping back out to the sideline, and 3) Z on Post Corner stretching deep coverage. 2 back protects backside then checks into flat. Backside guard pulls across to stone backside DE.',
+      'The 36/35 Flood play-action passing concept (36 Flood to the right, 35 Flood to the left) off the power look. QB fakes, rolls out to the side of the flood, and reads: 1) RB on Arrow route into the flat (takes one step back so checkdown clears, then accelerates into flat), 2) Y on 7-yd Whip Out snapping back out to the sideline, and 3) Z on Post Corner stretching deep coverage. Checkdown back fires across first to the backside flat. Backside guard pulls across to stone backside DE.',
     whenToCall:
       'When the defense bites hard on 24 Power run action or stacks the box against Veer, leaving perimeter zones vulnerable to flood overload.',
     qbDecisionMatrix: {
-      crashPull: 'Play-action fake, 3-step gather drop behind RT inside pass pro.',
+      crashPull: 'Play-action fake, roll out to side of flood outside tackle box behind pass pro.',
       squeezeGive: '1st Read: RB on the Arrow route releasing into flat to create immediate horizontal conflict on edge defender.',
       pitchPhase: '2nd Read: Y on the 7-yard Whip Out pivoting away from collapsing linebackers; 3rd Read: Z on Post Corner.',
     },
@@ -2026,13 +2038,13 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
         phase: 1,
         timeRange: [0, 0.25],
         title: 'Phase 1: Power Fake & Pass Pro Setup',
-        detail: 'O-line sets: RG pulls to backside DE, RT shifts inside for pass pro, 2 back attacks outside shoulder of backside DE for a 2 count, and 3 back attacks outside shoulder of SDE before releasing arrow.',
+        detail: 'O-line sets: RG pulls to backside DE, RT shifts inside for pass pro, 2 back fires across first on checkdown, 3 back takes one step back before arrow release, and QB rolls out to side of flood.',
       },
       {
         phase: 2,
         timeRange: [0.25, 0.55],
         title: 'Phase 2: Route Stems & Dual Flat Releases',
-        detail: 'Y drives 7 yards, X drives directly at outside shoulder of CB before going post, Z stems vertical on post move, 3 back releases arrow to right flat, and 2 back releases to left flat.',
+        detail: 'Y drives 7 yards, X drives at outside shoulder of CB before going post, Z stems vertical on post move, 3 back releases arrow to playside flat, and 2 back checks to backside flat.',
       },
       {
         phase: 3,
@@ -2110,31 +2122,40 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
             { x: base.W.x + 38, y: 135 },
           ],
         },
-        // 3 back blocking outside shoulder of SDE then releasing arrow
+        // 3 back: takes one step back on snap so checkdown clears, then releases on arrow route to the flat
         LH: {
           role: 'route_pass',
           points: [
             base.LH,
-            { x: 575, y: 410 },
-            { x: 650, y: 365 },
-            { x: 730, y: 350 },
-            { x: 800, y: 325 },
+            { x: 444, y: 518 }, // takes one depth step back on snap (creates clearance for checkdown)
+            { x: 550, y: 475 }, // crosses cleanly behind the cleared checkdown into playside edge
+            { x: 650, y: 420 }, // attacks outside shoulder of SDE
+            { x: 735, y: 365 }, // snaps into playside flat on arrow route
+            { x: 805, y: 325 }, // catches and bursts down sideline
           ],
         },
+        // QB rolls out to the side of the flood (right on 36 Flood)
         QB: {
           role: 'qb',
-          points: [base.QB, { x: 508, y: 420 }, { x: 506, y: 445 }, { x: 506, y: 450 }],
+          points: [
+            base.QB,
+            { x: 512, y: 442 }, // open reverse-gather fake step
+            { x: 555, y: 448 }, // rolls out toward side of flood
+            { x: 605, y: 442 }, // gains depth and width outside tackle box
+            { x: 645, y: 436 }, // sets feet on rollout in rhythm to deliver strike
+            { x: 665, y: 432 }, // follow-through on rollout
+          ],
         },
-        // 2 back attacking outside shoulder of backside DE for a 2 count then releasing to flats
+        // 2 back: checkdown goes first across formation, then releases to backside flat
         RH: {
           role: 'route_pass',
           points: [
             base.RH,
-            { x: 480, y: 425 },
-            { x: 370, y: 385 },
-            { x: 355, y: 365 },
-            { x: 260, y: 345 },
-            { x: 190, y: 330 },
+            { x: 475, y: 462 }, // checkdown fires immediately across first (clears in front of 3-back)
+            { x: 395, y: 430 }, // tracks across to backside edge
+            { x: 340, y: 385 }, // chips outside shoulder of backside DE
+            { x: 250, y: 350 }, // peels into backside flat as safety valve
+            { x: 180, y: 330 }, // secures sideline checkdown
           ],
         },
       };
@@ -2148,39 +2169,39 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
 
       if (powerPassReceiver === 'arrow') {
         finalCarrier = targetSide === 'left' ? 'RH' : 'LH';
-        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO 2-BACK (Playside Arrow Flat)' : '36 FLOOD PASS TO 3-BACK (Playside Arrow Flat)';
+        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO 2-BACK (Playside Arrow Flat · 60% Throw)' : '36 FLOOD PASS TO 3-BACK (Playside Arrow Flat · 60% Throw)';
         expectedYards = '+12.0 Yds (Quick Rhythm Completion)';
         coachingExplanation = targetSide === 'left'
-          ? '2 back chipped the defensive end and snapped into the left flat on the arrow route. Quick throw creates instant edge conflict on the overhang defender for a 12-yard strike.'
-          : '3 back chipped SDE and released arrow into the right flat. Quick throw creates instant edge conflict on the overhang defender for a 12-yard rhythm strike.';
+          ? '2 back took one step back, chipped the edge, and snapped into the flat. QB delivered the 1st read at 60% progression for a 12-yard strike.'
+          : '3 back took one step back, chipped SDE, and released arrow into the flat. QB delivered the 1st read at 60% progression for a 12-yard strike.';
       } else if (powerPassReceiver === 'corner') {
         finalCarrier = 'W';
-        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO Z (Deep Post Corner Touchdown)' : '36 FLOOD PASS TO Z (Deep Post Corner Touchdown)';
+        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO Z (Deep Post Corner · 68% Throw)' : '36 FLOOD PASS TO Z (Deep Post Corner · 68% Throw)';
         expectedYards = '+35.0 Yds (Deep Hole Shot / Over the Top)';
         coachingExplanation =
-          'Z stemmed vertically 10 yards, sold an inside post fake to freeze the free safety, then accelerated to the corner pylon. QB stepped into a clean pocket and dropped the ball over the cornerback into the end zone.';
+          'Z stemmed 10 yards, faked inside post to freeze safety, and accelerated to corner pylon. QB rolled out and delivered the 3rd read shot at 68% progression.';
       } else if (powerPassReceiver === 'checkdown') {
         finalCarrier = targetSide === 'left' ? 'LH' : 'RH';
-        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO 3-BACK (Backside Flat Checkdown)' : '36 FLOOD PASS TO 2-BACK (Backside Flat Checkdown)';
+        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO 3-BACK (Backside Flat Checkdown · 75% Throw)' : '36 FLOOD PASS TO 2-BACK (Backside Flat Checkdown · 75% Throw)';
         expectedYards = '+9.0 Yds (Safety Valve Checkdown)';
         coachingExplanation = targetSide === 'left'
-          ? '3 back stone-walled the backside DE for a disciplined 2-count before peeling out into the backside flat as the safety valve for a 9-yard positive gain.'
-          : '2 back stone-walled the backside DE for a disciplined 2-count before peeling out into the backside flat as the safety valve for a 9-yard positive gain.';
+          ? '3 back fired across first, stoned backside DE for 2-count, and peeled to flat. QB rolled out and delivered safety valve at 75% progression.'
+          : '2 back fired across first, stoned backside DE for 2-count, and peeled to flat. QB rolled out and delivered safety valve at 75% progression.';
       } else if (powerPassReceiver === 'post') {
         finalCarrier = targetSide === 'left' ? 'YTE' : 'XTE';
-        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO Y (Backside Deep Post)' : '36 FLOOD PASS TO X (Backside Deep Post)';
+        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO Y (Backside Deep Post · 73% Throw)' : '36 FLOOD PASS TO X (Backside Deep Post · 73% Throw)';
         expectedYards = '+28.0 Yds (Backside Isolated Post Shot)';
         coachingExplanation = targetSide === 'left'
-          ? 'Y attacked outside leverage of the cornerback to turn his hips, then broke across the deep middle behind linebackers biting on power fake for 28 yards.'
-          : 'X attacked outside leverage of the cornerback to turn his hips, then broke across the deep middle behind linebackers biting on power fake for 28 yards.';
+          ? 'Y attacked cornerback outside leverage and broke deep middle behind biting linebackers. QB delivered cross-field strike at 73% progression.'
+          : 'X attacked cornerback outside leverage and broke deep middle behind biting linebackers. QB delivered cross-field strike at 73% progression.';
       } else {
         // 'whip' (default 2nd read)
         finalCarrier = targetSide === 'left' ? 'XTE' : 'YTE';
-        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO X (7-Yd Whip Out)' : '36 FLOOD PASS TO Y (7-Yd Whip Out)';
+        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO X (7-Yd Whip Out · 65% Throw)' : '36 FLOOD PASS TO Y (7-Yd Whip Out · 65% Throw)';
         expectedYards = '+18.0 Yds (Sideline Whip Intermediate Strike)';
         coachingExplanation = targetSide === 'left'
-          ? 'X drove 7 yards upfield, broke inside 2 steps, and snapped violently back to the left sideline. QB delivered in rhythm for an 18-yard intermediate strike.'
-          : 'Y drove 7 yards upfield, broke inside 2 steps to freeze the overhang defender, and snapped violently back to the sideline for an 18-yard intermediate strike.';
+          ? 'X drove 7 yards upfield, broke inside 2 steps, and snapped whip out to sideline. QB delivered 2nd read in rhythm at 65% progression.'
+          : 'Y drove 7 yards upfield, broke inside 2 steps, and snapped whip out to sideline. QB delivered 2nd read in rhythm at 65% progression.';
       }
 
       return {

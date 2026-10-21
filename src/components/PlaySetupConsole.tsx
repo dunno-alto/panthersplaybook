@@ -863,7 +863,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                       {
                         id: 'arrow' as PowerPassReceiverOption,
                         label: targetSide === 'left' ? '1) 2-Back Arrow (Flat)' : '1) 3-Back Arrow (Flat)',
-                        badge: '1st Read · Quick Rhythm',
+                        badge: '1st Read · Throw @ 60%',
                         targetPid: targetSide === 'left' ? 'RH' : 'LH',
                         yards: '+12.0 Yds',
                         highlight: 'text-teal-300',
@@ -871,7 +871,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                       {
                         id: 'whip' as PowerPassReceiverOption,
                         label: targetSide === 'left' ? '2) X 7-Yd Whip Out' : '2) Y 7-Yd Whip Out',
-                        badge: '2nd Read · Primary (Sideline)',
+                        badge: '2nd Read · Throw @ 65%',
                         targetPid: targetSide === 'left' ? 'XTE' : 'YTE',
                         yards: '+18.0 Yds',
                         highlight: 'text-purple-300',
@@ -879,26 +879,26 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                       {
                         id: 'corner' as PowerPassReceiverOption,
                         label: '3) Z Post Corner',
-                        badge: '3rd Read · Deep Strike Shot',
+                        badge: '3rd Read · Throw @ 68%',
                         targetPid: 'W',
                         yards: '+35.0 Yds TD',
                         highlight: 'text-amber-300',
                       },
                       {
-                        id: 'checkdown' as PowerPassReceiverOption,
-                        label: targetSide === 'left' ? 'Check: 3-Back Flat' : 'Check: 2-Back Flat',
-                        badge: 'Safety Valve Checkdown',
-                        targetPid: targetSide === 'left' ? 'LH' : 'RH',
-                        yards: '+9.0 Yds',
-                        highlight: 'text-blue-300',
-                      },
-                      {
                         id: 'post' as PowerPassReceiverOption,
                         label: targetSide === 'left' ? 'Backside: Y Post' : 'Backside: X Post',
-                        badge: 'Backside Deep Post',
+                        badge: '4th Read · Throw @ 73%',
                         targetPid: targetSide === 'left' ? 'YTE' : 'XTE',
                         yards: '+28.0 Yds',
                         highlight: 'text-rose-300',
+                      },
+                      {
+                        id: 'checkdown' as PowerPassReceiverOption,
+                        label: targetSide === 'left' ? 'Check: 3-Back Flat' : 'Check: 2-Back Flat',
+                        badge: 'Safety Valve · Throw @ 75%',
+                        targetPid: targetSide === 'left' ? 'LH' : 'RH',
+                        yards: '+9.0 Yds',
+                        highlight: 'text-blue-300',
                       },
                     ].map((rcv) => {
                       const isSelected = powerPassReceiver === rcv.id;
