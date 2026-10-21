@@ -48,6 +48,7 @@ interface TacticalFieldCanvasProps {
   fieldTheme?: 'night_turf' | 'chalkboard' | 'high_contrast';
   onChangeFieldTheme?: (theme: 'night_turf' | 'chalkboard' | 'high_contrast') => void;
   powerPassReceiver?: PowerPassReceiverOption;
+  hideDefense?: boolean;
 }
 
 function interpolatePoints(points: Point[], progress: number): Point {
@@ -97,6 +98,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   fieldTheme = 'night_turf',
   onChangeFieldTheme,
   powerPassReceiver = 'whip',
+  hideDefense = false,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [internalFieldTheme, setInternalFieldTheme] = useState<'night_turf' | 'chalkboard' | 'high_contrast'>(fieldTheme);
@@ -894,6 +896,10 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
 
   // Compute live football position
   const getFootballPosition = (): Point => {
+    if (play.concept === 'blank') {
+      return currentOffensivePositions.QB || currentOffensivePositions.C || { x: 500, y: 412 };
+    }
+
     if (progress <= 0.04) {
       const snapT = progress / 0.04;
       return interpolatePoints([currentOffensivePositions.C, currentOffensivePositions.QB], snapT);
@@ -1098,10 +1104,16 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
           <span className="font-bold text-white tracking-wide font-mono">{play.code}</span>
           <span aria-hidden="true" className="text-slate-600">·</span>
           <span>
-            Formation: Split Back ({xMode === 'wide_x' ? 'Wide X' : 'Tight X'} / {eleventhMode === 'wide_z' ? 'Wide Z' : 'Wing Z'})
+            {play.concept === 'blank'
+              ? 'Blank Whiteboard Formation (Drag Any Player · Draw with Coach Pen)'
+              : `Formation: Split Back (${xMode === 'wide_x' ? 'Wide X' : 'Tight X'} / ${eleventhMode === 'wide_z' ? 'Wide Z' : 'Wing Z'})`}
           </span>
-          <span aria-hidden="true" className="text-slate-600">·</span>
-          <span className="text-amber-400 font-semibold">{frontConfig.shortLabel}</span>
+          {!hideDefense && (
+            <>
+              <span aria-hidden="true" className="text-slate-600">·</span>
+              <span className="text-amber-400 font-semibold">{frontConfig.shortLabel}</span>
+            </>
+          )}
         </div>
 
         {/* Tactical Field Visual Contrast Switcher */}
@@ -1113,8 +1125,12 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
 
           <div className="flex items-center gap-2 font-mono-tabular pl-2 border-l border-[#162A33]">
             <span className="text-teal-400 font-bold">{simResult.ballCarrierSequence.outcomeLabel}</span>
-            <span aria-hidden="true" className="text-slate-600">·</span>
-            <span className="text-emerald-400 font-semibold">{simResult.ballCarrierSequence.expectedYards}</span>
+            {simResult.ballCarrierSequence.expectedYards && (
+              <>
+                <span aria-hidden="true" className="text-slate-600">·</span>
+                <span className="text-emerald-400 font-semibold">{simResult.ballCarrierSequence.expectedYards}</span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -1448,106 +1464,107 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
         </g>
 
         {/* Defensive Players (11 Defenders) with Adaptive Key Halos */}
-        {frontConfig.players.map((def) => {
-          const pos = getAnimatedDefenderPoint(def);
-          const isSelected = selectedPlayerId === def.id;
+        {!hideDefense &&
+          frontConfig.players.map((def) => {
+            const pos = getAnimatedDefenderPoint(def);
+            const isSelected = selectedPlayerId === def.id;
 
-          const isInsideVeerDive = isInsideVeer && (targetSide === 'left' ? !!def.weakDiveKey : !!def.isDiveKey);
-          const isInsideVeerPitch = isInsideVeer && (targetSide === 'left' ? (!!def.weakPitchKey && def.id !== 'LCB' && def.id !== 'RCB') : (!!def.isPitchKey && def.id !== 'LCB' && def.id !== 'RCB'));
-          const isOutsideVeerDive = isOutsideVeer && (targetSide === 'left' ? (!!def.weakPitchKey || def.id === 'WDE') : (!!def.isPitchKey || def.id === 'SDE'));
-          const isOutsideVeerPitch = isOutsideVeer && (targetSide === 'left' ? ((def.id === 'WOLB' || def.id === 'WLB' || !!def.weakPitchKey) && def.id !== 'LCB' && def.id !== 'RCB') : ((def.id === 'SOLB' || def.id === 'SLB' || def.id === 'SS' || !!def.isPitchKey) && def.id !== 'RCB' && def.id !== 'LCB'));
-          const isTrapKickout = isTrap && (targetSide === 'left' ? (def.id === 'LDT' || def.id === 'WDT' || def.id === 'NT' || !!def.weakDiveKey) : (def.id === 'RDT' || def.id === 'SDT' || def.id === 'NT' || !!def.isDiveKey));
-          const isPowerKickout = isPower && (targetSide === 'left' ? (def.id === 'WDE' || !!def.weakPitchKey) : (def.id === 'SDE' || !!def.isPitchKey));
-          const isPowerIso = isPower && (def.id === 'MLB' || def.id === 'SLB' || def.id === 'SILB');
+            const isInsideVeerDive = isInsideVeer && (targetSide === 'left' ? !!def.weakDiveKey : !!def.isDiveKey);
+            const isInsideVeerPitch = isInsideVeer && (targetSide === 'left' ? (!!def.weakPitchKey && def.id !== 'LCB' && def.id !== 'RCB') : (!!def.isPitchKey && def.id !== 'LCB' && def.id !== 'RCB'));
+            const isOutsideVeerDive = isOutsideVeer && (targetSide === 'left' ? (!!def.weakPitchKey || def.id === 'WDE') : (!!def.isPitchKey || def.id === 'SDE'));
+            const isOutsideVeerPitch = isOutsideVeer && (targetSide === 'left' ? ((def.id === 'WOLB' || def.id === 'WLB' || !!def.weakPitchKey) && def.id !== 'LCB' && def.id !== 'RCB') : ((def.id === 'SOLB' || def.id === 'SLB' || def.id === 'SS' || !!def.isPitchKey) && def.id !== 'RCB' && def.id !== 'LCB'));
+            const isTrapKickout = isTrap && (targetSide === 'left' ? (def.id === 'LDT' || def.id === 'WDT' || def.id === 'NT' || !!def.weakDiveKey) : (def.id === 'RDT' || def.id === 'SDT' || def.id === 'NT' || !!def.isDiveKey));
+            const isPowerKickout = isPower && (targetSide === 'left' ? (def.id === 'WDE' || !!def.weakPitchKey) : (def.id === 'SDE' || !!def.isPitchKey));
+            const isPowerIso = isPower && (def.id === 'MLB' || def.id === 'SLB' || def.id === 'SILB');
 
-          const hasRedKey = isInsideVeerDive || isOutsideVeerDive || isPowerKickout || isTrapKickout;
-          const hasTealKey = isInsideVeerPitch || isOutsideVeerPitch || isPowerIso;
+            const hasRedKey = isInsideVeerDive || isOutsideVeerDive || isPowerKickout || isTrapKickout;
+            const hasTealKey = isInsideVeerPitch || isOutsideVeerPitch || isPowerIso;
 
-          let keyText = '';
-          if (isInsideVeerDive) keyText = '#1 DIVE KEY (DT)';
-          else if (isOutsideVeerDive) keyText = '#1 DIVE KEY (EMLOS)';
-          else if (isInsideVeerPitch) keyText = '#2 PITCH KEY (EMLOS)';
-          else if (isOutsideVeerPitch) keyText = '#2 PITCH KEY (OVERHANG)';
-          else if (isTrapKickout) keyText = targetSide === 'left' ? 'RG TRAP TARGET' : 'LG TRAP TARGET';
-          else if (isPowerKickout) keyText = targetSide === 'left' ? 'RG KICKOUT TARGET' : 'LG KICKOUT TARGET';
-          else if (isPowerIso) keyText = targetSide === 'left' ? 'LH LEAD ISO TARGET' : 'RH LEAD ISO TARGET';
+            let keyText = '';
+            if (isInsideVeerDive) keyText = '#1 DIVE KEY (DT)';
+            else if (isOutsideVeerDive) keyText = '#1 DIVE KEY (EMLOS)';
+            else if (isInsideVeerPitch) keyText = '#2 PITCH KEY (EMLOS)';
+            else if (isOutsideVeerPitch) keyText = '#2 PITCH KEY (OVERHANG)';
+            else if (isTrapKickout) keyText = targetSide === 'left' ? 'RG TRAP TARGET' : 'LG TRAP TARGET';
+            else if (isPowerKickout) keyText = targetSide === 'left' ? 'RG KICKOUT TARGET' : 'LG KICKOUT TARGET';
+            else if (isPowerIso) keyText = targetSide === 'left' ? 'LH LEAD ISO TARGET' : 'RH LEAD ISO TARGET';
 
-          return (
-            <g
-              key={def.id}
-              transform={`translate(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`}
-              className="cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectPlayer(def.id);
-              }}
-            >
-              {hasRedKey && (
-                <>
-                  <circle r="22" fill="#EF4444" fillOpacity="0.18" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="3 2" />
-                  <text x="0" y="-26" textAnchor="middle" fill="#FCA5A5" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
-                    {keyText}
-                  </text>
-                </>
-              )}
-              {hasTealKey && (
-                <>
-                  <circle r="22" fill="#14B8A6" fillOpacity="0.18" stroke="#14B8A6" strokeWidth="1.5" strokeDasharray="3 2" />
-                  <text x="0" y="-26" textAnchor="middle" fill="#5EEAD4" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
-                    {keyText}
-                  </text>
-                </>
-              )}
-
-              {/* Defender Node */}
-              <polygon
-                points="0,-15 15,0 0,15 -15,0"
-                fill={hasRedKey ? '#DC2626' : hasTealKey ? '#0D9488' : '#0B171E'}
-                stroke={isSelected ? '#FFFFFF' : hasRedKey ? '#FCA5A5' : hasTealKey ? '#5EEAD4' : '#334D5C'}
-                strokeWidth={isSelected ? 2.8 : 1.8}
-              />
-              <text
-                x="0"
-                y="4"
-                textAnchor="middle"
-                fill="#FFFFFF"
-                fontSize="10"
-                fontWeight="700"
-                className="font-mono-tabular pointer-events-none"
+            return (
+              <g
+                key={def.id}
+                transform={`translate(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`}
+                className="cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectPlayer(def.id);
+                }}
               >
-                {hasRedKey ? '#1' : hasTealKey ? '#2' : def.label}
-              </text>
+                {hasRedKey && (
+                  <>
+                    <circle r="22" fill="#EF4444" fillOpacity="0.18" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="3 2" />
+                    <text x="0" y="-26" textAnchor="middle" fill="#FCA5A5" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
+                      {keyText}
+                    </text>
+                  </>
+                )}
+                {hasTealKey && (
+                  <>
+                    <circle r="22" fill="#14B8A6" fillOpacity="0.18" stroke="#14B8A6" strokeWidth="1.5" strokeDasharray="3 2" />
+                    <text x="0" y="-26" textAnchor="middle" fill="#5EEAD4" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
+                      {keyText}
+                    </text>
+                  </>
+                )}
 
-              {/* Front Gap Assignment Badge */}
-              {def.gap && (
-                <g>
-                  <rect
-                    x="-21"
-                    y="18"
-                    width="42"
-                    height="13"
-                    rx="3"
-                    fill="#050C10"
-                    fillOpacity="0.95"
-                    stroke={hasRedKey ? '#EF4444' : hasTealKey ? '#14B8A6' : '#264250'}
-                    strokeWidth="0.8"
-                  />
-                  <text
-                    x="0"
-                    y="27.5"
-                    textAnchor="middle"
-                    fill={hasRedKey ? '#FCA5A5' : hasTealKey ? '#5EEAD4' : '#94A3B8'}
-                    fontSize="8"
-                    fontWeight="700"
-                    className="font-mono-tabular pointer-events-none"
-                  >
-                    {def.gap}
-                  </text>
-                </g>
-              )}
-            </g>
-          );
-        })}
+                {/* Defender Node */}
+                <polygon
+                  points="0,-15 15,0 0,15 -15,0"
+                  fill={hasRedKey ? '#DC2626' : hasTealKey ? '#0D9488' : '#0B171E'}
+                  stroke={isSelected ? '#FFFFFF' : hasRedKey ? '#FCA5A5' : hasTealKey ? '#5EEAD4' : '#334D5C'}
+                  strokeWidth={isSelected ? 2.8 : 1.8}
+                />
+                <text
+                  x="0"
+                  y="4"
+                  textAnchor="middle"
+                  fill="#FFFFFF"
+                  fontSize="10"
+                  fontWeight="700"
+                  className="font-mono-tabular pointer-events-none"
+                >
+                  {hasRedKey ? '#1' : hasTealKey ? '#2' : def.label}
+                </text>
+
+                {/* Front Gap Assignment Badge */}
+                {def.gap && (
+                  <g>
+                    <rect
+                      x="-21"
+                      y="18"
+                      width="42"
+                      height="13"
+                      rx="3"
+                      fill="#050C10"
+                      fillOpacity="0.95"
+                      stroke={hasRedKey ? '#EF4444' : hasTealKey ? '#14B8A6' : '#264250'}
+                      strokeWidth="0.8"
+                    />
+                    <text
+                      x="0"
+                      y="27.5"
+                      textAnchor="middle"
+                      fill={hasRedKey ? '#FCA5A5' : hasTealKey ? '#5EEAD4' : '#94A3B8'}
+                      fontSize="8"
+                      fontWeight="700"
+                      className="font-mono-tabular pointer-events-none"
+                    >
+                      {def.gap}
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
 
         {/* Offensive Players (11 Players) - Black & Teal Theme */}
         {Object.entries(baseOffense).map(([pid, meta]) => {
@@ -1584,7 +1601,19 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
               key={pid}
               transform={`translate(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`}
               className="cursor-pointer"
+              onPointerDown={(e) => {
+                if (chalkboardMode) {
+                  e.stopPropagation();
+                  setDraggingPlayerId(pid);
+                }
+              }}
               onMouseDown={(e) => {
+                if (chalkboardMode) {
+                  e.stopPropagation();
+                  setDraggingPlayerId(pid);
+                }
+              }}
+              onTouchStart={(e) => {
                 if (chalkboardMode) {
                   e.stopPropagation();
                   setDraggingPlayerId(pid);

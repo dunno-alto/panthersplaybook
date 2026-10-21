@@ -55,6 +55,14 @@ const OFFENSE_PEN_COLORS = [
   { label: 'Chalk White', value: '#FFFFFF', bgClass: 'bg-white', ringColor: 'ring-white' },
 ];
 
+const FORMATION_PRESETS: { id: string; label: string; offsets: Record<string, Point> }[] = [
+  { id: 'split_back', label: 'Split Back (Base)', offsets: {} },
+  { id: 'i_form', label: 'I-Formation', offsets: { LH: { x: 54, y: -16 }, RH: { x: -54, y: 34 } } },
+  { id: 'spread_2x2', label: 'Spread 2x2', offsets: { LH: { x: -186, y: -80 }, RH: { x: -54, y: 4 } } },
+  { id: 'trips_right', label: 'Trips 3x1', offsets: { RH: { x: 160, y: -65 }, LH: { x: 54, y: 8 } } },
+  { id: 'pistol', label: 'Pistol', offsets: { LH: { x: 54, y: 25 }, RH: { x: -280, y: -80 } } },
+];
+
 export type AppActiveTab = 'offense' | 'defense' | 'special_teams';
 
 export default function App() {
@@ -91,6 +99,7 @@ export default function App() {
   const [customArrows, setCustomArrows] = useState<CoachNotation[]>([]);
   const [offensePenColor, setOffensePenColor] = useState<string>('#FACC15');
   const [offensePenMode, setOffensePenMode] = useState<'freehand' | 'arrow'>('freehand');
+  const [hideDefenseOnWhiteboard, setHideDefenseOnWhiteboard] = useState<boolean>(false);
 
   // Sync fullscreen change & Escape key listener for offense
   useEffect(() => {
@@ -250,7 +259,11 @@ export default function App() {
 
   const handleSelectPlay = (playId: string) => {
     setSelectedPlayId(playId);
-    if (playId.includes('inside-veer')) setConcept('inside_veer');
+    if (playId.includes('blank')) {
+      setConcept('blank');
+      setChalkboardMode(true);
+      setSelectedPlayerId('QB');
+    } else if (playId.includes('inside-veer')) setConcept('inside_veer');
     else if (playId.includes('outside-veer')) setConcept('outside_veer');
     else if (playId.includes('trap') || playId.includes('counter')) setConcept('trap');
     else if (playId.includes('power-pass') || playId.includes('flood')) setConcept('flood');
@@ -274,7 +287,7 @@ export default function App() {
       } else {
         setSelectedPlayerId(targetSide === 'left' ? 'XTE' : 'YTE');
       }
-    } else {
+    } else if (!playId.includes('blank')) {
       // Inside Veer or Outside Veer: dive back is playside back
       setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
     }
@@ -284,6 +297,12 @@ export default function App() {
     setConcept(newConcept);
     setIsPlaying(false);
     setProgress(0);
+    if (newConcept === 'blank') {
+      setSelectedPlayId('blank-whiteboard');
+      setChalkboardMode(true);
+      setSelectedPlayerId('QB');
+      return;
+    }
     if (newConcept === 'power') {
       setSelectedPlayerId(targetSide === 'left' ? 'RG' : 'LG');
     } else if (newConcept === 'trap' || newConcept === 'counter') {
@@ -641,6 +660,55 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Whiteboard Controls Strip: Formation Presets & Defense Toggle */}
+              {concept === 'blank' && (
+                <div className="p-3 rounded-xl bg-gradient-to-r from-[#07131B] via-[#091822] to-[#07131B] border border-teal-500/40 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs font-mono animate-fadeIn">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-teal-300 font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+                      <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+                      <span>Formation Presets:</span>
+                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {FORMATION_PRESETS.map((fp) => (
+                        <button
+                          key={fp.id}
+                          type="button"
+                          onClick={() => setCustomOffsets(fp.offsets)}
+                          className="px-2.5 py-1 rounded-md bg-[#050C10] border border-[#162A33] hover:border-teal-500/60 text-slate-300 hover:text-white text-[11px] font-bold transition-all cursor-pointer"
+                          title={`Set ${fp.label}`}
+                        >
+                          {fp.label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setCustomOffsets({})}
+                        className="px-2 py-1 rounded-md bg-[#050C10] border border-[#162A33] hover:border-amber-500/60 text-slate-400 hover:text-amber-300 text-[11px] font-semibold transition-all cursor-pointer"
+                        title="Reset player alignment offsets to baseline"
+                      >
+                        Reset Alignment
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setHideDefenseOnWhiteboard((prev) => !prev)}
+                      className={`px-3 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        hideDefenseOnWhiteboard
+                          ? 'border-amber-500/60 bg-amber-950/40 text-amber-300 shadow-sm'
+                          : 'border-teal-500/40 bg-teal-950/40 text-teal-300 hover:bg-teal-950/70'
+                      }`}
+                      title="Toggle defensive personnel on or off for whiteboard canvas"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      <span>Defense: {hideDefenseOnWhiteboard ? 'Hidden (Offense Only)' : 'Visible (vs Front)'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Docked Coach Pen Toolbar Bar when active in regular view */}
               {chalkboardMode && !isOffenseFullscreen && (
                 <div className="p-2.5 rounded-xl bg-gradient-to-r from-[#0d212d] via-[#081822] to-[#0d212d] border border-amber-500/50 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs font-mono animate-fadeIn">
@@ -859,6 +927,50 @@ export default function App() {
                         <span>Exit Fullscreen</span>
                       </button>
                     </div>
+
+                    {/* Fullscreen Whiteboard Quick Presets & Defense Toggle */}
+                    {concept === 'blank' && (
+                      <div className="w-full flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#162A33]/80">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-teal-300 font-bold uppercase text-[10px] flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-teal-400" />
+                            Formations:
+                          </span>
+                          {FORMATION_PRESETS.map((fp) => (
+                            <button
+                              key={fp.id}
+                              type="button"
+                              onClick={() => setCustomOffsets(fp.offsets)}
+                              className="px-2 py-0.5 rounded bg-[#050C10] border border-[#162A33] hover:border-teal-500/60 text-slate-300 hover:text-white text-[10px] font-bold transition-all cursor-pointer"
+                              title={`Set ${fp.label}`}
+                            >
+                              {fp.label}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setCustomOffsets({})}
+                            className="px-1.5 py-0.5 rounded bg-[#050C10] border border-[#162A33] hover:border-amber-500/60 text-slate-400 hover:text-amber-300 text-[10px] font-semibold transition-all cursor-pointer"
+                            title="Reset player alignment offsets to baseline"
+                          >
+                            Reset
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setHideDefenseOnWhiteboard((prev) => !prev)}
+                          className={`px-2.5 py-1 rounded-md border text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            hideDefenseOnWhiteboard
+                              ? 'border-amber-500/60 bg-amber-950/50 text-amber-300'
+                              : 'border-teal-500/40 bg-teal-950/50 text-teal-300'
+                          }`}
+                          title="Toggle defensive personnel on or off for whiteboard canvas"
+                        >
+                          <Shield className="w-3 h-3" />
+                          <span>Defense: {hideDefenseOnWhiteboard ? 'Off (Offense Only)' : 'On (vs Front)'}</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -879,6 +991,7 @@ export default function App() {
                     showGapLabels={showGapLabels}
                     showBlockingAngles={showBlockingAngles}
                     chalkboardMode={chalkboardMode || isOffenseFullscreen}
+                    hideDefense={concept === 'blank' && hideDefenseOnWhiteboard}
                     customOffsets={customOffsets}
                     onUpdateCustomOffset={(pid: string, pt: Point) =>
                       setCustomOffsets((prev) => ({ ...prev, [pid]: pt }))
@@ -890,8 +1003,8 @@ export default function App() {
                     powerPassReceiver={powerPassReceiver}
                   />
 
-                  {/* Big Center Overlay Play Prompt if Stopped at Pre-Snap (Hidden in Fullscreen and when Coach Pen is active) */}
-                  {!isOffenseFullscreen && !chalkboardMode && !isPlaying && progress === 0 && (
+                  {/* Big Center Overlay Play Prompt if Stopped at Pre-Snap (Hidden in Fullscreen, on Blank concept, and when Coach Pen is active) */}
+                  {!isOffenseFullscreen && !chalkboardMode && concept !== 'blank' && !isPlaying && progress === 0 && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <button
                         type="button"

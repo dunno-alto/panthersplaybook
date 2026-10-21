@@ -4,7 +4,7 @@ export type PitchKeyBehavior = 'commit_qb' | 'feather_pitch';
 export type EleventhPlayerMode = 'wide_z' | 'wing_z';
 export type XPlayerMode = 'tight_x' | 'wide_x';
 
-export type OffensiveConcept = 'inside_veer' | 'outside_veer' | 'trap' | 'counter' | 'power' | 'flood';
+export type OffensiveConcept = 'inside_veer' | 'outside_veer' | 'trap' | 'counter' | 'power' | 'flood' | 'blank';
 export type TargetSide = 'right' | 'left';
 export type ZAlignmentSide = 'right' | 'left';
 export type ZAlignmentType = 'wide' | 'wing';
@@ -47,7 +47,7 @@ export interface PlayDefinition {
   name: string;
   subtitle: string;
   seriesTag: string;
-  playType: 'Triple Option' | 'Inside Read' | 'Misdirection Option' | 'Misdirection Trap' | 'Power' | 'Play-Action Pass';
+  playType: 'Triple Option' | 'Inside Read' | 'Misdirection Option' | 'Misdirection Trap' | 'Power' | 'Play-Action Pass' | 'Whiteboard';
   targetGap: string;
   primaryReadLabel: string;
   secondaryReadLabel: string;
@@ -161,6 +161,20 @@ export function formatOffensivePlayCall(
   conceptName: string;
   fullPlayCall: string;
 } {
+  if (concept === 'blank') {
+    return {
+      fullName: 'Blank Formation (Coach Whiteboard)',
+      formation: 'Custom Whiteboard',
+      xDesc: 'Positionable',
+      yDesc: 'Attached / Positionable',
+      zDesc: 'Positionable',
+      floodFakeDesc: '',
+      numberCode: '00',
+      conceptName: 'Whiteboard',
+      fullPlayCall: 'Blank Formation (Coach Whiteboard)',
+    };
+  }
+
   // 1. Backside TE: Wide or Tight
   // Playside TE: no call, always end man on the LOS
   const backsideTEDesc = xMode === 'tight_x' ? 'Tight' : 'Wide';
@@ -2220,6 +2234,281 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
   },
 ];
 
+export const BLANK_WHITEBOARD_PLAY: PlayDefinition = {
+  id: 'blank-whiteboard',
+  concept: 'blank',
+  targetSide: 'right',
+  code: '00 WHITEBOARD',
+  name: 'Blank Formation (Coach Whiteboard)',
+  subtitle: 'Clean Canvas · Drag Offensive Players · Draw Custom Plays, Formations & Schemes with Coach Pen',
+  seriesTag: 'Whiteboard Canvas',
+  playType: 'Whiteboard',
+  targetGap: 'Custom Formation / Scheme',
+  primaryReadLabel: 'Custom Read',
+  secondaryReadLabel: 'Custom Read',
+  summary: 'A clean whiteboard formation with zero pre-drawn routes or blocking paths. Drag any offensive player to create custom formations (Split Back, I-Formation, Spread, Trips, Pistol) and use the Coach Pen to whiteboard assignments, routes, and blocking schemes.',
+  whenToCall: 'Whiteboard installation sessions, custom gadget plays, situational walkthroughs, or teaching player alignments.',
+  qbDecisionMatrix: {
+    crashPull: 'Custom Scheme Diagram',
+    squeezeGive: 'Custom Scheme Diagram',
+    pitchPhase: 'Custom Scheme Diagram',
+  },
+  coachingPhases: [
+    {
+      phase: 1,
+      timeRange: [0, 0.35],
+      title: 'Pre-Snap Alignment & Spacing',
+      detail: 'Drag offensive players into any desired formation, split, or motion track.',
+    },
+    {
+      phase: 2,
+      timeRange: [0.35, 0.7],
+      title: 'Blocking Scheme & Key Reads',
+      detail: 'Diagram offensive line rules, pullers, combo blocks, and read keys using Coach Pen.',
+    },
+    {
+      phase: 3,
+      timeRange: [0.7, 1.0],
+      title: 'Ball Carrier Track & Passing Routes',
+      detail: 'Draw custom option tracks, downhill runs, or pass route trees across the field.',
+    },
+  ],
+  positionRules: {
+    C: {
+      id: 'C',
+      label: 'C',
+      fullName: 'Center',
+      group: 'OL',
+      split: 'Over the ball',
+      stance: '2-point or 3-point',
+      aimingPoint: 'Custom',
+      footwork: 'Custom',
+      assignmentsByFront: {
+        '5-3': 'Custom Whiteboard Assignment',
+        '4-4': 'Custom Whiteboard Assignment',
+        '6-2': 'Custom Whiteboard Assignment',
+        '5-2': 'Custom Whiteboard Assignment',
+        '4-3': 'Custom Whiteboard Assignment',
+        '3-4': 'Custom Whiteboard Assignment',
+      },
+      coachingCue: 'Center: Deliver clean snap; execute custom blocking scheme as diagrammed.',
+      commonErrorsFix: 'Ensure Center is aligned squarely over the football.',
+    },
+    LG: {
+      id: 'LG',
+      label: 'LG',
+      fullName: 'Left Guard',
+      group: 'OL',
+      split: '3-foot split',
+      stance: '3-point',
+      aimingPoint: 'Custom',
+      footwork: 'Custom',
+      assignmentsByFront: {
+        '5-3': 'Custom Whiteboard Assignment',
+        '4-4': 'Custom Whiteboard Assignment',
+        '6-2': 'Custom Whiteboard Assignment',
+        '5-2': 'Custom Whiteboard Assignment',
+        '4-3': 'Custom Whiteboard Assignment',
+        '3-4': 'Custom Whiteboard Assignment',
+      },
+      coachingCue: 'Left Guard: Base block, down block, or pull according to drawn assignment.',
+      commonErrorsFix: 'Maintain proper 3-foot split.',
+    },
+    RG: {
+      id: 'RG',
+      label: 'RG',
+      fullName: 'Right Guard',
+      group: 'OL',
+      split: '3-foot split',
+      stance: '3-point',
+      aimingPoint: 'Custom',
+      footwork: 'Custom',
+      assignmentsByFront: {
+        '5-3': 'Custom Whiteboard Assignment',
+        '4-4': 'Custom Whiteboard Assignment',
+        '6-2': 'Custom Whiteboard Assignment',
+        '5-2': 'Custom Whiteboard Assignment',
+        '4-3': 'Custom Whiteboard Assignment',
+        '3-4': 'Custom Whiteboard Assignment',
+      },
+      coachingCue: 'Right Guard: Base block, down block, or pull according to drawn assignment.',
+      commonErrorsFix: 'Maintain proper 3-foot split.',
+    },
+    LT: {
+      id: 'LT',
+      label: 'LT',
+      fullName: 'Left Tackle',
+      group: 'OL',
+      split: '3-foot split',
+      stance: '3-point',
+      aimingPoint: 'Custom',
+      footwork: 'Custom',
+      assignmentsByFront: {
+        '5-3': 'Custom Whiteboard Assignment',
+        '4-4': 'Custom Whiteboard Assignment',
+        '6-2': 'Custom Whiteboard Assignment',
+        '5-2': 'Custom Whiteboard Assignment',
+        '4-3': 'Custom Whiteboard Assignment',
+        '3-4': 'Custom Whiteboard Assignment',
+      },
+      coachingCue: 'Left Tackle: Veer release, reach, down block, or scoop per coach drawing.',
+      commonErrorsFix: 'Keep shoulders square on snap.',
+    },
+    RT: {
+      id: 'RT',
+      label: 'RT',
+      fullName: 'Right Tackle',
+      group: 'OL',
+      split: '3-foot split',
+      stance: '3-point',
+      aimingPoint: 'Custom',
+      footwork: 'Custom',
+      assignmentsByFront: {
+        '5-3': 'Custom Whiteboard Assignment',
+        '4-4': 'Custom Whiteboard Assignment',
+        '6-2': 'Custom Whiteboard Assignment',
+        '5-2': 'Custom Whiteboard Assignment',
+        '4-3': 'Custom Whiteboard Assignment',
+        '3-4': 'Custom Whiteboard Assignment',
+      },
+      coachingCue: 'Right Tackle: Veer release, reach, down block, or scoop per coach drawing.',
+      commonErrorsFix: 'Keep shoulders square on snap.',
+    },
+    YTE: {
+      id: 'YTE',
+      label: 'Y',
+      fullName: 'Y (Tight End)',
+      group: 'TE',
+      split: 'Attached to LOS or Flexed',
+      stance: '3-point or 2-point',
+      aimingPoint: 'Custom',
+      footwork: 'Custom',
+      assignmentsByFront: {
+        '5-3': 'Custom Whiteboard Assignment',
+        '4-4': 'Custom Whiteboard Assignment',
+        '6-2': 'Custom Whiteboard Assignment',
+        '5-2': 'Custom Whiteboard Assignment',
+        '4-3': 'Custom Whiteboard Assignment',
+        '3-4': 'Custom Whiteboard Assignment',
+      },
+      coachingCue: 'Y Tight End: Release into route or block playside edge as diagrammed.',
+      commonErrorsFix: 'Align on line of scrimmage unless flexed.',
+    },
+    XTE: {
+      id: 'XTE',
+      label: 'X',
+      fullName: 'X (Split End / Receiver)',
+      group: 'WR',
+      split: 'Split wide or tight',
+      stance: '2-point stance',
+      aimingPoint: 'Custom',
+      footwork: 'Custom',
+      assignmentsByFront: {
+        '5-3': 'Custom Whiteboard Assignment',
+        '4-4': 'Custom Whiteboard Assignment',
+        '6-2': 'Custom Whiteboard Assignment',
+        '5-2': 'Custom Whiteboard Assignment',
+        '4-3': 'Custom Whiteboard Assignment',
+        '3-4': 'Custom Whiteboard Assignment',
+      },
+      coachingCue: 'X Receiver: Position wide, tight, or slot; run diagrammed route.',
+      commonErrorsFix: 'Ensure proper alignment relative to the LOS.',
+    },
+    QB: {
+      id: 'QB',
+      label: '1',
+      fullName: '1 (Quarterback)',
+      group: 'BACK',
+      split: 'Under Center or Shotgun',
+      stance: '2-point stance',
+      aimingPoint: 'Custom',
+      footwork: 'Custom',
+      assignmentsByFront: {
+        '5-3': 'Custom Whiteboard Assignment',
+        '4-4': 'Custom Whiteboard Assignment',
+        '6-2': 'Custom Whiteboard Assignment',
+        '5-2': 'Custom Whiteboard Assignment',
+        '4-3': 'Custom Whiteboard Assignment',
+        '3-4': 'Custom Whiteboard Assignment',
+      },
+      coachingCue: '1-Back (QB): Execute footwork and reads as diagrammed with Coach Pen.',
+      commonErrorsFix: 'Set eyes on diagrammed read keys.',
+    },
+    LH: {
+      id: 'LH',
+      label: '3',
+      fullName: '3 (Left Halfback / Dive / Slot)',
+      group: 'BACK',
+      split: 'Split Back, Offset, or Slot',
+      stance: '2-point or 3-point',
+      aimingPoint: 'Custom',
+      footwork: 'Custom',
+      assignmentsByFront: {
+        '5-3': 'Custom Whiteboard Assignment',
+        '4-4': 'Custom Whiteboard Assignment',
+        '6-2': 'Custom Whiteboard Assignment',
+        '5-2': 'Custom Whiteboard Assignment',
+        '4-3': 'Custom Whiteboard Assignment',
+        '3-4': 'Custom Whiteboard Assignment',
+      },
+      coachingCue: '3-Back: Drag to any formation spot; execute whiteboard path.',
+      commonErrorsFix: 'Check stance and alignment depth.',
+    },
+    RH: {
+      id: 'RH',
+      label: '2',
+      fullName: '2 (Right Halfback / Pitch / Tailback)',
+      group: 'BACK',
+      split: 'Split Back, Offset, or Slot',
+      stance: '2-point or 3-point',
+      aimingPoint: 'Custom',
+      footwork: 'Custom',
+      assignmentsByFront: {
+        '5-3': 'Custom Whiteboard Assignment',
+        '4-4': 'Custom Whiteboard Assignment',
+        '6-2': 'Custom Whiteboard Assignment',
+        '5-2': 'Custom Whiteboard Assignment',
+        '4-3': 'Custom Whiteboard Assignment',
+        '3-4': 'Custom Whiteboard Assignment',
+      },
+      coachingCue: '2-Back: Drag to any formation spot; execute whiteboard path.',
+      commonErrorsFix: 'Check stance and alignment depth.',
+    },
+    W: {
+      id: 'W',
+      label: 'Z',
+      fullName: 'Z (Flanker / Wing / Slot)',
+      group: 'WR',
+      split: 'Flanker, Wing, or Slot',
+      stance: '2-point stance',
+      aimingPoint: 'Custom',
+      footwork: 'Custom',
+      assignmentsByFront: {
+        '5-3': 'Custom Whiteboard Assignment',
+        '4-4': 'Custom Whiteboard Assignment',
+        '6-2': 'Custom Whiteboard Assignment',
+        '5-2': 'Custom Whiteboard Assignment',
+        '4-3': 'Custom Whiteboard Assignment',
+        '3-4': 'Custom Whiteboard Assignment',
+      },
+      coachingCue: 'Z Receiver: Positioned wide, in the wing, or motioned across.',
+      commonErrorsFix: 'Check boundary alignment and motion timing.',
+    },
+  },
+  getOffensivePaths: () => ({
+    paths: {},
+    ballCarrierSequence: {
+      diveGive: false,
+      qbKeep: false,
+      pitchTriggered: false,
+      finalCarrier: 'QB',
+      outcomeLabel: 'Whiteboard Canvas',
+      expectedYards: 'Custom Diagram',
+      coachingExplanation: 'Clean whiteboard canvas with zero pre-drawn routes. Move players and draw custom schemes with the Coach Pen.',
+    },
+  }),
+};
+
 // Helper to mirror points and paths horizontally across X = 500
 function mirrorPoints(points: Point[]): Point[] {
   return points.map((p) => ({ x: 1000 - p.x, y: p.y }));
@@ -2445,6 +2734,10 @@ export function getActivePlayDefinition(
   floodFake: FloodAction = 'none',
   powerPassReceiver: PowerPassReceiverOption = 'whip'
 ): PlayDefinition {
+  if (concept === 'blank') {
+    return BLANK_WHITEBOARD_PLAY;
+  }
+
   const baseMap: Record<OffensiveConcept, PlayDefinition> = {
     inside_veer: VEER_PLAYBOOK[0],
     outside_veer: VEER_PLAYBOOK[1],
@@ -2452,6 +2745,7 @@ export function getActivePlayDefinition(
     counter: VEER_PLAYBOOK[2],
     power: VEER_PLAYBOOK[3],
     flood: VEER_PLAYBOOK[4],
+    blank: BLANK_WHITEBOARD_PLAY,
   };
 
   const basePlay = baseMap[concept] || VEER_PLAYBOOK[0];

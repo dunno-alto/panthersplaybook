@@ -132,7 +132,9 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
   // Derive concept from selectedPlay if not provided explicitly
   const activeConcept: OffensiveConcept =
     selectedConcept ||
-    (selectedPlay.id.includes('inside-veer')
+    (selectedPlay.id.includes('blank')
+      ? 'blank'
+      : selectedPlay.id.includes('inside-veer')
       ? 'inside_veer'
       : selectedPlay.id.includes('outside-veer')
       ? 'outside_veer'
@@ -187,6 +189,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
         counter: '20-trap',
         power: '34-power',
         flood: '324-power-pass',
+        blank: 'blank-whiteboard',
       };
       onSelectPlay(playIdMap[concept]);
     }
@@ -264,6 +267,15 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
       callout: '36/35 Flood',
       tag: 'Play-Action Pass',
       description: 'Play-Action Fake · Progression: 1) RB Flat 2) Y Whip Out 3) Z Corner',
+    },
+    {
+      id: 'blank',
+      name: 'Blank Formation',
+      rightNumber: '00',
+      leftNumber: '00',
+      callout: 'Coach Whiteboard',
+      tag: 'Coach Pen',
+      description: 'Clean Slate · Zero Routes · Drag Any Player to Position · Whiteboard with Coach Pen',
     },
   ];
 
@@ -546,7 +558,7 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                             {concept.name}
                           </p>
                           <p className="text-[11px] text-slate-400 truncate">
-                            Call: <span className="text-teal-300 font-mono font-bold">{activeNumber} {concept.id === 'trap' || (concept.id as string) === 'counter' ? 'Trap' : concept.id === 'power' ? 'Power' : concept.id === 'flood' ? 'Flood' : 'Veer'}</span> · {concept.description}
+                            Call: <span className="text-teal-300 font-mono font-bold">{activeNumber} {concept.id === 'blank' ? 'Whiteboard' : concept.id === 'trap' || (concept.id as string) === 'counter' ? 'Trap' : concept.id === 'power' ? 'Power' : concept.id === 'flood' ? 'Flood' : 'Veer'}</span> · {concept.description}
                           </p>
                         </div>
                       </div>
