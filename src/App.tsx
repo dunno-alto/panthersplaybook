@@ -90,7 +90,7 @@ export default function App() {
   // Field appearance & chalkboard
   const [fieldTheme, setFieldTheme] = useState<'night_turf' | 'chalkboard' | 'high_contrast'>('night_turf');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('LH');
-  const [showGapLabels, setShowGapLabels] = useState<boolean>(true);
+  const [showGapLabels, setShowGapLabels] = useState<boolean>(false);
   const [showBlockingAngles, setShowBlockingAngles] = useState<boolean>(true);
   const [chalkboardMode, setChalkboardMode] = useState<boolean>(false);
   const [isOffenseFullscreen, setIsOffenseFullscreen] = useState<boolean>(false);
@@ -100,7 +100,7 @@ export default function App() {
   const [offensePenColor, setOffensePenColor] = useState<string>('#FACC15');
   const [offensePenMode, setOffensePenMode] = useState<'freehand' | 'arrow'>('freehand');
   const [hideDefenseOnWhiteboard, setHideDefenseOnWhiteboard] = useState<boolean>(false);
-  const [showBlankPlayerLabels, setShowBlankPlayerLabels] = useState<boolean>(false);
+  const [showPlayerLabels, setShowPlayerLabels] = useState<boolean>(false);
 
   // Sync fullscreen change & Escape key listener for offense
   useEffect(() => {
@@ -596,6 +596,19 @@ export default function App() {
                   </button>
 
                   <button
+                    onClick={() => setShowPlayerLabels((p) => !p)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border cursor-pointer flex items-center gap-1.5 ${
+                      showPlayerLabels
+                        ? 'border-teal-400 bg-teal-950/60 text-teal-300'
+                        : 'border-[#162A33] bg-[#0A1318] text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Toggle player position labels (Hidden by default for clean playart)"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Labels {showPlayerLabels ? 'ON' : 'OFF'}</span>
+                  </button>
+
+                  <button
                     onClick={() => setShowGapLabels((p) => !p)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border cursor-pointer ${
                       showGapLabels
@@ -695,16 +708,16 @@ export default function App() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setShowBlankPlayerLabels((prev) => !prev)}
+                      onClick={() => setShowPlayerLabels((prev) => !prev)}
                       className={`px-2.5 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                        showBlankPlayerLabels
+                        showPlayerLabels
                           ? 'border-teal-500/60 bg-teal-950/60 text-teal-300 shadow-sm'
                           : 'border-[#162A33] bg-[#050C10] text-slate-400 hover:text-white'
                       }`}
                       title="Toggle player position labels inside circles & diamonds"
                     >
                       <Eye className="w-3.5 h-3.5" />
-                      <span>Labels: {showBlankPlayerLabels ? 'Visible' : 'Hidden (Clean)'}</span>
+                      <span>Labels: {showPlayerLabels ? 'Visible' : 'Hidden (Clean)'}</span>
                     </button>
 
                     <button
@@ -974,16 +987,16 @@ export default function App() {
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => setShowBlankPlayerLabels((prev) => !prev)}
+                            onClick={() => setShowPlayerLabels((prev) => !prev)}
                             className={`px-2 py-0.5 rounded border text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                              showBlankPlayerLabels
+                              showPlayerLabels
                                 ? 'border-teal-500/60 bg-teal-950/60 text-teal-300'
                                 : 'border-[#162A33] bg-[#050C10] text-slate-400 hover:text-white'
                             }`}
                             title="Toggle player position labels inside circles & diamonds"
                           >
                             <Eye className="w-3 h-3" />
-                            <span>Labels: {showBlankPlayerLabels ? 'Visible' : 'Hidden'}</span>
+                            <span>Labels: {showPlayerLabels ? 'Visible' : 'Hidden'}</span>
                           </button>
                           <button
                             type="button"
@@ -1022,7 +1035,7 @@ export default function App() {
                     showBlockingAngles={showBlockingAngles}
                     chalkboardMode={chalkboardMode || isOffenseFullscreen}
                     hideDefense={concept === 'blank' && hideDefenseOnWhiteboard}
-                    showPlayerLabels={concept === 'blank' ? showBlankPlayerLabels : true}
+                    showPlayerLabels={showPlayerLabels}
                     customOffsets={customOffsets}
                     onUpdateCustomOffset={(pid: string, pt: Point) =>
                       setCustomOffsets((prev) => ({ ...prev, [pid]: pt }))

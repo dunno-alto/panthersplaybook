@@ -128,7 +128,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   const isOptionPlay = isInsideVeer || isOutsideVeer || play.playType === 'Triple Option';
 
   const isBlankPlay = play.concept === 'blank';
-  const shouldShowLabels = isBlankPlay ? !!showPlayerLabels : true;
+  const shouldShowLabels = !!showPlayerLabels;
 
   const getSvgCoords = (e: React.PointerEvent<SVGSVGElement> | React.MouseEvent<SVGSVGElement>): Point => {
     const svg = svgRef.current;
@@ -1250,13 +1250,6 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
           </g>
         ))}
 
-        {/* Line of Scrimmage Label */}
-        {shouldShowLabels && !isBlankPlay && (
-          <text x="52" y="383" fill="#14B8A6" fillOpacity="0.9" fontSize="11" fontWeight="700" className="font-mono-tabular">
-            LINE OF SCRIMMAGE (LOS)
-          </text>
-        )}
-
         {/* Optional Gap Labels & Split Guides */}
         {showGapLabels && shouldShowLabels && !isBlankPlay && (
           <g>
@@ -1269,9 +1262,6 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
               </g>
             ))}
             <line x1="295" y1="390" x2="295" y2="496" stroke="#14B8A6" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="3 3" />
-            <text x="286" y="448" textAnchor="end" fill="#5EEAD4" fontSize="10" className="font-mono-tabular">
-              4.0 Yd Back Depth
-            </text>
           </g>
         )}
 
@@ -1337,7 +1327,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
             );
           })}
 
-        {/* Pitch Relationship Dashed Line on Option Plays (Inside & Outside Veer) */}
+        {/* Pitch Relationship Dashed Line on Option Plays (Inside & Outside Veer) - Clean without floating text */}
         {(isInsideVeer || isOutsideVeer || play.playType === 'Triple Option') && (
           <g opacity="0.85">
             {(() => {
@@ -1346,69 +1336,15 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
               const pbPt = currentOffensivePositions[pitchBackId];
               if (!qbPt || !pbPt) return null;
               return (
-                <>
-                  <line
-                    x1={qbPt.x}
-                    y1={qbPt.y}
-                    x2={pbPt.x}
-                    y2={pbPt.y}
-                    stroke="#14B8A6"
-                    strokeWidth="1.5"
-                    strokeDasharray="3 4"
-                  />
-                  <text
-                    x={(qbPt.x + pbPt.x) / 2}
-                    y={(qbPt.y + pbPt.y) / 2 + 16}
-                    textAnchor="middle"
-                    fill="#2DD4BF"
-                    fontSize="9.5"
-                    fontWeight="700"
-                    className="font-mono-tabular"
-                  >
-                    {isInsideVeer ? '4x4 Backfield Pitch Spacing' : 'Backfield Pitch Track'}
-                  </text>
-                </>
-              );
-            })()}
-          </g>
-        )}
-
-        {/* Center Backside Seal Annotation on Trap */}
-        {isTrap && currentOffensivePositions.C && (
-          <g opacity="0.95">
-            <text
-              x={currentOffensivePositions.C.x}
-              y={currentOffensivePositions.C.y - 18}
-              textAnchor="middle"
-              fill="#FBBF24"
-              fontSize="9.5"
-              fontWeight="700"
-              className="font-mono-tabular"
-            >
-              CENTER BACKSIDE SEAL
-            </text>
-          </g>
-        )}
-
-        {/* Pulling Guard Label Annotation on Power and Trap */}
-        {(isPower || isTrap) && (
-          <g opacity="0.95">
-            {(() => {
-              const pullId = targetSide === 'left' ? 'RG' : 'LG';
-              const pPt = currentOffensivePositions[pullId];
-              if (!pPt) return null;
-              return (
-                <text
-                  x={pPt.x}
-                  y={pPt.y + 24}
-                  textAnchor="middle"
-                  fill="#5EEAD4"
-                  fontSize="9.5"
-                  fontWeight="700"
-                  className="font-mono-tabular"
-                >
-                  {isTrap ? 'PULL & TRAP KICKOUT' : 'PULLING GUARD'}
-                </text>
+                <line
+                  x1={qbPt.x}
+                  y1={qbPt.y}
+                  x2={pbPt.x}
+                  y2={pbPt.y}
+                  stroke="#14B8A6"
+                  strokeWidth="1.5"
+                  strokeDasharray="3 4"
+                />
               );
             })()}
           </g>
@@ -1558,20 +1494,10 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                 )}
 
                 {hasRedKey && !isBlankPlay && (
-                  <>
-                    <circle r="22" fill="#EF4444" fillOpacity="0.18" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="3 2" />
-                    <text x="0" y="-26" textAnchor="middle" fill="#FCA5A5" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
-                      {keyText}
-                    </text>
-                  </>
+                  <circle r="22" fill="#EF4444" fillOpacity="0.18" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="3 2" />
                 )}
                 {hasTealKey && !isBlankPlay && (
-                  <>
-                    <circle r="22" fill="#14B8A6" fillOpacity="0.18" stroke="#14B8A6" strokeWidth="1.5" strokeDasharray="3 2" />
-                    <text x="0" y="-26" textAnchor="middle" fill="#5EEAD4" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
-                      {keyText}
-                    </text>
-                  </>
+                  <circle r="22" fill="#14B8A6" fillOpacity="0.18" stroke="#14B8A6" strokeWidth="1.5" strokeDasharray="3 2" />
                 )}
 
                 {/* Defender Node */}
@@ -1582,7 +1508,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                   strokeWidth={isSelected ? 2.8 : 1.8}
                 />
 
-                {/* Defender Node Text (hidden on blank if labels removed) */}
+                {/* Defender Node Text (hidden if labels are toggled off) */}
                 {shouldShowLabels && (
                   <text
                     x="0"
@@ -1593,36 +1519,8 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                     fontWeight="700"
                     className="font-mono-tabular pointer-events-none"
                   >
-                    {hasRedKey ? '#1' : hasTealKey ? '#2' : def.label}
+                    {def.label}
                   </text>
-                )}
-
-                {/* Front Gap Assignment Badge */}
-                {def.gap && shouldShowLabels && !isBlankPlay && (
-                  <g>
-                    <rect
-                      x="-21"
-                      y="18"
-                      width="42"
-                      height="13"
-                      rx="3"
-                      fill="#050C10"
-                      fillOpacity="0.95"
-                      stroke={hasRedKey ? '#EF4444' : hasTealKey ? '#14B8A6' : '#264250'}
-                      strokeWidth="0.8"
-                    />
-                    <text
-                      x="0"
-                      y="27.5"
-                      textAnchor="middle"
-                      fill={hasRedKey ? '#FCA5A5' : hasTealKey ? '#5EEAD4' : '#94A3B8'}
-                      fontSize="8"
-                      fontWeight="700"
-                      className="font-mono-tabular pointer-events-none"
-                    >
-                      {def.gap}
-                    </text>
-                  </g>
                 )}
               </g>
             );
@@ -1712,127 +1610,62 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                 <>
                   {/* Read 1: Playside RB Arrow */}
                   {((targetSide === 'left' && pid === 'RH') || (targetSide !== 'left' && pid === 'LH')) && (
-                    <>
-                      <circle
-                        r={isFinalCarrier ? 26 : 22}
-                        fill="#14B8A6"
-                        fillOpacity={isFinalCarrier ? 0.35 : 0.15}
-                        stroke={isFinalCarrier ? '#5EEAD4' : '#14B8A6'}
-                        strokeWidth={isFinalCarrier ? 2.5 : 1.5}
-                        strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
-                      />
-                      <text
-                        x="0"
-                        y="-26"
-                        textAnchor="middle"
-                        fill={isFinalCarrier ? '#99F6E4' : '#5EEAD4'}
-                        fontSize={isFinalCarrier ? '10' : '9'}
-                        fontWeight="800"
-                        className="font-mono-tabular"
-                      >
-                        {isFinalCarrier ? '★ TARGET: 1) RB ARROW' : '1: RB ARROW'}
-                      </text>
-                    </>
+                    <circle
+                      r={isFinalCarrier ? 26 : 22}
+                      fill="#14B8A6"
+                      fillOpacity={isFinalCarrier ? 0.35 : 0.15}
+                      stroke={isFinalCarrier ? '#5EEAD4' : '#14B8A6'}
+                      strokeWidth={isFinalCarrier ? 2.5 : 1.5}
+                      strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
+                    />
                   )}
 
                   {/* Read 2: Playside TE/SE Whip Out */}
                   {((targetSide === 'left' && pid === 'XTE') || (targetSide !== 'left' && pid === 'YTE')) && (
-                    <>
-                      <circle
-                        r={isFinalCarrier ? 26 : 22}
-                        fill="#A855F7"
-                        fillOpacity={isFinalCarrier ? 0.35 : 0.15}
-                        stroke={isFinalCarrier ? '#E9D5FF' : '#A855F7'}
-                        strokeWidth={isFinalCarrier ? 2.5 : 1.5}
-                        strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
-                      />
-                      <text
-                        x="0"
-                        y="-26"
-                        textAnchor="middle"
-                        fill={isFinalCarrier ? '#F5D0FE' : '#E9D5FF'}
-                        fontSize={isFinalCarrier ? '10' : '9'}
-                        fontWeight="800"
-                        className="font-mono-tabular"
-                      >
-                        {isFinalCarrier ? `★ TARGET: 2) ${targetSide === 'left' ? 'X' : 'Y'} WHIP` : `2: ${targetSide === 'left' ? 'X' : 'Y'} WHIP`}
-                      </text>
-                    </>
+                    <circle
+                      r={isFinalCarrier ? 26 : 22}
+                      fill="#A855F7"
+                      fillOpacity={isFinalCarrier ? 0.35 : 0.15}
+                      stroke={isFinalCarrier ? '#E9D5FF' : '#A855F7'}
+                      strokeWidth={isFinalCarrier ? 2.5 : 1.5}
+                      strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
+                    />
                   )}
 
                   {/* Read 3: Z Post Corner */}
                   {pid === 'W' && (
-                    <>
-                      <circle
-                        r={isFinalCarrier ? 26 : 22}
-                        fill="#F59E0B"
-                        fillOpacity={isFinalCarrier ? 0.35 : 0.12}
-                        stroke={isFinalCarrier ? '#FDE68A' : '#F59E0B'}
-                        strokeWidth={isFinalCarrier ? 2.5 : 1.5}
-                        strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
-                      />
-                      <text
-                        x="0"
-                        y="-26"
-                        textAnchor="middle"
-                        fill={isFinalCarrier ? '#FEF08A' : '#FCD34D'}
-                        fontSize={isFinalCarrier ? '10' : '9'}
-                        fontWeight="800"
-                        className="font-mono-tabular"
-                      >
-                        {isFinalCarrier ? '★ TARGET: 3) Z CORNER' : '3: Z CORNER'}
-                      </text>
-                    </>
+                    <circle
+                      r={isFinalCarrier ? 26 : 22}
+                      fill="#F59E0B"
+                      fillOpacity={isFinalCarrier ? 0.35 : 0.12}
+                      stroke={isFinalCarrier ? '#FDE68A' : '#F59E0B'}
+                      strokeWidth={isFinalCarrier ? 2.5 : 1.5}
+                      strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
+                    />
                   )}
 
                   {/* Checkdown: Backside RB Flat */}
                   {((targetSide === 'left' && pid === 'LH') || (targetSide !== 'left' && pid === 'RH')) && (
-                    <>
-                      <circle
-                        r={isFinalCarrier ? 26 : 20}
-                        fill="#3B82F6"
-                        fillOpacity={isFinalCarrier ? 0.35 : 0.12}
-                        stroke={isFinalCarrier ? '#BFDBFE' : '#3B82F6'}
-                        strokeWidth={isFinalCarrier ? 2.5 : 1.2}
-                        strokeDasharray={isFinalCarrier ? '5 2.5' : '3 2'}
-                      />
-                      <text
-                        x="0"
-                        y="-26"
-                        textAnchor="middle"
-                        fill={isFinalCarrier ? '#BFDBFE' : '#93C5FD'}
-                        fontSize={isFinalCarrier ? '10' : '8.5'}
-                        fontWeight="800"
-                        className="font-mono-tabular"
-                      >
-                        {isFinalCarrier ? '★ TARGET: CHECKDOWN' : 'CHECKDOWN'}
-                      </text>
-                    </>
+                    <circle
+                      r={isFinalCarrier ? 26 : 20}
+                      fill="#3B82F6"
+                      fillOpacity={isFinalCarrier ? 0.35 : 0.12}
+                      stroke={isFinalCarrier ? '#BFDBFE' : '#3B82F6'}
+                      strokeWidth={isFinalCarrier ? 2.5 : 1.2}
+                      strokeDasharray={isFinalCarrier ? '5 2.5' : '3 2'}
+                    />
                   )}
 
                   {/* Backside: Isolated Post */}
                   {((targetSide === 'left' && pid === 'YTE') || (targetSide !== 'left' && pid === 'XTE')) && (
-                    <>
-                      <circle
-                        r={isFinalCarrier ? 26 : 20}
-                        fill="#F43F5E"
-                        fillOpacity={isFinalCarrier ? 0.35 : 0.12}
-                        stroke={isFinalCarrier ? '#FECDD3' : '#F43F5E'}
-                        strokeWidth={isFinalCarrier ? 2.5 : 1.2}
-                        strokeDasharray={isFinalCarrier ? '5 2.5' : '3 2'}
-                      />
-                      <text
-                        x="0"
-                        y="-26"
-                        textAnchor="middle"
-                        fill={isFinalCarrier ? '#FECDD3' : '#FDA4AF'}
-                        fontSize={isFinalCarrier ? '10' : '8.5'}
-                        fontWeight="800"
-                        className="font-mono-tabular"
-                      >
-                        {isFinalCarrier ? '★ TARGET: BACKSIDE POST' : 'POST'}
-                      </text>
-                    </>
+                    <circle
+                      r={isFinalCarrier ? 26 : 20}
+                      fill="#F43F5E"
+                      fillOpacity={isFinalCarrier ? 0.35 : 0.12}
+                      stroke={isFinalCarrier ? '#FECDD3' : '#F43F5E'}
+                      strokeWidth={isFinalCarrier ? 2.5 : 1.2}
+                      strokeDasharray={isFinalCarrier ? '5 2.5' : '3 2'}
+                    />
                   )}
                 </>
               )}
@@ -1857,7 +1690,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                 />
               )}
 
-              {/* Offensive Player Label (hidden on blank if labels removed) */}
+              {/* Offensive Player Label (hidden if labels are toggled off) */}
               {shouldShowLabels && (
                 <text
                   x="0"
@@ -1870,36 +1703,6 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                 >
                   {meta.label}
                 </text>
-              )}
-
-              {/* LOS Alignment Badge for Y and Z when Gaps/Splits tool is enabled */}
-              {showGapLabels && shouldShowLabels && !isBlankPlay && (pid === 'YTE' || pid === 'W') && (
-                <g transform="translate(0, 24)">
-                  <rect
-                    x="-36"
-                    y="-7"
-                    width="72"
-                    height="14"
-                    rx="3"
-                    fill="#060D11"
-                    fillOpacity="0.95"
-                    stroke={pid === 'YTE' ? '#10B981' : '#38BDF8'}
-                    strokeWidth="0.9"
-                  />
-                  <text
-                    x="0"
-                    y="3"
-                    textAnchor="middle"
-                    fill={pid === 'YTE' ? '#6EE7B7' : '#BAE6FD'}
-                    fontSize="7.5"
-                    fontWeight="700"
-                    className="font-mono-tabular pointer-events-none"
-                  >
-                    {pid === 'YTE'
-                      ? 'Attached (LOS)'
-                      : (eleventhMode === 'wing_z' ? 'Wing (Off LOS)' : 'Wide (Off LOS)')}
-                  </text>
-                </g>
               )}
             </g>
           );
