@@ -49,6 +49,7 @@ interface TacticalFieldCanvasProps {
   onChangeFieldTheme?: (theme: 'night_turf' | 'chalkboard' | 'high_contrast') => void;
   powerPassReceiver?: PowerPassReceiverOption;
   hideDefense?: boolean;
+  showPlayerLabels?: boolean;
 }
 
 function interpolatePoints(points: Point[], progress: number): Point {
@@ -99,6 +100,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   onChangeFieldTheme,
   powerPassReceiver = 'whip',
   hideDefense = false,
+  showPlayerLabels = true,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [internalFieldTheme, setInternalFieldTheme] = useState<'night_turf' | 'chalkboard' | 'high_contrast'>(fieldTheme);
@@ -124,6 +126,9 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   const isPower = (play.concept === 'power' || play.id.includes('power')) && !play.id.includes('pass') && play.concept !== 'flood';
   const isPowerPass = play.concept === 'flood' || play.id.includes('power-pass') || play.id.includes('flood');
   const isOptionPlay = isInsideVeer || isOutsideVeer || play.playType === 'Triple Option';
+
+  const isBlankPlay = play.concept === 'blank';
+  const shouldShowLabels = isBlankPlay ? !!showPlayerLabels : true;
 
   const getSvgCoords = (e: React.PointerEvent<SVGSVGElement> | React.MouseEvent<SVGSVGElement>): Point => {
     const svg = svgRef.current;
@@ -152,11 +157,13 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   const handlePointerMoveSvg = (e: React.PointerEvent<SVGSVGElement>) => {
     const pt = getSvgCoords(e);
     if (draggingPlayerId) {
-      const basePt = baseOffense[draggingPlayerId];
+      const offBase = baseOffense[draggingPlayerId];
+      const defNode = frontConfig.players.find((d) => d.id === draggingPlayerId);
+      const basePt = offBase || defNode;
       if (basePt) {
         onUpdateCustomOffset(draggingPlayerId, {
-          x: pt.x - basePt.x,
-          y: pt.y - basePt.y,
+          x: Math.round(pt.x - basePt.x),
+          y: Math.round(pt.y - basePt.y),
         });
       }
       return;
@@ -891,7 +898,15 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
   }
 
   const getAnimatedDefenderPoint = (def: (typeof frontConfig.players)[number]): Point => {
-    return currentDefensivePositions[def.id] || { x: def.x, y: def.y };
+    const rawPos = currentDefensivePositions[def.id] || { x: def.x, y: def.y };
+    const offset = customOffsets[def.id];
+    if (offset) {
+      return {
+        x: rawPos.x + offset.x,
+        y: rawPos.y + offset.y,
+      };
+    }
+    return rawPos;
   };
 
   // Compute live football position
@@ -1104,11 +1119,11 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
           <span className="font-bold text-white tracking-wide font-mono">{play.code}</span>
           <span aria-hidden="true" className="text-slate-600">·</span>
           <span>
-            {play.concept === 'blank'
-              ? 'Blank Whiteboard Formation (Drag Any Player · Draw with Coach Pen)'
+            {isBlankPlay
+              ? 'Blank Whiteboard Formation (Drag Offense & Defense · Draw with Coach Pen)'
               : `Formation: Split Back (${xMode === 'wide_x' ? 'Wide X' : 'Tight X'} / ${eleventhMode === 'wide_z' ? 'Wide Z' : 'Wing Z'})`}
           </span>
-          {!hideDefense && (
+          {!hideDefense && !isBlankPlay && (
             <>
               <span aria-hidden="true" className="text-slate-600">·</span>
               <span className="text-amber-400 font-semibold">{frontConfig.shortLabel}</span>
@@ -1123,15 +1138,17 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
             <span className="text-teal-300 font-bold">Night Turf</span>
           </div>
 
-          <div className="flex items-center gap-2 font-mono-tabular pl-2 border-l border-[#162A33]">
-            <span className="text-teal-400 font-bold">{simResult.ballCarrierSequence.outcomeLabel}</span>
-            {simResult.ballCarrierSequence.expectedYards && (
-              <>
-                <span aria-hidden="true" className="text-slate-600">·</span>
-                <span className="text-emerald-400 font-semibold">{simResult.ballCarrierSequence.expectedYards}</span>
-              </>
-            )}
-          </div>
+          {!isBlankPlay && (
+            <div className="flex items-center gap-2 font-mono-tabular pl-2 border-l border-[#162A33]">
+              <span className="text-teal-400 font-bold">{simResult.ballCarrierSequence.outcomeLabel}</span>
+              {simResult.ballCarrierSequence.expectedYards && (
+                <>
+                  <span aria-hidden="true" className="text-slate-600">·</span>
+                  <span className="text-emerald-400 font-semibold">{simResult.ballCarrierSequence.expectedYards}</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1234,12 +1251,14 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
         ))}
 
         {/* Line of Scrimmage Label */}
-        <text x="52" y="383" fill="#14B8A6" fillOpacity="0.9" fontSize="11" fontWeight="700" className="font-mono-tabular">
-          LINE OF SCRIMMAGE (LOS)
-        </text>
+        {shouldShowLabels && !isBlankPlay && (
+          <text x="52" y="383" fill="#14B8A6" fillOpacity="0.9" fontSize="11" fontWeight="700" className="font-mono-tabular">
+            LINE OF SCRIMMAGE (LOS)
+          </text>
+        )}
 
         {/* Optional Gap Labels & Split Guides */}
-        {showGapLabels && (
+        {showGapLabels && shouldShowLabels && !isBlankPlay && (
           <g>
             {gapMarkers.map((g, idx) => (
               <g key={`${g.label}-${idx}`} transform={`translate(${g.x}, 372)`}>
@@ -1494,12 +1513,51 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                 key={def.id}
                 transform={`translate(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`}
                 className="cursor-pointer"
+                onPointerDown={(e) => {
+                  if (chalkboardMode || isBlankPlay) {
+                    e.stopPropagation();
+                    try {
+                      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+                    } catch {}
+                    setDraggingPlayerId(def.id);
+                  }
+                }}
+                onMouseDown={(e) => {
+                  if (chalkboardMode || isBlankPlay) {
+                    e.stopPropagation();
+                    setDraggingPlayerId(def.id);
+                  }
+                }}
+                onTouchStart={(e) => {
+                  if (chalkboardMode || isBlankPlay) {
+                    e.stopPropagation();
+                    setDraggingPlayerId(def.id);
+                  }
+                }}
+                onPointerUp={(e) => {
+                  if (draggingPlayerId) {
+                    try {
+                      (e.currentTarget as Element).releasePointerCapture?.(e.pointerId);
+                    } catch {}
+                    setDraggingPlayerId(null);
+                  }
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectPlayer(def.id);
                 }}
               >
-                {hasRedKey && (
+                {(isSelected || draggingPlayerId === def.id) && (
+                  <polygon
+                    points="0,-20 20,0 0,20 -20,0"
+                    fill="none"
+                    stroke="#2DD4BF"
+                    strokeWidth="2.2"
+                    strokeDasharray={draggingPlayerId === def.id ? '3 2' : undefined}
+                  />
+                )}
+
+                {hasRedKey && !isBlankPlay && (
                   <>
                     <circle r="22" fill="#EF4444" fillOpacity="0.18" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="3 2" />
                     <text x="0" y="-26" textAnchor="middle" fill="#FCA5A5" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
@@ -1507,7 +1565,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                     </text>
                   </>
                 )}
-                {hasTealKey && (
+                {hasTealKey && !isBlankPlay && (
                   <>
                     <circle r="22" fill="#14B8A6" fillOpacity="0.18" stroke="#14B8A6" strokeWidth="1.5" strokeDasharray="3 2" />
                     <text x="0" y="-26" textAnchor="middle" fill="#5EEAD4" fontSize="9.5" fontWeight="700" className="font-mono-tabular">
@@ -1523,20 +1581,24 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                   stroke={isSelected ? '#FFFFFF' : hasRedKey ? '#FCA5A5' : hasTealKey ? '#5EEAD4' : '#334D5C'}
                   strokeWidth={isSelected ? 2.8 : 1.8}
                 />
-                <text
-                  x="0"
-                  y="4"
-                  textAnchor="middle"
-                  fill="#FFFFFF"
-                  fontSize="10"
-                  fontWeight="700"
-                  className="font-mono-tabular pointer-events-none"
-                >
-                  {hasRedKey ? '#1' : hasTealKey ? '#2' : def.label}
-                </text>
+
+                {/* Defender Node Text (hidden on blank if labels removed) */}
+                {shouldShowLabels && (
+                  <text
+                    x="0"
+                    y="4"
+                    textAnchor="middle"
+                    fill="#FFFFFF"
+                    fontSize="10"
+                    fontWeight="700"
+                    className="font-mono-tabular pointer-events-none"
+                  >
+                    {hasRedKey ? '#1' : hasTealKey ? '#2' : def.label}
+                  </text>
+                )}
 
                 {/* Front Gap Assignment Badge */}
-                {def.gap && (
+                {def.gap && shouldShowLabels && !isBlankPlay && (
                   <g>
                     <rect
                       x="-21"
@@ -1602,21 +1664,32 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
               transform={`translate(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`}
               className="cursor-pointer"
               onPointerDown={(e) => {
-                if (chalkboardMode) {
+                if (chalkboardMode || isBlankPlay) {
                   e.stopPropagation();
+                  try {
+                    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+                  } catch {}
                   setDraggingPlayerId(pid);
                 }
               }}
               onMouseDown={(e) => {
-                if (chalkboardMode) {
+                if (chalkboardMode || isBlankPlay) {
                   e.stopPropagation();
                   setDraggingPlayerId(pid);
                 }
               }}
               onTouchStart={(e) => {
-                if (chalkboardMode) {
+                if (chalkboardMode || isBlankPlay) {
                   e.stopPropagation();
                   setDraggingPlayerId(pid);
+                }
+              }}
+              onPointerUp={(e) => {
+                if (draggingPlayerId) {
+                  try {
+                    (e.currentTarget as Element).releasePointerCapture?.(e.pointerId);
+                  } catch {}
+                  setDraggingPlayerId(null);
                 }
               }}
               onClick={(e) => {
@@ -1624,8 +1697,14 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                 onSelectPlayer(pid);
               }}
             >
-              {isSelected && (
-                <circle r="22" fill="none" stroke="#2DD4BF" strokeWidth="2.5" />
+              {(isSelected || draggingPlayerId === pid) && (
+                <circle
+                  r={draggingPlayerId === pid ? 24 : 22}
+                  fill="none"
+                  stroke="#2DD4BF"
+                  strokeWidth="2.5"
+                  strokeDasharray={draggingPlayerId === pid ? '4 2' : undefined}
+                />
               )}
 
               {/* Highlight Power Pass Targets & Selected Receiver Option */}
@@ -1778,20 +1857,23 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                 />
               )}
 
-              <text
-                x="0"
-                y="4"
-                textAnchor="middle"
-                fill="#FFFFFF"
-                fontSize="10.5"
-                fontWeight="700"
-                className="font-mono-tabular pointer-events-none"
-              >
-                {meta.label}
-              </text>
+              {/* Offensive Player Label (hidden on blank if labels removed) */}
+              {shouldShowLabels && (
+                <text
+                  x="0"
+                  y="4"
+                  textAnchor="middle"
+                  fill="#FFFFFF"
+                  fontSize="10.5"
+                  fontWeight="700"
+                  className="font-mono-tabular pointer-events-none"
+                >
+                  {meta.label}
+                </text>
+              )}
 
               {/* LOS Alignment Badge for Y and Z when Gaps/Splits tool is enabled */}
-              {showGapLabels && (pid === 'YTE' || pid === 'W') && (
+              {showGapLabels && shouldShowLabels && !isBlankPlay && (pid === 'YTE' || pid === 'W') && (
                 <g transform="translate(0, 24)">
                   <rect
                     x="-36"

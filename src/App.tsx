@@ -100,6 +100,7 @@ export default function App() {
   const [offensePenColor, setOffensePenColor] = useState<string>('#FACC15');
   const [offensePenMode, setOffensePenMode] = useState<'freehand' | 'arrow'>('freehand');
   const [hideDefenseOnWhiteboard, setHideDefenseOnWhiteboard] = useState<boolean>(false);
+  const [showBlankPlayerLabels, setShowBlankPlayerLabels] = useState<boolean>(false);
 
   // Sync fullscreen change & Escape key listener for offense
   useEffect(() => {
@@ -684,14 +685,28 @@ export default function App() {
                         type="button"
                         onClick={() => setCustomOffsets({})}
                         className="px-2 py-1 rounded-md bg-[#050C10] border border-[#162A33] hover:border-amber-500/60 text-slate-400 hover:text-amber-300 text-[11px] font-semibold transition-all cursor-pointer"
-                        title="Reset player alignment offsets to baseline"
+                        title="Reset all offensive and defensive positions to baseline"
                       >
-                        Reset Alignment
+                        Reset All Positions
                       </button>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowBlankPlayerLabels((prev) => !prev)}
+                      className={`px-2.5 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        showBlankPlayerLabels
+                          ? 'border-teal-500/60 bg-teal-950/60 text-teal-300 shadow-sm'
+                          : 'border-[#162A33] bg-[#050C10] text-slate-400 hover:text-white'
+                      }`}
+                      title="Toggle player position labels inside circles & diamonds"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Labels: {showBlankPlayerLabels ? 'Visible' : 'Hidden (Clean)'}</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => setHideDefenseOnWhiteboard((prev) => !prev)}
@@ -956,19 +971,34 @@ export default function App() {
                             Reset
                           </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setHideDefenseOnWhiteboard((prev) => !prev)}
-                          className={`px-2.5 py-1 rounded-md border text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                            hideDefenseOnWhiteboard
-                              ? 'border-amber-500/60 bg-amber-950/50 text-amber-300'
-                              : 'border-teal-500/40 bg-teal-950/50 text-teal-300'
-                          }`}
-                          title="Toggle defensive personnel on or off for whiteboard canvas"
-                        >
-                          <Shield className="w-3 h-3" />
-                          <span>Defense: {hideDefenseOnWhiteboard ? 'Off (Offense Only)' : 'On (vs Front)'}</span>
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setShowBlankPlayerLabels((prev) => !prev)}
+                            className={`px-2 py-0.5 rounded border text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                              showBlankPlayerLabels
+                                ? 'border-teal-500/60 bg-teal-950/60 text-teal-300'
+                                : 'border-[#162A33] bg-[#050C10] text-slate-400 hover:text-white'
+                            }`}
+                            title="Toggle player position labels inside circles & diamonds"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>Labels: {showBlankPlayerLabels ? 'Visible' : 'Hidden'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setHideDefenseOnWhiteboard((prev) => !prev)}
+                            className={`px-2 py-0.5 rounded border text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                              hideDefenseOnWhiteboard
+                                ? 'border-amber-500/60 bg-amber-950/50 text-amber-300'
+                                : 'border-teal-500/40 bg-teal-950/50 text-teal-300'
+                            }`}
+                            title="Toggle defensive personnel on or off for whiteboard canvas"
+                          >
+                            <Shield className="w-3 h-3" />
+                            <span>Defense: {hideDefenseOnWhiteboard ? 'Off' : 'On'}</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -992,6 +1022,7 @@ export default function App() {
                     showBlockingAngles={showBlockingAngles}
                     chalkboardMode={chalkboardMode || isOffenseFullscreen}
                     hideDefense={concept === 'blank' && hideDefenseOnWhiteboard}
+                    showPlayerLabels={concept === 'blank' ? showBlankPlayerLabels : true}
                     customOffsets={customOffsets}
                     onUpdateCustomOffset={(pid: string, pt: Point) =>
                       setCustomOffsets((prev) => ({ ...prev, [pid]: pt }))
