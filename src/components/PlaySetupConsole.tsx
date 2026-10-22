@@ -870,47 +870,39 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                     Choose which receiver the quarterback targets in the play-action pass rhythm:
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     {[
                       {
                         id: 'arrow' as PowerPassReceiverOption,
-                        label: targetSide === 'left' ? '1) 2-Back Arrow (Flat)' : '1) 3-Back Arrow (Flat)',
+                        label: '1) 2-Back Arrow (Flat)',
                         badge: '1st Read · Throw @ 60%',
-                        targetPid: targetSide === 'left' ? 'RH' : 'LH',
+                        targetPid: 'RH',
                         yards: '+12.0 Yds',
                         highlight: 'text-teal-300',
                       },
                       {
                         id: 'whip' as PowerPassReceiverOption,
-                        label: targetSide === 'left' ? '2) X 7-Yd Whip Out' : '2) Y 7-Yd Whip Out',
+                        label: '2) Y 7–10 Yd Dig',
                         badge: '2nd Read · Throw @ 65%',
-                        targetPid: targetSide === 'left' ? 'XTE' : 'YTE',
+                        targetPid: 'YTE',
                         yards: '+18.0 Yds',
                         highlight: 'text-purple-300',
                       },
                       {
                         id: 'corner' as PowerPassReceiverOption,
-                        label: '3) Z Post Corner',
+                        label: '3) X Post-Corner (or Vert)',
                         badge: '3rd Read · Throw @ 68%',
-                        targetPid: 'W',
-                        yards: '+35.0 Yds TD',
+                        targetPid: 'XTE',
+                        yards: '+28.0 Yds',
                         highlight: 'text-amber-300',
                       },
                       {
                         id: 'post' as PowerPassReceiverOption,
-                        label: targetSide === 'left' ? 'Backside: Y Post' : 'Backside: X Post',
+                        label: '4) Z Deep Post',
                         badge: '4th Read · Throw @ 73%',
-                        targetPid: targetSide === 'left' ? 'YTE' : 'XTE',
-                        yards: '+28.0 Yds',
+                        targetPid: 'W',
+                        yards: '+35.0 Yds TD',
                         highlight: 'text-rose-300',
-                      },
-                      {
-                        id: 'checkdown' as PowerPassReceiverOption,
-                        label: targetSide === 'left' ? 'Check: 3-Back Flat' : 'Check: 2-Back Flat',
-                        badge: 'Safety Valve · Throw @ 75%',
-                        targetPid: targetSide === 'left' ? 'LH' : 'RH',
-                        yards: '+9.0 Yds',
-                        highlight: 'text-blue-300',
                       },
                     ].map((rcv) => {
                       const isSelected = powerPassReceiver === rcv.id;
@@ -994,25 +986,21 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                   </span>
                   <p className="text-xs font-bold text-white">
                     {powerPassReceiver === 'arrow'
-                      ? targetSide === 'left' ? '1) 2-Back Arrow Route into Left Flat (+12 Yds)' : '1) 3-Back Arrow Route into Right Flat (+12 Yds)'
+                      ? '1) 2-Back Arrow Route into Weak Flat (+12 Yds)'
+                      : powerPassReceiver === 'whip'
+                      ? '2) Y 7–10 Yard Dig Route Across Middle (+18 Yds)'
                       : powerPassReceiver === 'corner'
-                      ? '3) Z Post Corner Over Top (+35 Yds Touchdown)'
-                      : powerPassReceiver === 'checkdown'
-                      ? targetSide === 'left' ? 'Checkdown: 3-Back Peeling into Backside Flat (+9 Yds)' : 'Checkdown: 2-Back Peeling into Backside Flat (+9 Yds)'
-                      : powerPassReceiver === 'post'
-                      ? targetSide === 'left' ? 'Backside: Y Snapping Deep Post Across Middle (+28 Yds)' : 'Backside: X Snapping Deep Post Across Middle (+28 Yds)'
-                      : targetSide === 'left' ? '2) X 7-Yard Whip Out to Left Sideline (+18 Yds)' : '2) Y 7-Yard Whip Out to Right Sideline (+18 Yds)'}
+                      ? '3) X Post-Corner / Boundary Vertical (+28 Yds)'
+                      : '4) Z Inside-Leverage Deep Post (+35 Yds Touchdown)'}
                   </p>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
                     {powerPassReceiver === 'arrow'
-                      ? 'Playside halfback chips the outside shoulder of the defensive end, then explodes on the arrow track to the flat. Immediate horizontal stress forces the perimeter overhang defender into a no-win spot.'
+                      ? '2-Back crosses the QB face, delivers a violent 2-second block on the weak DE, then releases into the weak flat as the primary target in the rollout rhythm.'
+                      : powerPassReceiver === 'whip'
+                      ? 'Y drives vertically 7–10 yards hard with pad level down, then snaps 90° flat across the middle on a dig directly behind the flowing linebackers.'
                       : powerPassReceiver === 'corner'
-                      ? 'Z stems vertically 10 yards, fakes hard on the post move inside with head and shoulders to freeze the free safety, then breaks 45° to the corner pylon into the open honey-hole behind the cornerback.'
-                      : powerPassReceiver === 'checkdown'
-                      ? 'Backside halfback stones the backside defensive end for a 2-count pass protection block, then leaks into the backside flat as a safety valve when linebackers drop deep with receivers.'
-                      : powerPassReceiver === 'post'
-                      ? 'Backside split end attacks the cornerback’s outside leverage to flip his hips, then cuts across the deep middle into vacant space created by linebackers biting up on the run fake.'
-                      : 'Tight end drives 7 yards upfield into the defender’s chest, plants hard for 2 steps inside, and violently snaps the whip out to the sideline away from collapsing linebackers.'}
+                      ? 'Tight X stems post to freeze the safety, then breaks 45° to the corner pylon (if split out wide, drives pure vertical down the boundary to clear the corner).'
+                      : 'Z attacks the outside leverage of the cornerback to win inside position, then cuts deep post across the middle of the field.'}
                   </p>
                 </div>
               </div>

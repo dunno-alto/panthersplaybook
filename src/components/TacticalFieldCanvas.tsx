@@ -927,42 +927,36 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
       let catchProgress = 0.80;
       let loftAmount = 14;
 
-      if (powerPassReceiver === 'arrow') {
-        // 1st Read: Arrow route throws at 60% (progress 0.60)
-        targetPlayerId = targetSide === 'left' ? 'RH' : 'LH';
+if (powerPassReceiver === 'arrow') {
+        // 1st Read: 2-Back (RH) Arrow route into weak flat
+        targetPlayerId = 'RH';
         releaseProgress = 0.60;
         catchProgress = 0.76;
         loftAmount = 10;
       } else if (powerPassReceiver === 'whip') {
-        // 2nd Read: Y Whip throws at 65% (progress 0.65)
-        targetPlayerId = targetSide === 'left' ? 'XTE' : 'YTE';
+        // 2nd Read: Y (YTE) 7-10 Yd Dig across middle
+        targetPlayerId = 'YTE';
         releaseProgress = 0.65;
         catchProgress = 0.80;
         loftAmount = 14;
       } else if (powerPassReceiver === 'corner') {
-        // 3rd Read: Corner route throws at 68% (progress 0.68)
-        targetPlayerId = 'W';
+        // 3rd Read: X (XTE) Post-Corner / Boundary Vertical
+        targetPlayerId = 'XTE';
         releaseProgress = 0.68;
         catchProgress = 0.86;
-        loftAmount = 26;
+        loftAmount = 24;
       } else if (powerPassReceiver === 'post') {
-        // Backside: X Post throws at 73% (progress 0.73)
-        targetPlayerId = targetSide === 'left' ? 'YTE' : 'XTE';
+        // 4th Read: Z (W) Deep Inside Post
+        targetPlayerId = 'W';
         releaseProgress = 0.73;
         catchProgress = 0.89;
-        loftAmount = 22;
-      } else if (powerPassReceiver === 'checkdown') {
-        // Checkdown: throws at 75% (progress 0.75)
-        targetPlayerId = targetSide === 'left' ? 'LH' : 'RH';
-        releaseProgress = 0.75;
-        catchProgress = 0.88;
-        loftAmount = 12;
+        loftAmount = 26;
       } else {
-        // Default to Y Whip (65%)
-        targetPlayerId = targetSide === 'left' ? 'XTE' : 'YTE';
-        releaseProgress = 0.65;
-        catchProgress = 0.80;
-        loftAmount = 14;
+        // Default to 1st Read: 2-Back (RH) Arrow
+        targetPlayerId = 'RH';
+        releaseProgress = 0.60;
+        catchProgress = 0.76;
+        loftAmount = 10;
       }
 
       const qbPos = currentOffensivePositions.QB;
@@ -1751,19 +1745,22 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                 <span className="w-2.5 h-2.5 rotate-45 bg-[#DC2626] inline-block" /> Kickout Target
               </span>
             </>
-          ) : isPowerPass ? (
+) : isPowerPass ? (
             <>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-[#14B8A6] inline-block" /> 1) RB Arrow (Flat)
+                <span className="w-3 h-0.5 bg-[#14B8A6] inline-block" /> 1) 2-Back Arrow (Flat)
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-[#A855F7] inline-block" /> 2) Y 7-Yd Whip Out
+                <span className="w-3 h-0.5 bg-[#A855F7] inline-block" /> 2) Y 7-10 Yd Dig
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-[#38BDF8] inline-block" /> 3) Z Post Corner
+                <span className="w-3 h-0.5 bg-[#38BDF8] inline-block" /> 3) X Post-Corner (or Vert)
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-[#F59E0B] inline-block" /> Power Run Fake
+                <span className="w-3 h-0.5 bg-[#F43F5E] inline-block" /> 4) Z Deep Post
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-0.5 bg-[#F59E0B] inline-block" /> 6-Hole Fake (3-Back)
               </span>
             </>
           ) : (

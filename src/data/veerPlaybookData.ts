@@ -2030,50 +2030,285 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
   // 5. FLOOD (36/35 FLOOD)
   {
     id: '324-power-pass',
-    code: '36 FLOOD',
-    name: '36/35 Flood',
-    subtitle: 'Play-Action Flood — Z Post Corner · Y 7-Yd Whip Out · 3 Back Step Back & Release Arrow · 2 Back Checkdown Goes First · QB Rollout to Flood Side',
+    code: '36/25 FLOOD',
+    name: '36/25 Flood',
+    subtitle: 'Play-Action Rollout: 3 March & Fake ➔ 2 Chip & Arrow (1st) ➔ Y Dig (2nd) ➔ X Post-Corner/Vert (3rd) ➔ Z Post (4th)',
     seriesTag: 'Core 05',
     playType: 'Play-Action Pass',
-    targetGap: 'Flood Concept (1: RB Arrow Flat / 2: Y 7-Yd Whip Out / 3: Z Post Corner)',
-    primaryReadLabel: 'Progression: 1) RB Arrow ➔ 2) Y 7-Yd Whip Out',
-    secondaryReadLabel: '3rd Read: Z Post Corner | Checkdown: 2 Flat / Backside: X Post',
+    targetGap: 'Weak-Side Rollout Flood (1: 2-Back Arrow / 2: Y Dig / 3: X Post-Corner / 4: Z Post)',
+    primaryReadLabel: '1st: 2-Back Arrow (Weak Flat)',
+    secondaryReadLabel: '2nd: Y Dig (7-10 yds) | 3rd: X Post-Corner | 4th: Z Post',
     summary:
-      'The 36/35 Flood play-action passing concept (36 Flood to the right, 35 Flood to the left) off the power look. QB fakes, rolls out to the side of the flood, and reads: 1) RB on Arrow route into the flat (takes one step back so checkdown clears, then accelerates into flat), 2) Y on 7-yd Whip Out snapping back out to the sideline, and 3) Z on Post Corner stretching deep coverage. Checkdown back fires across first to the backside flat. Backside guard pulls across to stone backside DE.',
+      'Play-action rollout to the weak side off 6-hole fake. The 3-back takes a left-right timing march and fakes into the 6-hole. The 1 (QB) long-arm fakes, rolls weak, and reads: 1) 2-Back on arrow route after hard-blocking weak DE for a 2-count, 2) Y on 7-10 yard dig across the middle, 3) X on post-corner (or pure vertical if split out), and 4) Z on deep post.',
     whenToCall:
-      'When the defense bites hard on 24 Power run action or stacks the box against Veer, leaving perimeter zones vulnerable to flood overload.',
+      'When defensive linebackers flow aggressively to 6-hole / inside veer run actions, opening up the weak-side flat and intermediate dig window.',
     qbDecisionMatrix: {
-      crashPull: 'Play-action fake, roll out to side of flood outside tackle box behind pass pro.',
-      squeezeGive: '1st Read: RB on the Arrow route releasing into flat to create immediate horizontal conflict on edge defender.',
-      pitchPhase: '2nd Read: Y on the 7-yard Whip Out pivoting away from collapsing linebackers; 3rd Read: Z on Post Corner.',
+      crashPull:
+        '1st Target (2-Back Arrow): 2-Back crosses face, hard blocks weak DE for 2 seconds, releases into weak flat. If open, deliver immediately in rhythm.',
+      squeezeGive:
+        '2nd Target (Y Dig): Y stems vertical 7-10 yards, snaps across middle behind flowing linebackers into intermediate hole.',
+      pitchPhase:
+        '3rd Target (X Post-Corner / Vert): X breaks to corner pylon (or vertical if split). 4th Target (Z Post): Z crosses deep middle on inside-leverage post.',
     },
     coachingPhases: [
       {
         phase: 1,
         timeRange: [0, 0.25],
-        title: 'Phase 1: Power Fake & Pass Pro Setup',
-        detail: 'O-line sets: RG pulls to backside DE, RT shifts inside for pass pro, 2 back fires across first on checkdown, 3 back takes one step back before arrow release, and QB rolls out to side of flood.',
+        title: 'Phase 1: Pre-Snap & 3-Back Timing March',
+        detail:
+          '3-back takes left-then-right timing march back. LG pulls across formation to strong DE. LT steps right; Center, RG, and RT step left.',
       },
       {
         phase: 2,
-        timeRange: [0.25, 0.55],
-        title: 'Phase 2: Route Stems & Dual Flat Releases',
-        detail: 'Y drives 7 yards, X drives at outside shoulder of CB before going post, Z stems vertical on post move, 3 back releases arrow to playside flat, and 2 back checks to backside flat.',
+        timeRange: [0.25, 0.5],
+        title: 'Phase 2: 6-Hole Fake & 2-Back DE Chip',
+        detail:
+          'QB long-arm fakes to 3-back into 6-hole. 2-back crosses face and delivers violent 2-second block on weak DE. Y, X, and Z stem vertically.',
       },
       {
         phase: 3,
-        timeRange: [0.55, 0.8],
-        title: 'Phase 3: Route Breaks & Progression Timing',
-        detail: 'QB progression: 1) RB on Arrow route into flat ➔ 2) Y on 7-yd Whip Out ➔ 3) Z on Post Corner.',
+        timeRange: [0.5, 0.75],
+        title: 'Phase 3: Weak Rollout & Route Breaks',
+        detail:
+          'QB rolls weak outside LT. 2-back releases to flat on arrow. Y snaps 7-10 yd dig across middle. X breaks post-corner (or vertical); Z breaks on post.',
       },
       {
         phase: 4,
-        timeRange: [0.8, 1.0],
-        title: 'Phase 4: High-Percentage Strike & RAC',
-        detail: 'QB delivers in rhythm to RB on the Arrow or Y snapping whip out to sideline, with Z over the top.',
+        timeRange: [0.75, 1.0],
+        title: 'Phase 4: Progression Strike (2 ➔ Y ➔ X ➔ Z)',
+        detail:
+          'QB delivers strike in rhythm to 2-back in flat, Y on dig behind LBs, X on deep corner, or Z crossing deep post.',
       },
     ],
-    positionRules: FLOOD_POSITION_RULES,
+    positionRules: {
+      QB: {
+        id: 'QB',
+        label: '1',
+        fullName: 'Quarterback (1)',
+        group: 'BACK',
+        split: 'Under Center',
+        stance: 'Under center low with even feet.',
+        aimingPoint: '6-Hole Fake ➔ Weak-Side Rollout',
+        footwork:
+          'Open left with a long-arm fake into the chest of the 3-back heading for the 6-hole. Ride the fake, pull the ball cleanly, and roll out to the weak side outside the tackle box with shoulders squared to the field.',
+        assignmentsByFront: {
+          '5-3': 'Open left, ride long-arm fake to 3-back into 6-hole, roll out weak. Progression: 1) 2-Back Arrow ➔ 2) Y Dig (7-10 yds) ➔ 3) X Post-Corner/Vert ➔ 4) Z Post.',
+          '4-4': 'Long-arm fake right to 3-back, bootleg weak side away from LB flow. Read 2-back flat to Y dig.',
+          '4-3': 'Open left, fake 6-hole, rollout weak behind pass pro.',
+          '6-2': 'Hard fake to freeze interior line, roll weak outside LT. Hit 2-back immediate arrow or Y in dig window.',
+          '5-2': 'Sell run fake to strong side, roll out weak behind 2-back block on weak DE. Deliver strike in rhythm.',
+          '3-4': 'Open left, long-arm mesh to 3-back, rollout weak. Read 2-back arrow ➔ Y dig ➔ X post-corner ➔ Z post.',
+        },
+        coachingCue: 'Long-arm fake to 6-hole, roll weak, read: 2-Back ➔ Y ➔ X ➔ Z!',
+        commonErrorsFix: 'Rushing the rollout without selling the fake allows the backside DE to stay home. Long-arm the ball to freeze the defense.',
+      },
+      LH: {
+        id: 'LH',
+        label: '3',
+        fullName: '3-Back (Left Halfback / Dive Fake)',
+        group: 'BACK',
+        split: '3–4 yds depth directly behind LG',
+        stance: 'Butt down, back at 45° angle, chest up, hand lightly in ground.',
+        aimingPoint: '6-Hole (Off-Tackle Strong Side)',
+        footwork:
+          'Take a march-step back with the left foot, then the right foot for timing. Turn shoulders toward the 6-hole and attack downhill into the line of scrimmage, securing the fake handoff from 1 with a high-pocket clamp.',
+        assignmentsByFront: {
+          '5-3': 'March back Left-Right for timing, turn toward 6-hole, take fake handoff from 1 and run hard into the line of scrimmage to bait defensive tackles and linebackers.',
+          '4-4': 'Two-step timing march, explode toward 6-hole, clamp down on fake handoff to freeze inside linebackers.',
+          '4-3': 'March back L-R, sell 6-hole run give.',
+          '6-2': 'March back L-R, hit 6-hole with pad level down, sell inside give completely.',
+          '5-2': 'Timing steps back, attack strong B/C seam off tackle, hold defensive line with realistic run bite.',
+          '3-4': 'March back L-R, turn to 6-hole, take fake from QB, explode downhill to draw safety support.',
+        },
+        coachingCue: 'Left-Right march for timing! Turn to the 6-hole, clamp the fake, and sell the run!',
+        commonErrorsFix: 'Skipping the two march steps causes the 3-back to arrive too fast before the QB can extend the long-arm fake. Be patient on the timing march.',
+      },
+      RH: {
+        id: 'RH',
+        label: '2',
+        fullName: '2-Back (Right Halfback / Primary Target)',
+        group: 'BACK',
+        split: '3–4 yds depth directly behind RG (Even with 3-back)',
+        stance: 'Butt down, back at 45° angle, chest up, hand lightly in ground.',
+        aimingPoint: 'Weak-Side DE ➔ Weak-Side Flat (Arrow Route)',
+        footwork:
+          'On snap, cross the face of the quarterback to the weak side. Strike and hard-block the weak-side DE for a strict 2-count. Disengage and release immediately into the weak flat on an arrow route.',
+        assignmentsByFront: {
+          '5-3': 'Cross face, hard block weak DE for 2 seconds. Release into weak flat on arrow route as PRIMARY (1st) target.',
+          '4-4': 'Cross face, stone weak edge rusher for 2 count, slip into flat for quick pitch/catch from rolling QB.',
+          '4-3': 'Cross face, chip weak DE 2 count, release arrow to flat.',
+          '6-2': 'Cross face, collision weak DE to buy QB bootleg depth, then peel into wide-open arrow route.',
+          '5-2': 'Cross face, deliver physical 2-second block on weak end, release to flat away from flow.',
+          '3-4': 'Cross face, punch weak 4-tech/OLB for 2 count, snap out on arrow route as #1 read.',
+        },
+        coachingCue: 'Cross face, STRIKE the DE for 2 seconds, then flash your numbers in the flat!',
+        commonErrorsFix: 'Releasing without blocking allows the weak DE to hit the QB before he can set his feet. Deliver a violent 2-second strike before releasing.',
+      },
+      LT: {
+        id: 'LT',
+        label: 'LT',
+        fullName: 'Left Tackle',
+        group: 'OL',
+        split: '2–3 ft split',
+        stance: '3-point pass pro stance; weight balanced.',
+        aimingPoint: 'Inside Gap (Step Right)',
+        footwork: 'Drop-step and slide right to secure the inside gap in slide pass protection.',
+        assignmentsByFront: {
+          '5-3': 'Pass pro: Step to the right, post inside gap, protect the interior rush lane.',
+          '4-4': 'Pass pro: Slide right, secure interior threat with Center.',
+          '4-3': 'Pass pro: Slide right, protect B-gap.',
+          '6-2': 'Pass pro: Step right, lock down defensive tackle.',
+          '5-2': 'Pass pro: Step right, maintain firm pocket inside.',
+          '3-4': 'Pass pro: Slide right against interior rush.',
+        },
+        coachingCue: 'Step right! Lock the inside gap in slide pro!',
+        commonErrorsFix: 'Over-setting to the left leaves a wide open B-gap lane behind the pulling LG.',
+      },
+      LG: {
+        id: 'LG',
+        label: 'LG',
+        fullName: 'Left Guard (Pulling Protector)',
+        group: 'OL',
+        split: '2–3 ft split',
+        stance: '3-point stance, weight balanced with light fingers.',
+        aimingPoint: 'Strong-Side Defensive End',
+        footwork:
+          'Open and pull flat across the formation behind the Center and RT. Target the strong-side DE and execute a hard pass-block just like an RB pick-up.',
+        assignmentsByFront: {
+          '5-3': 'Pull right across formation, square up and hard-block the strong-side DE to seal the edge of the pocket.',
+          '4-4': 'Pull flat across, stone strong DE/edge rusher with aggressive punch.',
+          '4-3': 'Pull flat right, kick out strong DE.',
+          '6-2': 'Pull right, meet strong defensive end at the point of attack, anchor the pass block.',
+          '5-2': 'Pull across the Center, fit strong DE like an RB pass-pro kickout block.',
+          '3-4': 'Pull flat to strong side, destroy strong DE rush.',
+        },
+        coachingCue: 'Pull flat across! Hard block the strong DE like a fullback!',
+        commonErrorsFix: 'Looping too deep in the backfield runs into the rolling QB. Skim the heels of the offensive line.',
+      },
+      C: {
+        id: 'C',
+        label: 'C',
+        fullName: 'Center',
+        group: 'OL',
+        split: '0 ft (Ball Snap)',
+        stance: 'Balanced 2/3-point stance, heads-up snap.',
+        aimingPoint: 'Left Gap (Slide Left)',
+        footwork: 'Snap the ball and immediately step/slide to the left in slide protection.',
+        assignmentsByFront: {
+          '5-3': 'Pass pro: Step left, secure A-gap rush.',
+          '4-4': 'Pass pro: Step left with RG, establish inside wall.',
+          '4-3': 'Pass pro: Slide left into A-gap.',
+          '6-2': 'Pass pro: Slide left, pick up interior guard/tackle.',
+          '5-2': 'Pass pro: Step left into A-gap, maintain firm pocket.',
+          '3-4': 'Pass pro: Slide left on 0-tech nose.',
+        },
+        coachingCue: 'Snap and step left! Seal the A-gap!',
+        commonErrorsFix: 'Watching the fake allows interior rushers to split the A-gap. Step left immediately after snap.',
+      },
+      RG: {
+        id: 'RG',
+        label: 'RG',
+        fullName: 'Right Guard',
+        group: 'OL',
+        split: '2–3 ft split',
+        stance: '3-point pass pro stance.',
+        aimingPoint: 'Left Gap (Slide Left)',
+        footwork: 'Pass pro: Step to the left, lock down the adjacent inside gap in slide protection.',
+        assignmentsByFront: {
+          '5-3': 'Pass pro: Step left, pick up penetrating defensive tackle.',
+          '4-4': 'Pass pro: Slide left, close B-to-A crease.',
+          '4-3': 'Pass pro: Slide left with Center.',
+          '6-2': 'Pass pro: Step left, brace interior pass rush.',
+          '5-2': 'Pass pro: Step left, support Center in slide pro.',
+          '3-4': 'Pass pro: Step left, punch interior rusher.',
+        },
+        coachingCue: 'Step left! Firm base, anchor the interior!',
+        commonErrorsFix: 'Leaning forward into defenders causes lunging. Keep chest high and slide left.',
+      },
+      RT: {
+        id: 'RT',
+        label: 'RT',
+        fullName: 'Right Tackle',
+        group: 'OL',
+        split: '2–3 ft split',
+        stance: '3-point pass pro stance.',
+        aimingPoint: 'Left Gap (Slide Left)',
+        footwork: 'Pass pro: Step to the left, locking down the B-gap crease behind the pulling LG.',
+        assignmentsByFront: {
+          '5-3': 'Pass pro: Step left, hinge inside and secure pass protection wall.',
+          '4-4': 'Pass pro: Slide left with RG, keep rushers in front.',
+          '4-3': 'Pass pro: Step left, hinge inside.',
+          '6-2': 'Pass pro: Step left, absorb defensive tackle inside.',
+          '5-2': 'Pass pro: Step left, lock interior gap.',
+          '3-4': 'Pass pro: Step left, maintain pocket width.',
+        },
+        coachingCue: 'Step left! Hinge and lock the gap!',
+        commonErrorsFix: 'Chasing the pulling LG leaves a gaping crease. Step left and hold your ground.',
+      },
+      YTE: {
+        id: 'YTE',
+        label: 'Y',
+        fullName: 'Tight End (Y - 2nd Target)',
+        group: 'TE',
+        split: '2–3 ft split attached to Right Tackle',
+        stance: '3-point stance, inside hand down.',
+        aimingPoint: '7–10 Yard Dig Route (Middle of Field)',
+        footwork:
+          'Fire off the ball vertically with violent pad level, driving upfield 7 to 10 yards. Based on linebacker traffic, snap flat across the middle on a dig route right behind the flowing backers.',
+        assignmentsByFront: {
+          '5-3': 'Vertical release 7-10 yards, plant outside foot, snap dig across middle behind vacating linebackers as 2nd TARGET.',
+          '4-4': 'Drive vertical hard, stem to 8 yards, break across hash marks in open window between linebackers.',
+          '4-3': 'Vertical stem 8 yds, dig across middle.',
+          '6-2': 'Release vertical 7 yards, cross face of linebackers on dig route.',
+          '5-2': 'Drive upfield 7-10 yds, cut flat across the middle behind the run bite.',
+          '3-4': 'Vertical stem 7-10 yds, find open void in middle of field on dig route.',
+        },
+        coachingCue: 'Hard vertical stem! Snap at 7-10 yards on the dig behind the linebackers!',
+        commonErrorsFix: 'Rounding the break allows the trailing linebacker to undercut the pass. Plant hard and snap flat at 90 degrees.',
+      },
+      XTE: {
+        id: 'XTE',
+        label: 'X',
+        fullName: 'X Receiver (Tight End / Split End)',
+        group: 'WR',
+        split: 'Tight: Attached 2–3 ft from LT | Split: On numbers (boundary)',
+        stance: 'Tight: 3-point stance | Split: 2-point stance, inside foot up.',
+        aimingPoint: 'Tight X: Post-Corner Route | Split X: Boundary Vertical (Go Route)',
+        footwork:
+          'Tight Alignment: Release vertical 10 yds, stem post inside to freeze safety, plant and snap 45° to corner pylon (3rd target). Split Alignment: Fire off snap, press CB outside leverage, and drive vertical down the boundary sideline to clear the flat.',
+        assignmentsByFront: {
+          '5-3': 'Tight X runs Post-Corner (3rd target); Split X runs pure Vertical down the boundary to clear deep coverage for the 2-Back arrow.',
+          '4-4': 'Tight: Stem post to corner pylon. Split: Drive vertical to pin boundary corner.',
+          '4-3': 'Tight: Post-corner. Split: Boundary go route.',
+          '6-2': 'Tight: Post-corner into weak pylon void. Split: Pure vertical clear-out.',
+          '5-2': 'Tight: Sell post, break corner. Split: Vertical streak up the numbers.',
+          '3-4': 'Tight: 10-yd stem, snap corner pylon. Split: Vertical route down sideline.',
+        },
+        coachingCue: 'Tight = Post-Corner! Split = Pure Vertical down the sideline!',
+        commonErrorsFix: 'When split out wide, trying to cut a post-corner runs you out of grass. Drive vertically to clear the flat for the 2-back.',
+      },
+      W: {
+        id: 'W',
+        label: 'Z',
+        fullName: 'Z Receiver (4th Target)',
+        group: 'WR',
+        split: '3 yds inside numbers (or 1 yd outside Y if wing)',
+        stance: '2-point stance, inside foot up, eyes locked on the football.',
+        aimingPoint: 'Inside Leverage Post Route (Deep Middle)',
+        footwork:
+          'Drive vertical 8–10 yards, attack the outside shoulder of the corner to win inside leverage, then cut hard at a 45° angle on a deep post crossing into the middle of the field.',
+        assignmentsByFront: {
+          '5-3': 'Drive vertical, win inside leverage, run deep post crossing behind safety as 4th TARGET.',
+          '4-4': 'Vertical stem, break inside on deep post across the field.',
+          '4-3': 'Vertical stem 10 yds, snap inside to deep post.',
+          '6-2': 'Attack deep middle on post route.',
+          '5-2': 'Win inside leverage on CB, break to post.',
+          '3-4': 'Drive vertical, cut post across the field into deep void.',
+        },
+        coachingCue: 'Attack outside leverage, then drive inside on the deep post!',
+        commonErrorsFix: 'Drifting flat across the field instead of running deep. Keep vertical depth on the post route to clear out underneath zones for the Y dig.',
+      },
+    },
     getOffensivePaths: (
       _front,
       _diveBehavior,
@@ -2085,138 +2320,120 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
       _ySide = 'right',
       _yType = 'tight',
       _floodFake = 'none',
-      powerPassReceiver: PowerPassReceiverOption = 'whip'
+      powerPassReceiver = 'arrow'
     ) => {
-      const base = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
+      const isTightX = xMode === 'tight_x';
 
-      const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
-        C: { role: 'block_down', points: [base.C, { x: 500, y: 368 }] },
-        // RG pulls to backside DE
-        RG: {
-          role: 'block_pull',
-          points: [base.RG, { x: 490, y: 405 }, { x: 420, y: 400 }, { x: 375, y: 355 }],
-        },
-        // RT shifts for inside pass pro
-        RT: {
-          role: 'block_down',
-          points: [base.RT, { x: base.RT.x - 14, y: 365 }],
-        },
-        LG: {
-          role: 'block_down',
-          points: [base.LG, { x: 460, y: 368 }],
-        },
-        LT: {
-          role: 'block_down',
-          points: [base.LT, { x: 410, y: 368 }],
-        },
-        // Y is running 7 yard whip out (drives up 7 yds, breaks in 2 steps, whips out to sideline)
-        YTE: {
-          role: 'route_pass',
-          points: [
-            base.YTE,
-            { x: 630, y: 320 },
-            { x: 625, y: 280 },
-            { x: 605, y: 272 },
-            { x: 660, y: 265 },
-            { x: 720, y: 260 },
-          ],
-        },
-        // X drives directly at outside shoulder of left side CB before going post
-        XTE: {
-          role: 'route_pass',
-          points: [base.XTE, { x: 195, y: 310 }, { x: 185, y: 260 }, { x: 420, y: 145 }],
-        },
-        // Z - post corner (stems vertical 10 yds, fakes post inside to freeze safety, cuts to corner pylon)
-        W: {
-          role: 'route_pass',
-          points: [
-            base.W,
-            { x: base.W.x + 8, y: 300 },
-            { x: base.W.x - 18, y: 220 },
-            { x: base.W.x + 38, y: 135 },
-          ],
-        },
-        // 3 back: takes one step back on snap so checkdown clears, then releases on arrow route to the flat
+      const paths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
+QB: {
+            role: 'qb',
+            points: [
+              { x: 500, y: 445 }, // Pre-snap under center
+              { x: 530, y: 460 }, // Long-arm fake step right into the 6-hole track
+              { x: 485, y: 495 }, // Reverse-pivot gather, gaining immediate depth
+              { x: 410, y: 520 }, // Looping 7 yards deep behind LOS (clearing tackle box)
+              { x: 310, y: 510 }, // Sprinting wide to the left (10-12 yards lateral)
+              { x: 230, y: 490 }, // 15 yards left: square shoulders, plant, and deliver strike
+            ],
+          },
         LH: {
-          role: 'route_pass',
+          role: 'fake',
           points: [
-            base.LH,
-            { x: 444, y: 518 }, // takes one depth step back on snap (creates clearance for checkdown)
-            { x: 550, y: 475 }, // crosses cleanly behind the cleared checkdown into playside edge
-            { x: 650, y: 420 }, // attacks outside shoulder of SDE
-            { x: 735, y: 365 }, // snaps into playside flat on arrow route
-            { x: 805, y: 325 }, // catches and bursts down sideline
+            { x: 445, y: 475 },
+            { x: 445, y: 505 },
+            { x: 450, y: 520 },
+            { x: 520, y: 490 },
+            { x: 610, y: 412 },
           ],
         },
-        // QB rolls out to the side of the flood (right on 36 Flood)
-        QB: {
-          role: 'qb',
-          points: [
-            base.QB,
-            { x: 512, y: 442 }, // open reverse-gather fake step
-            { x: 555, y: 448 }, // rolls out toward side of flood
-            { x: 605, y: 442 }, // gains depth and width outside tackle box
-            { x: 645, y: 436 }, // sets feet on rollout in rhythm to deliver strike
-            { x: 665, y: 432 }, // follow-through on rollout
-          ],
-        },
-        // 2 back: checkdown goes first across formation, then releases to backside flat
         RH: {
           role: 'route_pass',
           points: [
-            base.RH,
-            { x: 475, y: 462 }, // checkdown fires immediately across first (clears in front of 3-back)
-            { x: 395, y: 430 }, // tracks across to backside edge
-            { x: 340, y: 385 }, // chips outside shoulder of backside DE
-            { x: 250, y: 350 }, // peels into backside flat as safety valve
-            { x: 180, y: 330 }, // secures sideline checkdown
+            { x: 555, y: 475 },
+            { x: 450, y: 445 },
+            { x: 360, y: 405 },
+            { x: 340, y: 395 },
+            { x: 260, y: 380 },
+            { x: 160, y: 365 },
+          ],
+        },
+        LT: {
+          role: 'block_down',
+          points: [
+            { x: 390, y: 412 },
+            { x: 415, y: 418 },
+          ],
+        },
+        LG: {
+          role: 'block_pull',
+          points: [
+            { x: 445, y: 412 },
+            { x: 460, y: 435 },
+            { x: 540, y: 435 },
+            { x: 620, y: 425 },
+            { x: 660, y: 395 },
+          ],
+        },
+        C: {
+          role: 'block_down',
+          points: [
+            { x: 500, y: 412 },
+            { x: 480, y: 418 },
+          ],
+        },
+        RG: {
+          role: 'block_down',
+          points: [
+            { x: 555, y: 412 },
+            { x: 535, y: 418 },
+          ],
+        },
+        RT: {
+          role: 'block_down',
+          points: [
+            { x: 610, y: 412 },
+            { x: 590, y: 418 },
+          ],
+        },
+        YTE: {
+          role: 'route_pass',
+          points: [
+            { x: 670, y: 412 },
+            { x: 670, y: 325 },
+            { x: 600, y: 325 },
+            { x: 480, y: 325 },
+            { x: 390, y: 325 },
+          ],
+        },
+        XTE: isTightX
+          ? {
+              role: 'route_pass',
+              points: [
+                { x: 335, y: 412 },
+                { x: 340, y: 310 },
+                { x: 375, y: 260 },
+                { x: 220, y: 150 },
+              ],
+            }
+          : {
+              role: 'route_pass',
+              points: [
+                { x: 170, y: 412 },
+                { x: 170, y: 310 },
+                { x: 170, y: 200 },
+                { x: 170, y: 110 },
+              ],
+            },
+        W: {
+          role: 'route_pass',
+          points: [
+            { x: 830, y: 412 },
+            { x: 810, y: 320 },
+            { x: 740, y: 240 },
+            { x: 620, y: 150 },
           ],
         },
       };
-
-      const paths = targetSide === 'left' ? mirrorPaths(rawPaths) : rawPaths;
-
-      let finalCarrier: 'LH' | 'RH' | 'QB' | 'YTE' | 'XTE' | 'W' = 'YTE';
-      let outcomeLabel = '';
-      let expectedYards = '';
-      let coachingExplanation = '';
-
-      if (powerPassReceiver === 'arrow') {
-        finalCarrier = targetSide === 'left' ? 'RH' : 'LH';
-        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO 2-BACK (Playside Arrow Flat · 60% Throw)' : '36 FLOOD PASS TO 3-BACK (Playside Arrow Flat · 60% Throw)';
-        expectedYards = '+12.0 Yds (Quick Rhythm Completion)';
-        coachingExplanation = targetSide === 'left'
-          ? '2 back took one step back, chipped the edge, and snapped into the flat. QB delivered the 1st read at 60% progression for a 12-yard strike.'
-          : '3 back took one step back, chipped SDE, and released arrow into the flat. QB delivered the 1st read at 60% progression for a 12-yard strike.';
-      } else if (powerPassReceiver === 'corner') {
-        finalCarrier = 'W';
-        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO Z (Deep Post Corner · 68% Throw)' : '36 FLOOD PASS TO Z (Deep Post Corner · 68% Throw)';
-        expectedYards = '+35.0 Yds (Deep Hole Shot / Over the Top)';
-        coachingExplanation =
-          'Z stemmed 10 yards, faked inside post to freeze safety, and accelerated to corner pylon. QB rolled out and delivered the 3rd read shot at 68% progression.';
-      } else if (powerPassReceiver === 'checkdown') {
-        finalCarrier = targetSide === 'left' ? 'LH' : 'RH';
-        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO 3-BACK (Backside Flat Checkdown · 75% Throw)' : '36 FLOOD PASS TO 2-BACK (Backside Flat Checkdown · 75% Throw)';
-        expectedYards = '+9.0 Yds (Safety Valve Checkdown)';
-        coachingExplanation = targetSide === 'left'
-          ? '3 back fired across first, stoned backside DE for 2-count, and peeled to flat. QB rolled out and delivered safety valve at 75% progression.'
-          : '2 back fired across first, stoned backside DE for 2-count, and peeled to flat. QB rolled out and delivered safety valve at 75% progression.';
-      } else if (powerPassReceiver === 'post') {
-        finalCarrier = targetSide === 'left' ? 'YTE' : 'XTE';
-        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO Y (Backside Deep Post · 73% Throw)' : '36 FLOOD PASS TO X (Backside Deep Post · 73% Throw)';
-        expectedYards = '+28.0 Yds (Backside Isolated Post Shot)';
-        coachingExplanation = targetSide === 'left'
-          ? 'Y attacked cornerback outside leverage and broke deep middle behind biting linebackers. QB delivered cross-field strike at 73% progression.'
-          : 'X attacked cornerback outside leverage and broke deep middle behind biting linebackers. QB delivered cross-field strike at 73% progression.';
-      } else {
-        // 'whip' (default 2nd read)
-        finalCarrier = targetSide === 'left' ? 'XTE' : 'YTE';
-        outcomeLabel = targetSide === 'left' ? '35 FLOOD PASS TO X (7-Yd Whip Out · 65% Throw)' : '36 FLOOD PASS TO Y (7-Yd Whip Out · 65% Throw)';
-        expectedYards = '+18.0 Yds (Sideline Whip Intermediate Strike)';
-        coachingExplanation = targetSide === 'left'
-          ? 'X drove 7 yards upfield, broke inside 2 steps, and snapped whip out to sideline. QB delivered 2nd read in rhythm at 65% progression.'
-          : 'Y drove 7 yards upfield, broke inside 2 steps, and snapped whip out to sideline. QB delivered 2nd read in rhythm at 65% progression.';
-      }
 
       return {
         paths,
@@ -2224,10 +2441,11 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
           diveGive: false,
           qbKeep: false,
           pitchTriggered: false,
-          finalCarrier,
-          outcomeLabel,
-          expectedYards,
-          coachingExplanation,
+          finalCarrier: 'RH',
+          outcomeLabel: '36/25 FLOOD PASS TO 2-BACK (Arrow Route · 1st Read)',
+          expectedYards: '+12.0 Yds (Weak Flat Arrow Strike)',
+          coachingExplanation:
+            '2-Back chipped weak DE for 2 seconds, then released into the flat. QB rolled weak and delivered the primary read in rhythm.',
         },
       };
     },
