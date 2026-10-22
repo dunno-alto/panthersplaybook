@@ -534,7 +534,6 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
               <div className="space-y-1.5">
                 {concepts.map((concept) => {
                   const isSelected = activeConcept === concept.id;
-                  const activeNumber = targetSide === 'right' ? concept.rightNumber : concept.leftNumber;
 
                   return (
                     <button
@@ -547,24 +546,10 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                           : 'border-[#162A33] bg-[#070F14] hover:border-[#20404E] hover:bg-[#0A161E]'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span
-                          className={`font-mono font-bold text-xs px-2 py-0.5 rounded ${
-                            isSelected
-                              ? 'bg-teal-400 text-slate-950 font-extrabold shadow-sm'
-                              : 'bg-[#101F26] text-teal-300 border border-[#1B3542]'
-                          }`}
-                        >
-                          {activeNumber}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-white truncate">
-                            {concept.name}
-                          </p>
-                          <p className="text-[11px] text-slate-400 truncate">
-                            Call: <span className="text-teal-300 font-mono font-bold">{activeNumber} {concept.id === 'blank' ? 'Whiteboard' : concept.id === 'trap' || (concept.id as string) === 'counter' ? 'Trap' : concept.id === 'power' ? 'Power' : concept.id === 'flood' ? 'Flood' : 'Veer'}</span> · {concept.description}
-                          </p>
-                        </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-white truncate">
+                          {concept.name}
+                        </p>
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">

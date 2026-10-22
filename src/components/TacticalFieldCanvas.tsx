@@ -1479,37 +1479,37 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
               >
                 {(isSelected || draggingPlayerId === def.id) && (
                   <polygon
-                    points="0,-20 20,0 0,20 -20,0"
+                    points="0,-16 16,0 0,16 -16,0"
                     fill="none"
                     stroke="#2DD4BF"
-                    strokeWidth="2.2"
+                    strokeWidth="2"
                     strokeDasharray={draggingPlayerId === def.id ? '3 2' : undefined}
                   />
                 )}
 
                 {hasRedKey && !isBlankPlay && (
-                  <circle r="22" fill="#EF4444" fillOpacity="0.18" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="3 2" />
+                  <circle r="17.6" fill="#EF4444" fillOpacity="0.18" stroke="#EF4444" strokeWidth="1.2" strokeDasharray="3 2" />
                 )}
                 {hasTealKey && !isBlankPlay && (
-                  <circle r="22" fill="#14B8A6" fillOpacity="0.18" stroke="#14B8A6" strokeWidth="1.5" strokeDasharray="3 2" />
+                  <circle r="17.6" fill="#14B8A6" fillOpacity="0.18" stroke="#14B8A6" strokeWidth="1.2" strokeDasharray="3 2" />
                 )}
 
                 {/* Defender Node */}
                 <polygon
-                  points="0,-15 15,0 0,15 -15,0"
+                  points="0,-12 12,0 0,12 -12,0"
                   fill={hasRedKey ? '#DC2626' : hasTealKey ? '#0D9488' : '#0B171E'}
                   stroke={isSelected ? '#FFFFFF' : hasRedKey ? '#FCA5A5' : hasTealKey ? '#5EEAD4' : '#334D5C'}
-                  strokeWidth={isSelected ? 2.8 : 1.8}
+                  strokeWidth={isSelected ? 2.4 : 1.6}
                 />
 
                 {/* Defender Node Text (hidden if labels are toggled off) */}
                 {shouldShowLabels && (
                   <text
                     x="0"
-                    y="4"
+                    y="3"
                     textAnchor="middle"
                     fill="#FFFFFF"
-                    fontSize="10"
+                    fontSize="8"
                     fontWeight="700"
                     className="font-mono-tabular pointer-events-none"
                   >
@@ -1520,7 +1520,7 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
             );
           })}
 
-        {/* Offensive Players (11 Players) - Black & Teal Theme */}
+        {/* Offensive Players (11 Players) - Black & Teal Theme (Scaled to 80%) */}
         {Object.entries(baseOffense).map(([pid, meta]) => {
           const pos = currentOffensivePositions[pid] || { x: meta.x, y: meta.y };
           const isSelected = selectedPlayerId === pid;
@@ -1591,11 +1591,11 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
             >
               {(isSelected || draggingPlayerId === pid) && (
                 <circle
-                  r={draggingPlayerId === pid ? 24 : 22}
+                  r={draggingPlayerId === pid ? 19.2 : 17.6}
                   fill="none"
                   stroke="#2DD4BF"
-                  strokeWidth="2.5"
-                  strokeDasharray={draggingPlayerId === pid ? '4 2' : undefined}
+                  strokeWidth="2"
+                  strokeDasharray={draggingPlayerId === pid ? '3 2' : undefined}
                 />
               )}
 
@@ -1605,48 +1605,48 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
                   {/* Read 1: Arrow Flat (RH on Right, LH on Left) */}
                   {(targetSide === 'left' ? pid === 'LH' : pid === 'RH') && (
                     <circle
-                      r={isFinalCarrier ? 26 : 22}
+                      r={isFinalCarrier ? 20.8 : 17.6}
                       fill="#14B8A6"
                       fillOpacity={isFinalCarrier ? 0.35 : 0.15}
                       stroke={isFinalCarrier ? '#5EEAD4' : '#14B8A6'}
-                      strokeWidth={isFinalCarrier ? 2.5 : 1.5}
-                      strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
+                      strokeWidth={isFinalCarrier ? 2 : 1.2}
+                      strokeDasharray={isFinalCarrier ? '4 2' : '3 1.5'}
                     />
                   )}
 
                   {/* Read 2: Dig Route (YTE on Right, XTE on Left) */}
                   {(targetSide === 'left' ? pid === 'XTE' : pid === 'YTE') && (
                     <circle
-                      r={isFinalCarrier ? 26 : 22}
+                      r={isFinalCarrier ? 20.8 : 17.6}
                       fill="#A855F7"
                       fillOpacity={isFinalCarrier ? 0.35 : 0.15}
                       stroke={isFinalCarrier ? '#E9D5FF' : '#A855F7'}
-                      strokeWidth={isFinalCarrier ? 2.5 : 1.5}
-                      strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
+                      strokeWidth={isFinalCarrier ? 2 : 1.2}
+                      strokeDasharray={isFinalCarrier ? '4 2' : '3 1.5'}
                     />
                   )}
 
                   {/* Read 3: Post-Corner (XTE on Right, YTE on Left) */}
                   {(targetSide === 'left' ? pid === 'YTE' : pid === 'XTE') && (
                     <circle
-                      r={isFinalCarrier ? 26 : 22}
+                      r={isFinalCarrier ? 20.8 : 17.6}
                       fill="#F59E0B"
                       fillOpacity={isFinalCarrier ? 0.35 : 0.15}
                       stroke={isFinalCarrier ? '#FDE68A' : '#F59E0B'}
-                      strokeWidth={isFinalCarrier ? 2.5 : 1.5}
-                      strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
+                      strokeWidth={isFinalCarrier ? 2 : 1.2}
+                      strokeDasharray={isFinalCarrier ? '4 2' : '3 1.5'}
                     />
                   )}
 
                   {/* Read 4: Z Deep Post (W) */}
                   {pid === 'W' && (
                     <circle
-                      r={isFinalCarrier ? 26 : 22}
+                      r={isFinalCarrier ? 20.8 : 17.6}
                       fill="#F43F5E"
                       fillOpacity={isFinalCarrier ? 0.35 : 0.15}
                       stroke={isFinalCarrier ? '#FECDD3' : '#F43F5E'}
-                      strokeWidth={isFinalCarrier ? 2.5 : 1.5}
-                      strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
+                      strokeWidth={isFinalCarrier ? 2 : 1.2}
+                      strokeDasharray={isFinalCarrier ? '4 2' : '3 1.5'}
                     />
                   )}
                 </>
@@ -1654,21 +1654,21 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
 
               {meta.group === 'OL' ? (
                 <rect
-                  x="-15"
-                  y="-13"
-                  width="30"
-                  height="26"
-                  rx="5"
+                  x="-12"
+                  y="-10.4"
+                  width="24"
+                  height="20.8"
+                  rx="4"
                   fill={fill}
                   stroke={isSelected ? '#2DD4BF' : stroke}
-                  strokeWidth={isSelected ? 2.8 : 2}
+                  strokeWidth={isSelected ? 2.4 : 1.6}
                 />
               ) : (
                 <circle
-                  r="16"
+                  r="12.8"
                   fill={fill}
                   stroke={isSelected ? '#2DD4BF' : stroke}
-                  strokeWidth={isSelected ? 2.8 : 2}
+                  strokeWidth={isSelected ? 2.4 : 1.6}
                 />
               )}
 
@@ -1676,10 +1676,10 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
               {shouldShowLabels && (
                 <text
                   x="0"
-                  y="4"
+                  y="3.2"
                   textAnchor="middle"
                   fill="#FFFFFF"
-                  fontSize="10.5"
+                  fontSize="8.4"
                   fontWeight="700"
                   className="font-mono-tabular pointer-events-none"
                 >
@@ -1691,9 +1691,9 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
         })}
 
         {/* Animated Football */}
-        <g transform={`translate(${ballPos.x.toFixed(1)}, ${(ballPos.y - 14).toFixed(1)})`}>
-          <ellipse rx="8.5" ry="5.5" fill="#B45309" stroke="#FEF3C7" strokeWidth="1.5" transform="rotate(-20)" />
-          <line x1="-4" y1="-1" x2="4" y2="1" stroke="#FEF3C7" strokeWidth="1.2" />
+        <g transform={`translate(${ballPos.x.toFixed(1)}, ${(ballPos.y - 11).toFixed(1)})`}>
+          <ellipse rx="6.8" ry="4.4" fill="#B45309" stroke="#FEF3C7" strokeWidth="1.2" transform="rotate(-20)" />
+          <line x1="-3.2" y1="-0.8" x2="3.2" y2="0.8" stroke="#FEF3C7" strokeWidth="1" />
         </g>
       </svg>
 
