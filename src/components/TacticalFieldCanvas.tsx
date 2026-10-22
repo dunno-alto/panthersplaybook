@@ -927,21 +927,21 @@ export const TacticalFieldCanvas: React.FC<TacticalFieldCanvasProps> = ({
       let catchProgress = 0.80;
       let loftAmount = 14;
 
-if (powerPassReceiver === 'arrow') {
-        // 1st Read: 2-Back (RH) Arrow route into weak flat
-        targetPlayerId = 'RH';
+      if (powerPassReceiver === 'arrow') {
+        // 1st Read: Arrow route into flat (RH on right, LH on left)
+        targetPlayerId = targetSide === 'left' ? 'LH' : 'RH';
         releaseProgress = 0.60;
         catchProgress = 0.76;
         loftAmount = 10;
       } else if (powerPassReceiver === 'whip') {
-        // 2nd Read: Y (YTE) 7-10 Yd Dig across middle
-        targetPlayerId = 'YTE';
+        // 2nd Read: 7-10 Yd Dig across middle (YTE on right, XTE on left)
+        targetPlayerId = targetSide === 'left' ? 'XTE' : 'YTE';
         releaseProgress = 0.65;
         catchProgress = 0.80;
         loftAmount = 14;
       } else if (powerPassReceiver === 'corner') {
-        // 3rd Read: X (XTE) Post-Corner / Boundary Vertical
-        targetPlayerId = 'XTE';
+        // 3rd Read: Post-Corner / Boundary Vertical (XTE on right, YTE on left)
+        targetPlayerId = targetSide === 'left' ? 'YTE' : 'XTE';
         releaseProgress = 0.68;
         catchProgress = 0.86;
         loftAmount = 24;
@@ -952,8 +952,8 @@ if (powerPassReceiver === 'arrow') {
         catchProgress = 0.89;
         loftAmount = 26;
       } else {
-        // Default to 1st Read: 2-Back (RH) Arrow
-        targetPlayerId = 'RH';
+        // Default to 1st Read: Arrow
+        targetPlayerId = targetSide === 'left' ? 'LH' : 'RH';
         releaseProgress = 0.60;
         catchProgress = 0.76;
         loftAmount = 10;
@@ -1602,8 +1602,8 @@ if (powerPassReceiver === 'arrow') {
               {/* Highlight Power Pass Targets & Selected Receiver Option */}
               {isPowerPass && (
                 <>
-                  {/* Read 1: Playside RB Arrow */}
-                  {((targetSide === 'left' && pid === 'RH') || (targetSide !== 'left' && pid === 'LH')) && (
+                  {/* Read 1: Arrow Flat (RH on Right, LH on Left) */}
+                  {(targetSide === 'left' ? pid === 'LH' : pid === 'RH') && (
                     <circle
                       r={isFinalCarrier ? 26 : 22}
                       fill="#14B8A6"
@@ -1614,8 +1614,8 @@ if (powerPassReceiver === 'arrow') {
                     />
                   )}
 
-                  {/* Read 2: Playside TE/SE Whip Out */}
-                  {((targetSide === 'left' && pid === 'XTE') || (targetSide !== 'left' && pid === 'YTE')) && (
+                  {/* Read 2: Dig Route (YTE on Right, XTE on Left) */}
+                  {(targetSide === 'left' ? pid === 'XTE' : pid === 'YTE') && (
                     <circle
                       r={isFinalCarrier ? 26 : 22}
                       fill="#A855F7"
@@ -1626,39 +1626,27 @@ if (powerPassReceiver === 'arrow') {
                     />
                   )}
 
-                  {/* Read 3: Z Post Corner */}
-                  {pid === 'W' && (
+                  {/* Read 3: Post-Corner (XTE on Right, YTE on Left) */}
+                  {(targetSide === 'left' ? pid === 'YTE' : pid === 'XTE') && (
                     <circle
                       r={isFinalCarrier ? 26 : 22}
                       fill="#F59E0B"
-                      fillOpacity={isFinalCarrier ? 0.35 : 0.12}
+                      fillOpacity={isFinalCarrier ? 0.35 : 0.15}
                       stroke={isFinalCarrier ? '#FDE68A' : '#F59E0B'}
                       strokeWidth={isFinalCarrier ? 2.5 : 1.5}
                       strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
                     />
                   )}
 
-                  {/* Checkdown: Backside RB Flat */}
-                  {((targetSide === 'left' && pid === 'LH') || (targetSide !== 'left' && pid === 'RH')) && (
+                  {/* Read 4: Z Deep Post (W) */}
+                  {pid === 'W' && (
                     <circle
-                      r={isFinalCarrier ? 26 : 20}
-                      fill="#3B82F6"
-                      fillOpacity={isFinalCarrier ? 0.35 : 0.12}
-                      stroke={isFinalCarrier ? '#BFDBFE' : '#3B82F6'}
-                      strokeWidth={isFinalCarrier ? 2.5 : 1.2}
-                      strokeDasharray={isFinalCarrier ? '5 2.5' : '3 2'}
-                    />
-                  )}
-
-                  {/* Backside: Isolated Post */}
-                  {((targetSide === 'left' && pid === 'YTE') || (targetSide !== 'left' && pid === 'XTE')) && (
-                    <circle
-                      r={isFinalCarrier ? 26 : 20}
+                      r={isFinalCarrier ? 26 : 22}
                       fill="#F43F5E"
-                      fillOpacity={isFinalCarrier ? 0.35 : 0.12}
+                      fillOpacity={isFinalCarrier ? 0.35 : 0.15}
                       stroke={isFinalCarrier ? '#FECDD3' : '#F43F5E'}
-                      strokeWidth={isFinalCarrier ? 2.5 : 1.2}
-                      strokeDasharray={isFinalCarrier ? '5 2.5' : '3 2'}
+                      strokeWidth={isFinalCarrier ? 2.5 : 1.5}
+                      strokeDasharray={isFinalCarrier ? '5 2.5' : '4 2'}
                     />
                   )}
                 </>

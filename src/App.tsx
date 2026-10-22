@@ -278,15 +278,15 @@ export default function App() {
       setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
     } else if (playId.includes('flood') || playId === '324-power-pass') {
       if (powerPassReceiver === 'arrow') {
-        setSelectedPlayerId(targetSide === 'left' ? 'RH' : 'LH');
-      } else if (powerPassReceiver === 'corner') {
-        setSelectedPlayerId('W');
-      } else if (powerPassReceiver === 'checkdown') {
         setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
-      } else if (powerPassReceiver === 'post') {
-        setSelectedPlayerId(targetSide === 'left' ? 'YTE' : 'XTE');
-      } else {
+      } else if (powerPassReceiver === 'whip') {
         setSelectedPlayerId(targetSide === 'left' ? 'XTE' : 'YTE');
+      } else if (powerPassReceiver === 'corner') {
+        setSelectedPlayerId(targetSide === 'left' ? 'YTE' : 'XTE');
+      } else if (powerPassReceiver === 'post') {
+        setSelectedPlayerId('W');
+      } else {
+        setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
       }
     } else if (!playId.includes('blank')) {
       // Inside Veer or Outside Veer: dive back is playside back
@@ -311,15 +311,15 @@ export default function App() {
       setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
     } else if (newConcept === 'flood') {
       if (powerPassReceiver === 'arrow') {
-        setSelectedPlayerId(targetSide === 'left' ? 'RH' : 'LH');
-      } else if (powerPassReceiver === 'corner') {
-        setSelectedPlayerId('W');
-      } else if (powerPassReceiver === 'checkdown') {
         setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
-      } else if (powerPassReceiver === 'post') {
-        setSelectedPlayerId(targetSide === 'left' ? 'YTE' : 'XTE');
-      } else {
+      } else if (powerPassReceiver === 'whip') {
         setSelectedPlayerId(targetSide === 'left' ? 'XTE' : 'YTE');
+      } else if (powerPassReceiver === 'corner') {
+        setSelectedPlayerId(targetSide === 'left' ? 'YTE' : 'XTE');
+      } else if (powerPassReceiver === 'post') {
+        setSelectedPlayerId('W');
+      } else {
+        setSelectedPlayerId(targetSide === 'left' ? 'LH' : 'RH');
       }
     } else {
       // Inside Veer or Outside Veer: dive back is playside back
@@ -493,6 +493,21 @@ export default function App() {
                 setTargetSide(side);
                 setIsPlaying(false);
                 setProgress(0);
+                if (concept === 'flood') {
+                  if (powerPassReceiver === 'arrow') {
+                    setSelectedPlayerId(side === 'left' ? 'LH' : 'RH');
+                  } else if (powerPassReceiver === 'whip') {
+                    setSelectedPlayerId(side === 'left' ? 'XTE' : 'YTE');
+                  } else if (powerPassReceiver === 'corner') {
+                    setSelectedPlayerId(side === 'left' ? 'YTE' : 'XTE');
+                  } else if (powerPassReceiver === 'post') {
+                    setSelectedPlayerId('W');
+                  }
+                } else if (concept === 'power') {
+                  setSelectedPlayerId(side === 'left' ? 'RG' : 'LG');
+                } else if (concept !== 'blank') {
+                  setSelectedPlayerId(side === 'left' ? 'LH' : 'RH');
+                }
               }}
               zSide={zSide}
               onChangeZSide={(side) => {

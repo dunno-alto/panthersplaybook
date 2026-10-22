@@ -175,7 +175,11 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
     eleventhMode,
     xMode,
     zSide,
-    targetSide
+    targetSide,
+    'right',
+    'tight',
+    'none',
+    powerPassReceiver
   );
 
   const handleSelectConcept = (concept: OffensiveConcept) => {
@@ -874,25 +878,25 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                     {[
                       {
                         id: 'arrow' as PowerPassReceiverOption,
-                        label: '1) 2-Back Arrow (Flat)',
+                        label: targetSide === 'left' ? '1) 3-Back Arrow (Flat)' : '1) 2-Back Arrow (Flat)',
                         badge: '1st Read · Throw @ 60%',
-                        targetPid: 'RH',
+                        targetPid: targetSide === 'left' ? 'LH' : 'RH',
                         yards: '+12.0 Yds',
                         highlight: 'text-teal-300',
                       },
                       {
                         id: 'whip' as PowerPassReceiverOption,
-                        label: '2) Y 7–10 Yd Dig',
+                        label: targetSide === 'left' ? '2) X 7–10 Yd Dig' : '2) Y 7–10 Yd Dig',
                         badge: '2nd Read · Throw @ 65%',
-                        targetPid: 'YTE',
+                        targetPid: targetSide === 'left' ? 'XTE' : 'YTE',
                         yards: '+18.0 Yds',
                         highlight: 'text-purple-300',
                       },
                       {
                         id: 'corner' as PowerPassReceiverOption,
-                        label: '3) X Post-Corner (or Vert)',
+                        label: targetSide === 'left' ? '3) Y Post-Corner (or Vert)' : '3) X Post-Corner (or Vert)',
                         badge: '3rd Read · Throw @ 68%',
-                        targetPid: 'XTE',
+                        targetPid: targetSide === 'left' ? 'YTE' : 'XTE',
                         yards: '+28.0 Yds',
                         highlight: 'text-amber-300',
                       },
@@ -986,20 +990,32 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                   </span>
                   <p className="text-xs font-bold text-white">
                     {powerPassReceiver === 'arrow'
-                      ? '1) 2-Back Arrow Route into Weak Flat (+12 Yds)'
+                      ? (targetSide === 'left'
+                          ? '1) 3-Back Arrow Route into Flat (+12 Yds)'
+                          : '1) 2-Back Arrow Route into Weak Flat (+12 Yds)')
                       : powerPassReceiver === 'whip'
-                      ? '2) Y 7–10 Yard Dig Route Across Middle (+18 Yds)'
+                      ? (targetSide === 'left'
+                          ? '2) X 7–10 Yard Dig Route Across Middle (+18 Yds)'
+                          : '2) Y 7–10 Yard Dig Route Across Middle (+18 Yds)')
                       : powerPassReceiver === 'corner'
-                      ? '3) X Post-Corner / Boundary Vertical (+28 Yds)'
+                      ? (targetSide === 'left'
+                          ? '3) Y Post-Corner / Boundary Vertical (+28 Yds)'
+                          : '3) X Post-Corner / Boundary Vertical (+28 Yds)')
                       : '4) Z Inside-Leverage Deep Post (+35 Yds Touchdown)'}
                   </p>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
                     {powerPassReceiver === 'arrow'
-                      ? '2-Back crosses the QB face, delivers a violent 2-second block on the weak DE, then releases into the weak flat as the primary target in the rollout rhythm.'
+                      ? (targetSide === 'left'
+                          ? '3-Back crosses the QB face, delivers a violent 2-second block on the strong DE, then releases into the flat as the primary target in the rollout rhythm.'
+                          : '2-Back crosses the QB face, delivers a violent 2-second block on the weak DE, then releases into the weak flat as the primary target in the rollout rhythm.')
                       : powerPassReceiver === 'whip'
-                      ? 'Y drives vertically 7–10 yards hard with pad level down, then snaps 90° flat across the middle on a dig directly behind the flowing linebackers.'
+                      ? (targetSide === 'left'
+                          ? 'X drives vertically 7–10 yards hard with pad level down, then snaps 90° flat across the middle on a dig directly behind the flowing linebackers.'
+                          : 'Y drives vertically 7–10 yards hard with pad level down, then snaps 90° flat across the middle on a dig directly behind the flowing linebackers.')
                       : powerPassReceiver === 'corner'
-                      ? 'Tight X stems post to freeze the safety, then breaks 45° to the corner pylon (if split out wide, drives pure vertical down the boundary to clear the corner).'
+                      ? (targetSide === 'left'
+                          ? 'Tight Y stems post to freeze the safety, then breaks 45° to the corner pylon (if split out wide, drives pure vertical down the boundary to clear the corner).'
+                          : 'Tight X stems post to freeze the safety, then breaks 45° to the corner pylon (if split out wide, drives pure vertical down the boundary to clear the corner).')
                       : 'Z attacks the outside leverage of the cornerback to win inside position, then cuts deep post across the middle of the field.'}
                   </p>
                 </div>
@@ -1015,14 +1031,12 @@ export const PlaySetupConsole: React.FC<PlaySetupConsoleProps> = ({
                 ? (targetSide === 'left' ? 'RG Pull Track' : 'LG Pull Track')
                 : `Target: ${
                     powerPassReceiver === 'arrow'
-                      ? '1) RB Arrow Flat'
+                      ? (targetSide === 'left' ? '1) 3-Back Arrow Flat' : '1) 2-Back Arrow Flat')
                       : powerPassReceiver === 'corner'
-                      ? '3) Z Post Corner'
-                      : powerPassReceiver === 'checkdown'
-                      ? 'Checkdown Flat'
+                      ? (targetSide === 'left' ? '3) Y Post Corner' : '3) X Post Corner')
                       : powerPassReceiver === 'post'
-                      ? 'Backside Post'
-                      : '2) Y Whip Out'
+                      ? '4) Z Deep Post'
+                      : (targetSide === 'left' ? '2) X 7-10 Yd Dig' : '2) Y 7-10 Yd Dig')
                   }`}
             </span>
             <span className="text-teal-400">Progression</span>

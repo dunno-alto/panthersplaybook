@@ -2030,8 +2030,8 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
   // 5. FLOOD (36/35 FLOOD)
   {
     id: '324-power-pass',
-    code: '36/25 FLOOD',
-    name: '36/25 Flood',
+    code: '36/35 FLOOD',
+    name: '36/35 Flood',
     subtitle: 'Play-Action Rollout: 3 March & Fake ➔ 2 Chip & Arrow (1st) ➔ Y Dig (2nd) ➔ X Post-Corner/Vert (3rd) ➔ Z Post (4th)',
     seriesTag: 'Core 05',
     playType: 'Play-Action Pass',
@@ -2081,26 +2081,26 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
       },
     ],
     positionRules: {
-      QB: {
+QB: {
         id: 'QB',
         label: '1',
         fullName: 'Quarterback (1)',
         group: 'BACK',
         split: 'Under Center',
         stance: 'Under center low with even feet.',
-        aimingPoint: '6-Hole Fake ➔ Weak-Side Rollout',
+        aimingPoint: 'Hop-Spin Left ➔ Straight Drop Fake ➔ Circular Rollout Left',
         footwork:
-          'Open left with a long-arm fake into the chest of the 3-back heading for the 6-hole. Ride the fake, pull the ball cleanly, and roll out to the weak side outside the tackle box with shoulders squared to the field.',
+          'On snap, execute a quick hop-spin to the left, turning hips counter-clockwise. Drop straight back along the midline while long-arming the fake with your left hand to the 3-back crossing into the 6-hole. Sink 7 yards deep into the pocket, then break off into a smooth circular rollout curving 15 yards to the left outside the tackle box.',
         assignmentsByFront: {
-          '5-3': 'Open left, ride long-arm fake to 3-back into 6-hole, roll out weak. Progression: 1) 2-Back Arrow ➔ 2) Y Dig (7-10 yds) ➔ 3) X Post-Corner/Vert ➔ 4) Z Post.',
-          '4-4': 'Long-arm fake right to 3-back, bootleg weak side away from LB flow. Read 2-back flat to Y dig.',
-          '4-3': 'Open left, fake 6-hole, rollout weak behind pass pro.',
-          '6-2': 'Hard fake to freeze interior line, roll weak outside LT. Hit 2-back immediate arrow or Y in dig window.',
-          '5-2': 'Sell run fake to strong side, roll out weak behind 2-back block on weak DE. Deliver strike in rhythm.',
-          '3-4': 'Open left, long-arm mesh to 3-back, rollout weak. Read 2-back arrow ➔ Y dig ➔ X post-corner ➔ Z post.',
+          '5-3': 'Hop-spin left, drop straight back with left-arm fake to 3-back into 6-hole, break into circular rollout left. Read: 1) 2-Back Arrow ➔ 2) Y Dig ➔ 3) X Post-Corner/Vert ➔ 4) Z Post.',
+          '4-4': 'Hop-spin left, straight-back fake, circular bootleg weak side outside LT.',
+          '4-3': 'Hop-spin left, straight-back left-arm fake, smooth rollout weak.',
+          '6-2': 'Hop-spin left, sell drop-back fake to freeze line, circle out 15 yds left.',
+          '5-2': 'Hop-spin left, straight drop fake, circular rollout behind 2-back chip on weak DE.',
+          '3-4': 'Hop-spin left, straight drop fake to 3-back, smooth rollout left.',
         },
-        coachingCue: 'Long-arm fake to 6-hole, roll weak, read: 2-Back ➔ Y ➔ X ➔ Z!',
-        commonErrorsFix: 'Rushing the rollout without selling the fake allows the backside DE to stay home. Long-arm the ball to freeze the defense.',
+        coachingCue: 'Hop-spin left, drop straight back with left arm, smooth circular rollout!',
+        commonErrorsFix: 'Stepping to the right ruins the angle. Hop-spin left and drop straight back along the center line before curving out.',
       },
       LH: {
         id: 'LH',
@@ -2323,33 +2323,38 @@ export const VEER_PLAYBOOK: PlayDefinition[] = [
       powerPassReceiver = 'arrow'
     ) => {
       const isTightX = xMode === 'tight_x';
+      const base = getBaseOffensiveAlignment(eleventhMode, xMode, zSide);
 
-      const paths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
-QB: {
-            role: 'qb',
-            points: [
-              { x: 500, y: 445 }, // Pre-snap under center
-              { x: 530, y: 460 }, // Long-arm fake step right into the 6-hole track
-              { x: 485, y: 495 }, // Reverse-pivot gather, gaining immediate depth
-              { x: 410, y: 520 }, // Looping 7 yards deep behind LOS (clearing tackle box)
-              { x: 310, y: 510 }, // Sprinting wide to the left (10-12 yards lateral)
-              { x: 230, y: 490 }, // 15 yards left: square shoulders, plant, and deliver strike
-            ],
-          },
+      const rawPaths: Record<string, { role: OffensivePathDef['roleType']; points: Point[]; label?: string }> = {
+        // 1 (QB): Hop-spin left, straight drop fake, smooth circular rollout 7 yds deep & 15 yds left
+        QB: {
+          role: 'qb',
+          points: [
+            base.QB,
+            { x: 495, y: 458 }, // 1. Hop-spin turning hips to the left
+            { x: 498, y: 492 }, // 2. Drop straight back, left-arm fake extended to 3-back
+            { x: 480, y: 520 }, // 3. Bottom of drop (~7 yards deep behind LOS)
+            { x: 410, y: 525 }, // 4. Smooth circular arc curving past LT
+            { x: 310, y: 510 }, // 5. Accelerating 10-12 yards laterally to the left
+            { x: 230, y: 485 }, // 6. 15 yards left: square up, set feet, deliver strike
+          ],
+        },
+        // 3-back (LH): Timing march back, then fake into 6-hole
         LH: {
           role: 'fake',
           points: [
-            { x: 445, y: 475 },
+            base.LH,
             { x: 445, y: 505 },
             { x: 450, y: 520 },
             { x: 520, y: 490 },
             { x: 610, y: 412 },
           ],
         },
+        // 2-back (RH): Crosses face, hard-blocks weak DE for 2 counts, releases into weak flat on arrow route (1st Read)
         RH: {
           role: 'route_pass',
           points: [
-            { x: 555, y: 475 },
+            base.RH,
             { x: 450, y: 445 },
             { x: 360, y: 405 },
             { x: 340, y: 395 },
@@ -2360,14 +2365,15 @@ QB: {
         LT: {
           role: 'block_down',
           points: [
-            { x: 390, y: 412 },
-            { x: 415, y: 418 },
+            base.LT,
+            { x: base.LT.x + 11, y: 418 },
           ],
         },
+        // LG: Pulls across to strong DE
         LG: {
           role: 'block_pull',
           points: [
-            { x: 445, y: 412 },
+            base.LG,
             { x: 460, y: 435 },
             { x: 540, y: 435 },
             { x: 620, y: 425 },
@@ -2377,63 +2383,138 @@ QB: {
         C: {
           role: 'block_down',
           points: [
-            { x: 500, y: 412 },
-            { x: 480, y: 418 },
+            base.C,
+            { x: base.C.x - 20, y: 418 },
           ],
         },
         RG: {
           role: 'block_down',
           points: [
-            { x: 555, y: 412 },
-            { x: 535, y: 418 },
+            base.RG,
+            { x: base.RG.x - 20, y: 418 },
           ],
         },
         RT: {
           role: 'block_down',
           points: [
-            { x: 610, y: 412 },
-            { x: 590, y: 418 },
+            base.RT,
+            { x: base.RT.x - 20, y: 418 },
           ],
         },
+        // Y Tight End: 7-10 yd dig across middle (2nd Read)
         YTE: {
           role: 'route_pass',
           points: [
-            { x: 670, y: 412 },
-            { x: 670, y: 325 },
+            base.YTE,
+            { x: base.YTE.x, y: 325 },
             { x: 600, y: 325 },
             { x: 480, y: 325 },
             { x: 390, y: 325 },
           ],
         },
+        // X: Post-Corner if tight, boundary vertical if split wide (3rd Read)
         XTE: isTightX
           ? {
               role: 'route_pass',
               points: [
-                { x: 335, y: 412 },
-                { x: 340, y: 310 },
-                { x: 375, y: 260 },
+                base.XTE,
+                { x: base.XTE.x + 5, y: 310 },
+                { x: base.XTE.x + 40, y: 260 },
                 { x: 220, y: 150 },
               ],
             }
           : {
               role: 'route_pass',
               points: [
-                { x: 170, y: 412 },
-                { x: 170, y: 310 },
-                { x: 170, y: 200 },
-                { x: 170, y: 110 },
+                base.XTE,
+                { x: base.XTE.x, y: 310 },
+                { x: base.XTE.x, y: 200 },
+                { x: base.XTE.x, y: 110 },
               ],
             },
+        // Z (W): Deep Post across middle (4th Read)
         W: {
           role: 'route_pass',
-          points: [
-            { x: 830, y: 412 },
-            { x: 810, y: 320 },
-            { x: 740, y: 240 },
-            { x: 620, y: 150 },
-          ],
+          points:
+            zSide === 'right'
+              ? [
+                  base.W,
+                  { x: base.W.x - 20, y: 320 },
+                  { x: base.W.x - 90, y: 240 },
+                  { x: 380, y: 150 },
+                ]
+              : [
+                  base.W,
+                  { x: base.W.x + 20, y: 320 },
+                  { x: base.W.x + 70, y: 240 },
+                  { x: 420, y: 150 },
+                ],
         },
       };
+
+      const paths = targetSide === 'left' ? mirrorPaths(rawPaths) : rawPaths;
+
+      // Ensure W's route is always anchored to base.W and breaks toward middle
+      paths.W = {
+        role: 'route_pass',
+        points:
+          targetSide === 'right'
+            ? zSide === 'right'
+              ? [base.W, { x: base.W.x - 20, y: 320 }, { x: base.W.x - 90, y: 240 }, { x: 380, y: 150 }]
+              : [base.W, { x: base.W.x + 20, y: 320 }, { x: base.W.x + 70, y: 240 }, { x: 420, y: 150 }]
+            : zSide === 'left'
+            ? [base.W, { x: base.W.x + 20, y: 320 }, { x: base.W.x + 90, y: 240 }, { x: 620, y: 150 }]
+            : [base.W, { x: base.W.x - 20, y: 320 }, { x: base.W.x - 70, y: 240 }, { x: 580, y: 150 }],
+      };
+
+      // Progression Receiver target and outcome
+      let finalCarrier = targetSide === 'left' ? 'LH' : 'RH';
+      let outcomeLabel =
+        targetSide === 'left'
+          ? '35 FLOOD PASS TO 3-BACK (Arrow Route · 1st Read)'
+          : '36 FLOOD PASS TO 2-BACK (Arrow Route · 1st Read)';
+      let expectedYards = '+12.0 Yds (Flat Arrow Strike)';
+      let coachingExplanation =
+        targetSide === 'left'
+          ? '3-Back chipped strong DE for 2 seconds, then released into the flat. QB rolled weak and delivered the primary read in rhythm.'
+          : '2-Back chipped weak DE for 2 seconds, then released into the flat. QB rolled weak and delivered the primary read in rhythm.';
+
+      if (powerPassReceiver === 'whip') {
+        finalCarrier = targetSide === 'left' ? 'XTE' : 'YTE';
+        outcomeLabel =
+          targetSide === 'left'
+            ? '35 FLOOD PASS TO X (Dig Route · 2nd Read)'
+            : '36 FLOOD PASS TO Y (Dig Route · 2nd Read)';
+        expectedYards = '+18.0 Yds (Intermediate Dig Crossing Strike)';
+        coachingExplanation =
+          targetSide === 'left'
+            ? 'X stems 7–10 yards vertically and snaps flat across the middle behind flowing linebackers into the intermediate void.'
+            : 'Y stems 7–10 yards vertically and snaps flat across the middle behind flowing linebackers into the intermediate void.';
+      } else if (powerPassReceiver === 'corner') {
+        finalCarrier = targetSide === 'left' ? 'YTE' : 'XTE';
+        outcomeLabel =
+          targetSide === 'left'
+            ? isTightX
+              ? '35 FLOOD PASS TO Y (Post-Corner · 3rd Read)'
+              : '35 FLOOD PASS TO Y (Boundary Vertical · 3rd Read)'
+            : isTightX
+            ? '36 FLOOD PASS TO X (Post-Corner · 3rd Read)'
+            : '36 FLOOD PASS TO X (Boundary Vertical · 3rd Read)';
+        expectedYards = '+28.0 Yds (Deep Boundary Strike)';
+        coachingExplanation =
+          targetSide === 'left'
+            ? 'Y stems post to freeze safety, then breaks 45° to the corner pylon (or clears vertical down the boundary).'
+            : 'X stems post to freeze safety, then breaks 45° to the corner pylon (or clears vertical down the boundary).';
+      } else if (powerPassReceiver === 'post') {
+        finalCarrier = 'W';
+        outcomeLabel =
+          targetSide === 'left'
+            ? '35 FLOOD PASS TO Z (Deep Post · 4th Read TD)'
+            : '36 FLOOD PASS TO Z (Deep Post · 4th Read TD)';
+        expectedYards = '+35.0 Yds (Deep Post Touchdown)';
+        coachingExplanation =
+          'Z attacks outside leverage of the cornerback, then cuts on a deep post crossing across the middle behind safeties.';
+      }
 
       return {
         paths,
@@ -2441,11 +2522,10 @@ QB: {
           diveGive: false,
           qbKeep: false,
           pitchTriggered: false,
-          finalCarrier: 'RH',
-          outcomeLabel: '36/25 FLOOD PASS TO 2-BACK (Arrow Route · 1st Read)',
-          expectedYards: '+12.0 Yds (Weak Flat Arrow Strike)',
-          coachingExplanation:
-            '2-Back chipped weak DE for 2 seconds, then released into the flat. QB rolled weak and delivered the primary read in rhythm.',
+          finalCarrier,
+          outcomeLabel,
+          expectedYards,
+          coachingExplanation,
         },
       };
     },
